@@ -1,0 +1,13 @@
+node_modules/
+.env
+.env.local
+.env*.local
+dist/
+.turbo/
+*.tsbuildinfo
+.DS_Store
+coverage/
+.claude/settings.local.json
+CLAUDE.local.md
+logs/
+pipeline/daemon.json

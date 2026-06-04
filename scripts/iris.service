@@ -1,0 +1,19 @@
+[Unit]
+Description=Iris Build Pipeline Daemon
+Documentation=https://github.com/Xeebs/iris
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=xhasan
+WorkingDirectory=/home/xhasan/my-projects/Iris
+ExecStart=/usr/bin/python3 /home/xhasan/my-projects/Iris/scripts/daemon.py
+Restart=on-failure
+RestartSec=30
+StandardOutput=append:/home/xhasan/my-projects/Iris/logs/systemd.log
+StandardError=append:/home/xhasan/my-projects/Iris/logs/systemd.log
+EnvironmentFile=-/home/xhasan/my-projects/Iris/.env
+
+[Install]
+WantedBy=multi-user.target

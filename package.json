@@ -1,0 +1,28 @@
+{
+  "name": "iris",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Platform-agnostic business context intelligence layer for AI tools",
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=9.0.0"
+  },
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "test": "turbo run test",
+    "test:integration": "turbo run test:integration",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "db:migrate": "turbo run db:migrate --filter=@iris/api",
+    "mcp:start": "pnpm --filter=@iris/mcp-server dev",
+    "mcp:inspect": "npx @modelcontextprotocol/inspector pnpm mcp:start",
+    "connector:scaffold": "tsx scripts/scaffold-connector.ts",
+    "connector:test": "turbo run test --filter=@iris/connector-$0"
+  },
+  "devDependencies": {
+    "turbo": "^2.0.0",
+    "typescript": "^5.5.0",
+    "tsx": "^4.0.0"
+  }
+}

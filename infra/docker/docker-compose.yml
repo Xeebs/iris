@@ -1,0 +1,43 @@
+version: '3.9'
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: iris
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - '6379:6379'
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    ports:
+      - '6333:6333'
+      - '6334:6334'
+    volumes:
+      - qdrant_data:/qdrant/storage
+
+  # Optional: Neo4j for knowledge graph features
+  # neo4j:
+  #   image: neo4j:5-community
+  #   environment:
+  #     NEO4J_AUTH: neo4j/password
+  #   ports:
+  #     - '7474:7474'
+  #     - '7687:7687'
+  #   volumes:
+  #     - neo4j_data:/data
+
+volumes:
+  postgres_data:
+  qdrant_data:
+  # neo4j_data:
