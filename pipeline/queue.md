@@ -44,7 +44,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Logger
 - **Layer**: 1 — Core
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: High
 - **Description**: Implement packages/core/src/logger.ts using pino. Export a typed logger with info/warn/error/debug methods. Support structured metadata as second argument. Export a child logger factory for connector-scoped logging.
 - **Files**:
@@ -55,7 +55,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Error Types
 - **Layer**: 1 — Core
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: High
 - **Description**: Implement packages/core/src/errors.ts. Define IrisError base class, ConnectorError (retryable flag), IndexerError, CacheError, MCPError. Use neverthrow for Result<T,E> wrappers. Export err() and ok() helpers.
 - **Files**:
@@ -66,7 +66,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Config Loader
 - **Layer**: 1 — Core
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: High
 - **Description**: Implement packages/core/src/config.ts. Use zod to validate env vars at startup. Export typed config object with all env vars from .env.example. Throw a clear error on missing required vars so startup fails fast.
 - **Files**:
