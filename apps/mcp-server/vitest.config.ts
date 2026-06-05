@@ -11,6 +11,8 @@ export default defineConfig({
       '@iris/core/logger': path.resolve(__dirname, '../../packages/core/src/logger.ts'),
       '@iris/core/errors': path.resolve(__dirname, '../../packages/core/src/errors.ts'),
       '@iris/core': path.resolve(__dirname, '../../packages/core/src/index.ts'),
+      '@iris/semantic-core/glossary': path.resolve(__dirname, '../../packages/semantic-core/src/glossary.ts'),
+      '@iris/semantic-core/metrics': path.resolve(__dirname, '../../packages/semantic-core/src/metrics.ts'),
       '@iris/semantic-core': path.resolve(__dirname, '../../packages/semantic-core/src/index.ts'),
       '@iris/cache/semantic-cache': path.resolve(__dirname, '../../packages/cache/src/semantic-cache.ts'),
       '@iris/cache': path.resolve(__dirname, '../../packages/cache/src/index.ts'),

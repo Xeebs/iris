@@ -384,7 +384,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Google Drive Connector
 - **Layer**: 12 — Additional Connectors
-- **Status**: UNWORKED
+- **Status**: IN_PROGRESS
 - **Priority**: High
 - **Description**: Implement Google Drive connector in packages/connectors/google-drive/. Sync files and folders as SemanticEntity objects. Use OAuth2 (Google API). Support incremental sync via modifiedTime cursor. Extract file content for indexing (text files only). ConnectorManifest with name, icon, OAuth scopes. MSW tests with fixture responses. See connector-patterns.md for sync generator and entity transformation rules.
 - **Files**:
