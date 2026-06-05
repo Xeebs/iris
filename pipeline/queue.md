@@ -251,7 +251,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Audit Logger
 - **Layer**: 7 — MCP Server
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: High
 - **Description**: Implement apps/mcp-server/src/audit.ts. Log every MCP tool invocation to the audit table (Postgres): timestamp, workspace_id, tool_name, query, token_estimate, cache_hit, duration_ms. Export logAuditEvent(event) and getAuditLog(workspaceId, options) with cursor pagination.
 - **Files**:
