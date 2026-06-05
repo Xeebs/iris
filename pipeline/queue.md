@@ -123,7 +123,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Notion Connector
 - **Layer**: 3 — Connectors
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: High
 - **Description**: Full Notion connector in packages/connectors/notion/. Implement connect() with OAuth2, sync() yielding database rows and pages as SemanticEntity objects, getSchema() from Notion database schemas, healthCheck(). Use MSW for tests.
 - **Files**:

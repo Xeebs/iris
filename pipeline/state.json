@@ -1,12 +1,12 @@
 {
   "current_phase": "COMMIT",
-  "active_task": "HubSpot Connector",
+  "active_task": "Notion Connector",
   "active_layer": 3,
   "last_cycle": "2026-06-04",
   "last_research": null,
   "last_commit": "2026-06-04",
-  "cycle_count": 6,
+  "cycle_count": 7,
   "rate_limit_hit": false,
   "mode": "BUILD",
-  "notes": "Committing HubSpot Connector — 14/14 tests pass"
+  "notes": "Committing Notion Connector — 13/13 tests pass"
 }
