@@ -6,3 +6,5 @@ export type { EmbeddingResult, EmbeddingServiceOptions } from './embedding.js';
 export { buildEmbeddingInput, generateEmbeddings, EMBEDDING_MODEL, EMBEDDING_DIMENSIONS, BATCH_SIZE } from './embedding.js';
 export type { VectorStore, VectorSearchFilter, VectorSearchResult } from './vector-store.js';
 export { PgvectorStore } from './vector-store.js';
+export type { GlossaryTerm } from './glossary.js';
+export { GlossaryService } from './glossary.js';

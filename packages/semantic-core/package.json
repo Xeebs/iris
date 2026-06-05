@@ -10,7 +10,9 @@
     "./indexer": "./dist/indexer.js",
     "./retrieval": "./dist/retrieval.js",
     "./embedding": "./dist/embedding.js",
-    "./vector-store": "./dist/vector-store.js"
+    "./vector-store": "./dist/vector-store.js",
+    "./glossary": "./dist/glossary.js",
+    "./metrics": "./dist/metrics.js"
   },
   "scripts": {
     "build": "tsc --build",

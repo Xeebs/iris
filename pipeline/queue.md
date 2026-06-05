@@ -350,7 +350,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Glossary Service & API
 - **Layer**: 11 — Data Persistence
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: High
 - **Description**: Implement packages/semantic-core/src/glossary.ts with GlossaryService class. Methods: addTerm(workspaceId, term, definition, exampleValue), getTerm(workspaceId, term), listTerms(workspaceId, filter?), deleteTerm(workspaceId, term). Persist to postgres via pg pool. Wire up to apps/api/src/routes/glossary.ts with GET /api/v1/glossary, POST /api/v1/glossary (create term), DELETE /api/v1/glossary/:term endpoints. All endpoints require workspaceId. Full unit + integration tests.
 - **Files**:
