@@ -1,25 +1,15 @@
-/**
- * SemanticCache — vector-similarity-based response cache.
- *
- * Caches MCP context responses keyed by the semantic meaning of the query,
- * not the exact query string. A cache hit is triggered when a new query's
- * embedding has cosine similarity ≥ hitThreshold against a cached query.
- *
- * Cache entries are invalidated by:
- * - Source data changes (entity update events from connectors)
- * - TTL expiry (default: 1 hour)
- * - Manual flush via the admin API
- *
- * @see docs/architecture.md#token-efficiency-stack
- * @see .claude/rules/embedding-patterns.md
- */
+import type { Redis } from 'ioredis';
+import { logger } from '@iris/core/logger';
+
+const log = logger.child({ service: 'semantic-cache' });
 
 export interface CacheEntry {
+  id: string;
   queryEmbedding: number[];
   response: string;
   tokenCount: number;
   workspaceId: string;
-  entityIds: string[]; // entities included in this response; used for invalidation
+  entityIds: string[];
   createdAt: Date;
   expiresAt: Date;
 }
@@ -39,67 +29,172 @@ export const DEFAULT_CACHE_CONFIG: SemanticCacheConfig = {
   maxEntriesPerWorkspace: 10_000,
 };
 
-/**
- * Look up a cached response for the given query embedding.
- * Returns null on cache miss.
- *
- * @param queryEmbedding - Embedding vector for the incoming query
- * @param workspaceId    - Must match the entry's workspace (enforced here and in storage)
- * @param config         - Cache configuration
- */
-export async function getCachedResponse(
-  queryEmbedding: number[],
-  workspaceId: string,
-  config: Partial<SemanticCacheConfig> = {},
-): Promise<CacheEntry | null> {
-  void queryEmbedding;
-  void workspaceId;
-  void config;
-  // TODO: Query Redis / Qdrant for the nearest cached embedding within workspaceId
-  // TODO: Return null if best similarity < hitThreshold or entry is expired
-  return null;
+function entriesKey(workspaceId: string): string {
+  return `iris:cache:${workspaceId}:entries`;
+}
+
+function entityIndexKey(workspaceId: string, entityId: string): string {
+  return `iris:cache:${workspaceId}:entity:${entityId}`;
+}
+
+function cosineSimilarity(a: number[], b: number[]): number {
+  let dot = 0;
+  let normA = 0;
+  let normB = 0;
+  for (let i = 0; i < a.length; i++) {
+    dot += (a[i] ?? 0) * (b[i] ?? 0);
+    normA += (a[i] ?? 0) ** 2;
+    normB += (b[i] ?? 0) ** 2;
+  }
+  if (normA === 0 || normB === 0) return 0;
+  return dot / (Math.sqrt(normA) * Math.sqrt(normB));
 }
 
 /**
- * Store a response in the semantic cache.
- *
- * @param queryEmbedding - Embedding of the query that produced this response
- * @param response       - The compressed context string returned to the AI tool
- * @param tokenCount     - Token count of the response (for analytics)
- * @param workspaceId    - Workspace scope for this entry
- * @param entityIds      - Entity IDs included in the response (for invalidation)
- * @param config         - Cache configuration
+ * Semantic cache backed by Redis hashes.
+ * Entries are stored per-workspace; lookup scans all entries and checks cosine similarity.
  */
-export async function setCachedResponse(
-  queryEmbedding: number[],
-  response: string,
-  tokenCount: number,
-  workspaceId: string,
-  entityIds: string[],
-  config: Partial<SemanticCacheConfig> = {},
-): Promise<void> {
-  void queryEmbedding;
-  void response;
-  void tokenCount;
-  void workspaceId;
-  void entityIds;
-  void config;
-  // TODO: Write to Redis with TTL; also store embedding in Qdrant for similarity search
-}
+export class SemanticCache {
+  private readonly config: SemanticCacheConfig;
 
-/**
- * Invalidate all cache entries that include any of the given entity IDs.
- * Called by the indexer after a sync upserts or deletes entities.
- *
- * @param entityIds   - Entity IDs whose cached responses should be invalidated
- * @param workspaceId - Scope invalidation to a single workspace
- */
-export async function invalidateCacheForEntities(
-  entityIds: string[],
-  workspaceId: string,
-): Promise<number> {
-  void entityIds;
-  void workspaceId;
-  // TODO: Find all cache entries containing any entityId; delete from Redis + Qdrant
-  return 0; // returns count of invalidated entries
+  /**
+   * @param redis  - ioredis client (caller owns connection lifecycle)
+   * @param config - Cache configuration overrides
+   */
+  constructor(
+    private readonly redis: Redis,
+    config: Partial<SemanticCacheConfig> = {},
+  ) {
+    this.config = { ...DEFAULT_CACHE_CONFIG, ...config };
+  }
+
+  /**
+   * Look up a cached response for the given query embedding.
+   * Returns null on cache miss.
+   *
+   * @param queryEmbedding - Pre-computed embedding vector for the query
+   * @param workspaceId    - Workspace scope for cache isolation
+   */
+  async get(queryEmbedding: number[], workspaceId: string): Promise<CacheEntry | null> {
+    const allEntries = await this.redis.hvals(entriesKey(workspaceId));
+    const now = Date.now();
+
+    let bestEntry: CacheEntry | null = null;
+    let bestScore = -1;
+
+    for (const raw of allEntries) {
+      let entry: CacheEntry;
+      try {
+        entry = JSON.parse(raw) as CacheEntry;
+      } catch {
+        continue;
+      }
+
+      if (new Date(entry.expiresAt).getTime() < now) continue;
+
+      const score = cosineSimilarity(queryEmbedding, entry.queryEmbedding);
+      if (score >= this.config.hitThreshold && score > bestScore) {
+        bestScore = score;
+        bestEntry = entry;
+      }
+    }
+
+    if (bestEntry) {
+      log.debug('Semantic cache hit', {
+        workspaceId,
+        entryId: bestEntry.id,
+        similarity: bestScore,
+      });
+    } else {
+      log.debug('Semantic cache miss', { workspaceId });
+    }
+
+    return bestEntry;
+  }
+
+  /**
+   * Store a response in the semantic cache with TTL.
+   *
+   * @param queryEmbedding - Embedding of the query
+   * @param response       - Context string to cache
+   * @param tokenCount     - Token count for analytics
+   * @param workspaceId    - Workspace scope
+   * @param entityIds      - Entity IDs in the response (for invalidation)
+   */
+  async set(
+    queryEmbedding: number[],
+    response: string,
+    tokenCount: number,
+    workspaceId: string,
+    entityIds: string[],
+  ): Promise<void> {
+    const id = `${workspaceId}:${Date.now()}:${Math.random().toString(36).slice(2, 8)}`;
+    const now = new Date();
+    const entry: CacheEntry = {
+      id,
+      queryEmbedding,
+      response,
+      tokenCount,
+      workspaceId,
+      entityIds,
+      createdAt: now,
+      expiresAt: new Date(now.getTime() + this.config.ttlSeconds * 1000),
+    };
+
+    const pipeline = this.redis.pipeline();
+
+    pipeline.hset(entriesKey(workspaceId), id, JSON.stringify(entry));
+    pipeline.expire(entriesKey(workspaceId), this.config.ttlSeconds);
+
+    for (const entityId of entityIds) {
+      pipeline.sadd(entityIndexKey(workspaceId, entityId), id);
+      pipeline.expire(entityIndexKey(workspaceId, entityId), this.config.ttlSeconds);
+    }
+
+    await pipeline.exec();
+
+    log.debug('Semantic cache set', { workspaceId, entryId: id, tokenCount, entityCount: entityIds.length });
+  }
+
+  /**
+   * Invalidate all cache entries containing any of the given entity IDs.
+   *
+   * @param entityIds   - Entity IDs whose cached responses should be purged
+   * @param workspaceId - Workspace scope
+   * @returns Number of entries invalidated
+   */
+  async invalidate(entityIds: string[], workspaceId: string): Promise<number> {
+    if (entityIds.length === 0) return 0;
+
+    const entryIdsToDelete = new Set<string>();
+
+    for (const entityId of entityIds) {
+      const key = entityIndexKey(workspaceId, entityId);
+      const ids = await this.redis.smembers(key);
+      for (const id of ids) entryIdsToDelete.add(id);
+    }
+
+    if (entryIdsToDelete.size === 0) return 0;
+
+    const pipeline = this.redis.pipeline();
+    const hashKey = entriesKey(workspaceId);
+
+    for (const id of entryIdsToDelete) {
+      pipeline.hdel(hashKey, id);
+    }
+
+    for (const entityId of entityIds) {
+      pipeline.del(entityIndexKey(workspaceId, entityId));
+    }
+
+    await pipeline.exec();
+
+    log.info('Semantic cache invalidated', {
+      workspaceId,
+      entityCount: entityIds.length,
+      entryCount: entryIdsToDelete.size,
+    });
+
+    return entryIdsToDelete.size;
+  }
 }

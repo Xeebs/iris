@@ -191,7 +191,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Semantic Cache
 - **Layer**: 5 — Cache
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: High
 - **Description**: Implement packages/cache/src/semantic-cache.ts. Redis-backed cache. On lookup: generate query embedding, scan Redis for vectors with cosine similarity ≥ 0.92, return cached response if hit. On write: store query vector + response with TTL. On invalidate: remove entries related to a set of entity IDs. Full unit tests with mocked Redis.
 - **Files**:
