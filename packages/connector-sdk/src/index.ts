@@ -12,3 +12,4 @@ export type {
 export { ConnectorError, BaseConnector } from './base-connector.js';
 export type { ConnectorFactory, ConnectorRegistration } from './registry.js';
 export { ConnectorRegistry, registry } from './registry.js';
+export { createMockConnector, assertEntityShape } from './test-utils.js';

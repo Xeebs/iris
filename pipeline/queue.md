@@ -92,7 +92,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Connector Test Utilities
 - **Layer**: 2 — Connector SDK
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: Medium
 - **Description**: Implement packages/connector-sdk/src/test-utils.ts. Export createMockConnector() factory that returns a BaseConnector with all methods as vi.fn(). Export a helper assertEntityShape(entity) that validates a SemanticEntity has all required fields in the right format.
 - **Files**:
@@ -106,7 +106,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: HubSpot Connector
 - **Layer**: 3 — Connectors
-- **Status**: UNWORKED
+- **Status**: IN_PROGRESS
 - **Priority**: High
 - **Description**: Full HubSpot CRM connector in packages/connectors/hubspot/. Implement connect() with OAuth2 token exchange, sync() as an AsyncGenerator yielding contacts, companies, and deals as SemanticEntity objects (cursor-based pagination), getSchema(), healthCheck(). Include ConnectorManifest. Use MSW to mock HubSpot API in tests.
 - **Files**:
