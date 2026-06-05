@@ -15,18 +15,18 @@
     "declarationMap": true,
     "sourceMap": true,
     "paths": {
-      "@iris/connector-sdk": ["./packages/connector-sdk/src/index.ts"],
-      "@iris/connector-sdk/*": ["./packages/connector-sdk/src/*.ts"],
-      "@iris/core": ["./packages/core/src/index.ts"],
-      "@iris/core/*": ["./packages/core/src/*.ts"],
-      "@iris/semantic-core": ["./packages/semantic-core/src/index.ts"],
-      "@iris/semantic-core/*": ["./packages/semantic-core/src/*.ts"],
-      "@iris/cache": ["./packages/cache/src/index.ts"],
-      "@iris/cache/*": ["./packages/cache/src/*.ts"],
-      "@iris/compression": ["./packages/compression/src/index.ts"],
-      "@iris/compression/*": ["./packages/compression/src/*.ts"],
-      "@iris/graph": ["./packages/graph/src/index.ts"],
-      "@iris/graph/*": ["./packages/graph/src/*.ts"]
+      "@iris/connector-sdk": ["./packages/connector-sdk/dist/index.d.ts"],
+      "@iris/connector-sdk/*": ["./packages/connector-sdk/dist/*.d.ts"],
+      "@iris/core": ["./packages/core/dist/index.d.ts"],
+      "@iris/core/*": ["./packages/core/dist/*.d.ts"],
+      "@iris/semantic-core": ["./packages/semantic-core/dist/index.d.ts"],
+      "@iris/semantic-core/*": ["./packages/semantic-core/dist/*.d.ts"],
+      "@iris/cache": ["./packages/cache/dist/index.d.ts"],
+      "@iris/cache/*": ["./packages/cache/dist/*.d.ts"],
+      "@iris/compression": ["./packages/compression/dist/index.d.ts"],
+      "@iris/compression/*": ["./packages/compression/dist/*.d.ts"],
+      "@iris/graph": ["./packages/graph/dist/index.d.ts"],
+      "@iris/graph/*": ["./packages/graph/dist/*.d.ts"]
     }
   },
   "exclude": ["node_modules", "dist", "**/__tests__/**"]

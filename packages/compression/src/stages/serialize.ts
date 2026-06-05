@@ -2,7 +2,6 @@ import type { SemanticEntity, AttributeValue } from '@iris/connector-sdk';
 
 function formatValue(v: AttributeValue): string {
   if (Array.isArray(v)) return v.join(', ');
-  if (v instanceof Date) return v.toISOString().split('T')[0] ?? '';
   return String(v);
 }
 

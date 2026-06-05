@@ -67,14 +67,17 @@ export function registerQueryContext(
           return { content: [{ type: 'text' as const, text: cacheHit.response }] };
         }
 
-        const result = await retrieveContext(params.query, vectorStore, {
+        const retrievalOpts: Parameters<typeof retrieveContext>[2] = {
           workspaceId: params.workspaceId,
           topK: params.topK ?? 10,
-          entityTypes: params.entityTypes,
           expandRelationships: true,
           maxDepth: 1,
           openAiApiKey: openAiKey,
-        });
+        };
+        if (params.entityTypes !== undefined) {
+          retrievalOpts.entityTypes = params.entityTypes;
+        }
+        const result = await retrieveContext(params.query, vectorStore, retrievalOpts);
 
         const compressed = compress(result.entities, {
           contextBudget: params.contextBudget ?? 2000,

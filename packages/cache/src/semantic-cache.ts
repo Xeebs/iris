@@ -1,4 +1,4 @@
-import type { Redis } from 'ioredis';
+import { Redis } from 'ioredis';
 import { logger } from '@iris/core/logger';
 
 const log = logger.child({ service: 'semantic-cache' });
@@ -197,4 +197,19 @@ export class SemanticCache {
 
     return entryIdsToDelete.size;
   }
+}
+
+/**
+ * Create a SemanticCache connected to a Redis URL.
+ * Ownership of the Redis connection is transferred to the caller for cleanup.
+ *
+ * @param redisUrl - Redis connection URL (e.g., redis://localhost:6379)
+ * @param config   - Optional cache configuration overrides
+ */
+export function createSemanticCache(
+  redisUrl: string,
+  config: Partial<SemanticCacheConfig> = {},
+): { cache: SemanticCache; redis: Redis } {
+  const redis = new Redis(redisUrl);
+  return { cache: new SemanticCache(redis, config), redis };
 }

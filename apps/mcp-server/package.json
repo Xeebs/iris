@@ -19,6 +19,7 @@
     "@iris/core": "workspace:*",
     "@iris/semantic-core": "workspace:*",
     "@modelcontextprotocol/sdk": "^1.0.0",
+    "ioredis": "^5.4.1",
     "neverthrow": "^6.2.1",
     "postgres": "^3.4.4",
     "zod": "^3.23.8"
