@@ -16,5 +16,5 @@ export const requireAuth: MiddlewareHandler = createMiddleware(async (c, next) =
       401,
     );
   }
-  await next();
+  return next();
 });

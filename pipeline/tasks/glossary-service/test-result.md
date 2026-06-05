@@ -1,0 +1,1 @@
+PASS — 9/9 glossary service unit tests, 9/9 glossary route tests (18 total), typecheck clean. Also fixed pre-existing api app typecheck errors: auth.ts return path, connectors.ts validateConfig throw-vs-Result, queries.ts exactOptionalPropertyTypes.

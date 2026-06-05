@@ -100,11 +100,10 @@ describe('POST /api/v1/connectors', () => {
 
   it('returns 400 when config validation fails', async () => {
     vi.mocked(registry.get).mockReturnValue(MANIFEST as never);
-    const { err } = await import('neverthrow');
     const { ConnectorError } = await import('@iris/connector-sdk');
-    vi.mocked(registry.validateConfig).mockReturnValue(
-      err(new ConnectorError('portalId is required', false)) as never,
-    );
+    vi.mocked(registry.validateConfig).mockImplementation(() => {
+      throw new ConnectorError('portalId is required', 'INVALID_CONFIG', false);
+    });
     const app = makeApp();
     const res = await app.request('/api/v1/connectors', {
       method: 'POST',
@@ -118,8 +117,7 @@ describe('POST /api/v1/connectors', () => {
 
   it('returns 201 when config is valid', async () => {
     vi.mocked(registry.get).mockReturnValue(MANIFEST as never);
-    const { ok } = await import('neverthrow');
-    vi.mocked(registry.validateConfig).mockReturnValue(ok(undefined) as never);
+    vi.mocked(registry.validateConfig).mockReturnValue({ portalId: '123' });
     const app = makeApp();
     const res = await app.request('/api/v1/connectors', {
       method: 'POST',

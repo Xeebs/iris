@@ -47,12 +47,11 @@ connectorRoutes.post('/', async (c) => {
     );
   }
 
-  const validation = registry.validateConfig(body.data.connectorId, body.data.config);
-  if (validation.isErr()) {
-    return c.json(
-      { error: { code: 'VALIDATION_ERROR', message: validation.error.message } },
-      400,
-    );
+  try {
+    registry.validateConfig(body.data.connectorId, body.data.config);
+  } catch (e) {
+    const message = e instanceof Error ? e.message : 'Invalid config';
+    return c.json({ error: { code: 'VALIDATION_ERROR', message } }, 400);
   }
 
   log.info('Connector instance created', { connectorId: body.data.connectorId });

@@ -37,7 +37,7 @@ export function createQueryRoutes(vectorStore: VectorStore, openAiKey: string): 
     const result = await retrieveContext(query, vectorStore, {
       workspaceId,
       topK,
-      entityTypes,
+      ...(entityTypes !== undefined ? { entityTypes } : {}),
       expandRelationships: true,
       maxDepth: 1,
       openAiApiKey: openAiKey,
