@@ -1,0 +1,19 @@
+{
+  "results": [
+    {
+      "id": "2001",
+      "properties": {
+        "name": "Acme Corp",
+        "domain": "acme.com",
+        "industry": "Technology",
+        "city": "San Francisco",
+        "country": "United States",
+        "numberofemployees": "500",
+        "annualrevenue": "50000000",
+        "hs_lastmodifieddate": "2026-05-10T12:00:00.000Z",
+        "hubspot_owner_id": "50"
+      }
+    }
+  ],
+  "paging": {}
+}

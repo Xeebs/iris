@@ -1,0 +1,35 @@
+{
+  "results": [
+    {
+      "id": "1001",
+      "properties": {
+        "firstname": "Alice",
+        "lastname": "Smith",
+        "email": "alice@acme.com",
+        "company": "Acme Corp",
+        "phone": "+1-555-0101",
+        "lifecyclestage": "lead",
+        "hs_lead_status": "IN_PROGRESS",
+        "hubspot_owner_id": "50",
+        "lastmodifieddate": "2026-05-01T10:00:00.000Z",
+        "associatedcompanyid": "2001"
+      }
+    },
+    {
+      "id": "1002",
+      "properties": {
+        "firstname": "Bob",
+        "lastname": "Jones",
+        "email": "bob@globex.com",
+        "company": "Globex",
+        "phone": null,
+        "lifecyclestage": "customer",
+        "hs_lead_status": null,
+        "hubspot_owner_id": "51",
+        "lastmodifieddate": "2026-04-15T08:00:00.000Z",
+        "associatedcompanyid": null
+      }
+    }
+  ],
+  "paging": {}
+}

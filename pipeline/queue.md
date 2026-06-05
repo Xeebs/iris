@@ -106,7 +106,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: HubSpot Connector
 - **Layer**: 3 — Connectors
-- **Status**: IN_PROGRESS
+- **Status**: COMMITTED
 - **Priority**: High
 - **Description**: Full HubSpot CRM connector in packages/connectors/hubspot/. Implement connect() with OAuth2 token exchange, sync() as an AsyncGenerator yielding contacts, companies, and deals as SemanticEntity objects (cursor-based pagination), getSchema(), healthCheck(). Include ConnectorManifest. Use MSW to mock HubSpot API in tests.
 - **Files**:

@@ -279,6 +279,37 @@ importers:
         specifier: ^1.6.0
         version: 1.6.1(@types/node@20.19.41)
 
+  packages/connectors/hubspot:
+    dependencies:
+      '@iris/connector-sdk':
+        specifier: workspace:*
+        version: link:../../connector-sdk
+      '@iris/core':
+        specifier: workspace:*
+        version: link:../../core
+      neverthrow:
+        specifier: ^6.2.1
+        version: 6.2.2
+      zod:
+        specifier: ^3.23.8
+        version: 3.25.76
+    devDependencies:
+      '@types/node':
+        specifier: ^20.14.0
+        version: 20.19.41
+      '@vitest/coverage-v8':
+        specifier: ^1.6.0
+        version: 1.6.1(vitest@1.6.1(@types/node@20.19.41))
+      msw:
+        specifier: ^2.3.1
+        version: 2.14.6(@types/node@20.19.41)(typescript@5.9.3)
+      typescript:
+        specifier: ^5.5.0
+        version: 5.9.3
+      vitest:
+        specifier: ^1.6.0
+        version: 1.6.1(@types/node@20.19.41)
+
   packages/core:
     dependencies:
       neverthrow:
