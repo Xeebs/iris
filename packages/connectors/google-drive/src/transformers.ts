@@ -1,4 +1,4 @@
-import type { SemanticEntity } from '@iris/connector-sdk';
+import type { SemanticEntity, AttributeValue } from '@iris/connector-sdk';
 
 export interface GoogleDriveFile {
   id: string;
@@ -27,7 +27,7 @@ export function transformFile(file: GoogleDriveFile, content?: string): Semantic
   const isFolder = file.mimeType === FOLDER_MIME;
   const type = isFolder ? 'folder' : 'file';
 
-  const attributes: Record<string, unknown> = {
+  const attributes: Record<string, AttributeValue> = {
     mimeType: file.mimeType,
     description: file.description ?? null,
     size: file.size ? Number(file.size) : null,

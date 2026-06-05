@@ -399,7 +399,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Snowflake Connector
 - **Layer**: 12 — Additional Connectors
-- **Status**: UNWORKED
+- **Status**: IN_PROGRESS
 - **Priority**: High
 - **Description**: Implement Snowflake connector in packages/connectors/snowflake/. Allow users to configure which tables to sync. Connector reads table schemas and syncs rows as SemanticEntity objects with field names as attributes. Support incremental sync via UPDATED_AT column filter. API-key auth (account, user, password, warehouse config). MSW tests with fixture SQL responses.
 - **Files**:
