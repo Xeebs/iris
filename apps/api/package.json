@@ -18,6 +18,7 @@
     "@iris/core": "workspace:*",
     "@iris/semantic-core": "workspace:*",
     "@hono/clerk-auth": "^2.0.0",
+    "@hono/node-server": "^1.0.0",
     "hono": "^4.5.0",
     "neverthrow": "^6.2.1",
     "postgres": "^3.4.4",

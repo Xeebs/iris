@@ -266,7 +266,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: API Server Bootstrap
 - **Layer**: 8 — API
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: High
 - **Description**: Scaffold apps/api/src/server.ts using Hono (fast, lightweight). Register route groups: /api/v1/connectors, /api/v1/entities, /api/v1/queries, /api/v1/audit. Add auth middleware (Clerk JWT). Add error handler that returns the standard envelope format per api-conventions.md. Add zod-based request validation middleware.
 - **Files**:

@@ -2,6 +2,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { SemanticCache } from '@iris/cache/semantic-cache';
 import { PgvectorStore } from '@iris/semantic-core';
+import type { VectorStore } from '@iris/semantic-core';
 import { logger } from '@iris/core/logger';
 import Redis from 'ioredis';
 
@@ -22,7 +23,7 @@ const log = logger.child({ service: 'mcp-server' });
  * @param openAiKey    - OpenAI API key for query embeddings
  */
 export function createMcpServer(
-  vectorStore: PgvectorStore,
+  vectorStore: VectorStore,
   semanticCache: SemanticCache,
   openAiKey: string,
 ): McpServer {
