@@ -202,7 +202,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Prefix Cache Manager
 - **Layer**: 5 — Cache
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: Medium
 - **Description**: Implement packages/cache/src/prefix-cache.ts. Manages the static prefix context block (glossary + metric definitions + schema summaries) that should be kept at the front of every MCP response to maximize provider prefix cache hits. Exports buildPrefixBlock() which returns a stable, deterministic string for a given workspace. Cache it in Redis with a long TTL.
 - **Files**:
