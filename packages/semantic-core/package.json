@@ -12,7 +12,8 @@
     "./embedding": "./dist/embedding.js",
     "./vector-store": "./dist/vector-store.js",
     "./glossary": "./dist/glossary.js",
-    "./metrics": "./dist/metrics.js"
+    "./metrics": "./dist/metrics.js",
+    "./sync-events": "./dist/sync-events.js"
   },
   "scripts": {
     "build": "tsc --build",
