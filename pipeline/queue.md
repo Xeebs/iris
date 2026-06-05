@@ -287,7 +287,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Salesforce Connector
 - **Layer**: 9 — Additional Connectors
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: Medium
 - **Description**: Salesforce CRM connector in packages/connectors/salesforce/. Sync Contacts, Accounts, Opportunities via Salesforce REST API with OAuth2. Use SOQL for incremental sync (WHERE LastModifiedDate > :cursor). MSW tests.
 - **Files**:
