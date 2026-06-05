@@ -4,6 +4,7 @@ import type postgres from 'postgres';
 import type { ConnectorManifest } from '@iris/connector-sdk';
 import { registry } from '@iris/connector-sdk';
 import { logger } from '@iris/core/logger';
+import type { SyncJobQueue } from '@iris/queue';
 
 import { ConnectorService } from '../services/connector-service.js';
 
@@ -27,8 +28,9 @@ const workspaceQuerySchema = z.object({
 
 /**
  * @param sql - Postgres client for instance persistence
+ * @param syncQueue - BullMQ queue for async connector sync jobs
  */
-export function createConnectorRoutes(sql: SqlClient): Hono {
+export function createConnectorRoutes(sql: SqlClient, syncQueue?: SyncJobQueue): Hono {
   const routes = new Hono();
   const service = new ConnectorService(sql);
 
@@ -180,7 +182,17 @@ export function createConnectorRoutes(sql: SqlClient): Hono {
       return c.json({ error: { code: 'INTERNAL_ERROR', message: 'Failed to start sync' } }, 500);
     }
 
-    log.info('Sync triggered', { instanceId: id, connectorId: instanceResult.value.connectorId });
+    if (syncQueue) {
+      const jobResult = await syncQueue.enqueueSync(id, parsed.data.workspaceId);
+      if (jobResult.isErr()) {
+        log.error('Failed to enqueue sync job', { instanceId: id, error: jobResult.error });
+        return c.json({ error: { code: 'INTERNAL_ERROR', message: 'Failed to enqueue sync job' } }, 500);
+      }
+      log.info('Sync job enqueued', { instanceId: id, jobId: jobResult.value.jobId });
+      return c.json({ data: { instanceId: id, jobId: jobResult.value.jobId, status: 'queued' } });
+    }
+
+    log.info('Sync triggered (no queue configured)', { instanceId: id, connectorId: instanceResult.value.connectorId });
     return c.json({ data: { instanceId: id, status: 'syncing' } });
   });
 

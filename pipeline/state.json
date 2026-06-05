@@ -1,12 +1,12 @@
 {
-  "current_phase": "TEST",
-  "active_task": "Connector Instance Management API",
-  "active_layer": 12,
+  "current_phase": "COMMIT",
+  "active_task": "BullMQ Job Queue Infrastructure",
+  "active_layer": 13,
   "last_cycle": "2026-06-05",
   "last_research": "2026-06-05",
   "last_commit": "2026-06-05",
   "cycle_count": 25,
   "rate_limit_hit": false,
   "mode": "BUILD",
-  "notes": "Testing Connector Instance Management API"
+  "notes": "BullMQ Job Queue Infrastructure — tests pass, committing."
 }

@@ -1,0 +1,31 @@
+{
+  "name": "@iris/queue",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "main": "./dist/sync-job-queue.js",
+  "types": "./dist/sync-job-queue.d.ts",
+  "exports": {
+    ".": "./dist/sync-job-queue.js"
+  },
+  "scripts": {
+    "build": "tsc --build",
+    "dev": "tsc --build --watch",
+    "test": "vitest run --coverage",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src --ext .ts"
+  },
+  "dependencies": {
+    "@iris/core": "workspace:*",
+    "bullmq": "^5.8.0",
+    "ioredis": "^5.3.2",
+    "neverthrow": "^6.2.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "@vitest/coverage-v8": "^1.6.0",
+    "ioredis-mock": "^8.9.0",
+    "typescript": "^5.5.0",
+    "vitest": "^1.6.0"
+  }
+}

@@ -413,7 +413,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Connector Instance Management API
 - **Layer**: 12 — Additional Connectors
-- **Status**: IN_PROGRESS
+- **Status**: COMMITTED
 - **Priority**: High
 - **Description**: Extend apps/api/src/routes/connectors.ts to fully support connector instance persistence and lifecycle. Add endpoints: POST /connectors (create instance, store config in DB), GET /connectors/:id (fetch instance), PUT /connectors/:id (update config), DELETE /connectors/:id. Add POST /connectors/:id/sync (trigger sync job via BullMQ), POST /connectors/:id/test (health check). Store instance status (active|error|syncing) and lastSyncedAt. Integrate with the database schema from Database Schema Migrations task. Full tests with real DB.
 - **Files**:
@@ -421,4 +421,87 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
   - apps/api/src/services/connector-service.ts
   - apps/api/src/__tests__/connectors.test.ts (update)
 - **Depends on**: Database Schema Migrations
+- **Added**: 2026-06-05
+
+---
+
+## Layer 13: Sync Job Queue
+
+### Task: BullMQ Job Queue Infrastructure
+- **Layer**: 13 — Sync Job Queue
+- **Status**: COMMITTED
+- **Priority**: High
+- **Description**: Implement BullMQ-backed job queue for async connector syncs in packages/queue/. Create SyncJobQueue class with enqueueSync(connectorInstanceId), processJob(job), and handleJobCompletion(). Wire up to Redis. Update apps/api/src/routes/connectors.ts POST /connectors/:id/sync to enqueue a job instead of inline processing. Track job status in connector_instances.sync_status column. Include unit tests with mocked Redis (ioredis-mock) and integration tests with real Redis via docker-compose.
+- **Files**:
+  - packages/queue/src/sync-job-queue.ts
+  - packages/queue/src/__tests__/sync-job-queue.test.ts
+  - packages/queue/src/__tests__/sync-job-queue.integration.test.ts
+  - apps/api/src/workers/sync-worker.ts
+  - apps/api/migrations/004_add_sync_status.sql
+- **Depends on**: Connector Instance Management API
+- **Added**: 2026-06-05
+
+---
+
+## Layer 14: Knowledge Graph
+
+### Task: Knowledge Graph Service (Neo4j)
+- **Layer**: 14 — Knowledge Graph
+- **Status**: UNWORKED
+- **Priority**: Medium
+- **Description**: Implement packages/graph/src/graph-store.ts as a Neo4j interface. Define a GraphStore interface with methods: addEntity(entity), addRelationship(sourceId, targetId, type), getRelated(entityId, relationshipType, limit), removeEntity(entityId), removeRelationship(sourceId, targetId). Implement Neo4jGraphStore using neo4j-driver. Support read/write across tenants (workspaceId partition). Add unit tests with mocked Neo4j driver and integration tests with real Neo4j via docker-compose. See schema-mapper rules for entity-relationship semantics.
+- **Files**:
+  - packages/graph/src/graph-store.ts
+  - packages/graph/src/__tests__/graph-store.test.ts
+  - packages/graph/src/__tests__/graph-store.integration.test.ts
+  - infra/docker/docker-compose.yml (add Neo4j service)
+- **Depends on**: Vector Store Interface
+- **Added**: 2026-06-05
+
+### Task: Entity Relationship Indexing
+- **Layer**: 14 — Knowledge Graph
+- **Status**: UNWORKED
+- **Priority**: Medium
+- **Description**: Extend packages/semantic-core/src/indexer.ts to extract and persist entity relationships during indexing. After embedding an entity, scan its attributes and relationships array, then call graphStore.addRelationship() for each. Also populate the entity_relationships table in Postgres (entity_id, related_entity_id, relationship_type, confidence_score). Update the retrieval engine to expand queries by following relationship edges (depth=1) and including related entities in context. Add unit and integration tests covering relationship discovery and expansion.
+- **Files**:
+  - packages/semantic-core/src/indexer.ts (update)
+  - packages/semantic-core/src/retrieval.ts (update)
+  - apps/api/migrations/005_add_entity_relationships.sql
+  - packages/semantic-core/src/__tests__/indexer.test.ts (update)
+  - packages/semantic-core/src/__tests__/retrieval.test.ts (update)
+- **Depends on**: Knowledge Graph Service (Neo4j), Indexer Implementation
+- **Added**: 2026-06-05
+
+---
+
+## Layer 15: Dashboard & Analytics
+
+### Task: Token Analytics Service & Dashboard
+- **Layer**: 15 — Dashboard & Analytics
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Implement packages/semantic-core/src/token-analytics.ts with TokenAnalytics class. Methods: logQuery(workspaceId, tokensSpent, tokensSavedByCaching, tokensSavedByCompression), getAnalytics(workspaceId, timeframe). Persist to Postgres (token_events table with timestamp, workspace_id, tokens_spent, tokens_saved_caching, tokens_saved_compression). Expose GET /api/v1/analytics/tokens endpoint returning time-series data. Wire up to the dashboard at apps/dashboard/app/analytics/page.tsx with a chart showing daily token spend, cache hit rate, and compression ratio. Include unit + integration tests.
+- **Files**:
+  - packages/semantic-core/src/token-analytics.ts
+  - packages/semantic-core/src/__tests__/token-analytics.test.ts
+  - packages/semantic-core/src/__tests__/token-analytics.integration.test.ts
+  - apps/api/migrations/006_add_token_events.sql
+  - apps/api/src/routes/analytics.ts
+  - apps/dashboard/app/analytics/page.tsx
+  - apps/dashboard/components/token-chart.tsx
+- **Depends on**: Compression Pipeline, Semantic Cache, MCP Server Bootstrap
+- **Added**: 2026-06-05
+
+### Task: Connector Setup UI Flow
+- **Layer**: 15 — Dashboard & Analytics
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Build a multi-step connector setup wizard in the dashboard at apps/dashboard/app/connectors/setup/page.tsx. Step 1: select connector type (list manifests from GET /api/v1/connectors/types). Step 2: OAuth redirect or API key entry (per manifest.auth config). Step 3: schema auto-discovery (call connector.getSchema()). Step 4: field mapping confirmation (show table/column summary). Step 5: review and create instance (POST /api/v1/connectors). Use shadcn/ui Stepper component. Full tests with mocked API responses.
+- **Files**:
+  - apps/dashboard/app/connectors/setup/page.tsx
+  - apps/dashboard/components/connector-setup-wizard.tsx
+  - apps/dashboard/components/oauth-redirect-handler.tsx
+  - apps/dashboard/components/schema-mapper.tsx
+  - apps/dashboard/app/connectors/setup/__tests__/page.test.tsx
+- **Depends on**: Dashboard Scaffold, Connector Instance Management API
 - **Added**: 2026-06-05
