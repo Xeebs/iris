@@ -1,0 +1,21 @@
+{
+  "statementHandle": "01b3-0000-0001-aaaa-bbbb0000d002",
+  "resultSetMetaData": {
+    "rowType": [
+      { "name": "ID", "type": "TEXT" },
+      { "name": "NAME", "type": "TEXT" },
+      { "name": "EMAIL", "type": "TEXT" },
+      { "name": "STATUS", "type": "TEXT" },
+      { "name": "UPDATED_AT", "type": "TIMESTAMP_LTZ" }
+    ],
+    "numRows": 3,
+    "partitionInfo": [
+      { "rowCount": 3 }
+    ]
+  },
+  "data": [
+    ["cust-001", "Acme Corp", "contact@acme.com", "active", "2024-03-15T10:00:00.000Z"],
+    ["cust-002", "Globex Inc", "info@globex.com", "inactive", "2024-02-01T08:30:00.000Z"],
+    ["cust-003", "Initech", "hello@initech.com", "active", "2024-03-20T14:45:00.000Z"]
+  ]
+}
