@@ -4,6 +4,8 @@ Completed tasks are logged here by the daemon after each successful commit.
 
 ---
 
+- 2026-06-05 | Snowflake Connector — SQL API sync, partition pagination, incremental sync, 17 MSW tests, 97.4% coverage
+
 <!-- Entries appended below by the pipeline daemon -->
 - 2026-06-04: COMMITTED Package Manifests — package.json, tsconfig.json, turbo.json, pnpm workspace; root typecheck passes
 - 2026-06-04: COMMITTED Local Infrastructure — docker-compose (postgres/pgvector, redis, qdrant), postgres-init.sql, db:migrate stub

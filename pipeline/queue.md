@@ -399,7 +399,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Snowflake Connector
 - **Layer**: 12 — Additional Connectors
-- **Status**: IN_PROGRESS
+- **Status**: COMMITTED
 - **Priority**: High
 - **Description**: Implement Snowflake connector in packages/connectors/snowflake/. Allow users to configure which tables to sync. Connector reads table schemas and syncs rows as SemanticEntity objects with field names as attributes. Support incremental sync via UPDATED_AT column filter. API-key auth (account, user, password, warehouse config). MSW tests with fixture SQL responses.
 - **Files**:
@@ -413,7 +413,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Connector Instance Management API
 - **Layer**: 12 — Additional Connectors
-- **Status**: UNWORKED
+- **Status**: IN_PROGRESS
 - **Priority**: High
 - **Description**: Extend apps/api/src/routes/connectors.ts to fully support connector instance persistence and lifecycle. Add endpoints: POST /connectors (create instance, store config in DB), GET /connectors/:id (fetch instance), PUT /connectors/:id (update config), DELETE /connectors/:id. Add POST /connectors/:id/sync (trigger sync job via BullMQ), POST /connectors/:id/test (health check). Store instance status (active|error|syncing) and lastSyncedAt. Integrate with the database schema from Database Schema Migrations task. Full tests with real DB.
 - **Files**:

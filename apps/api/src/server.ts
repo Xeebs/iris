@@ -6,7 +6,7 @@ import { PgvectorStore } from '@iris/semantic-core';
 import { logger } from '@iris/core/logger';
 
 import { requireAuth, errorHandler } from './middleware/index.js';
-import { connectorRoutes } from './routes/connectors.js';
+import { createConnectorRoutes } from './routes/connectors.js';
 import { createEntityRoutes } from './routes/entities.js';
 import { createQueryRoutes } from './routes/queries.js';
 import { createAuditRoutes } from './routes/audit.js';
@@ -22,10 +22,9 @@ function createApp(vectorStore: PgvectorStore, sql: ReturnType<typeof postgres>,
 
   app.use('*', clerkMiddleware());
 
-  app.route('/api/v1/connectors', connectorRoutes);
-
   const authed = new Hono();
   authed.use('*', requireAuth);
+  authed.route('/connectors', createConnectorRoutes(sql));
   authed.route('/entities', createEntityRoutes(vectorStore));
   authed.route('/queries', createQueryRoutes(vectorStore, openAiKey));
   authed.route('/audit', createAuditRoutes(sql));
