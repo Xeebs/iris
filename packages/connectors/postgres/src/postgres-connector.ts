@@ -1,0 +1,218 @@
+import { ok, err } from 'neverthrow';
+import type { Result } from 'neverthrow';
+import { z } from 'zod';
+import pg from 'postgres';
+
+import { BaseConnector, ConnectorError } from '@iris/connector-sdk';
+import type { SemanticEntity, SyncOptions, ConnectorSchema, HealthStatus, AttributeValue } from '@iris/connector-sdk';
+import { logger } from '@iris/core/logger';
+
+import { manifest } from './manifest.js';
+
+export { manifest };
+
+const tableConfigSchema = z.object({
+  name: z.string().min(1),
+  entityType: z.string().min(1).default('row'),
+  updatedAtColumn: z.string().optional(),
+  labelColumn: z.string().optional(),
+});
+
+const configSchema = z.object({
+  connectionString: z.string().min(1),
+  tables: z.array(tableConfigSchema).min(1),
+});
+
+export type TableConfig = z.infer<typeof tableConfigSchema>;
+export type PostgresConfig = z.infer<typeof configSchema>;
+
+const BATCH_SIZE = 500;
+
+export class PostgresConnector extends BaseConnector<PostgresConfig> {
+  private sql: ReturnType<typeof pg> | null = null;
+  private config: PostgresConfig | null = null;
+  private readonly log = logger.child({ connector: 'postgres' });
+
+  /**
+   * @param config - Connection string and table list
+   * @returns Result<void, ConnectorError>
+   */
+  async connect(config: PostgresConfig): Promise<Result<void, ConnectorError>> {
+    const parsed = configSchema.safeParse(config);
+    if (!parsed.success) {
+      return err(new ConnectorError(
+        `Invalid Postgres config: ${parsed.error.message}`,
+        'INVALID_CONFIG',
+        false,
+      ));
+    }
+
+    try {
+      this.sql = pg(parsed.data.connectionString, { ssl: false, max: 5 });
+      this.config = parsed.data;
+      await this.sql`SELECT 1`;
+      this.log.info('Connected to Postgres', { tables: parsed.data.tables.map((t) => t.name) });
+      return ok(undefined);
+    } catch (e) {
+      this.sql = null;
+      return err(new ConnectorError(`Postgres connection failed: ${String(e)}`, 'CONNECTION_FAILED', true));
+    }
+  }
+
+  /**
+   * @param options - Sync options including lastSyncedAt for incremental sync
+   */
+  async *sync(options: SyncOptions): AsyncGenerator<SemanticEntity> {
+    if (!this.sql || !this.config) {
+      throw new ConnectorError('Not connected — call connect() first', 'NOT_CONNECTED', false);
+    }
+
+    const tableFilter = options.entityTypes?.length
+      ? this.config.tables.filter((t) => options.entityTypes!.includes(t.entityType))
+      : this.config.tables;
+
+    for (const tableConf of tableFilter) {
+      yield* this.syncTable(tableConf, options);
+    }
+  }
+
+  async getSchema(): Promise<ConnectorSchema> {
+    if (!this.sql || !this.config) {
+      throw new ConnectorError('Not connected', 'NOT_CONNECTED', false);
+    }
+
+    const entityTypes = await Promise.all(
+      this.config.tables.map(async (tableConf) => {
+        const columns = await this.sql!<Array<{ column_name: string; data_type: string }>>`
+          SELECT column_name, data_type
+          FROM information_schema.columns
+          WHERE table_name = ${tableConf.name}
+            AND table_schema = 'public'
+          ORDER BY ordinal_position
+        `;
+
+        return {
+          name: tableConf.entityType,
+          attributes: columns.map((c: { column_name: string; data_type: string }) => ({
+            name: c.column_name,
+            type: pgTypeToAttributeType(c.data_type),
+            nullable: true,
+          })),
+        };
+      }),
+    );
+
+    return { entityTypes, version: '1.0.0' };
+  }
+
+  async healthCheck(): Promise<HealthStatus> {
+    if (!this.sql) {
+      return { healthy: false, error: 'Not connected', checkedAt: new Date() };
+    }
+    try {
+      await this.sql`SELECT 1`;
+      return { healthy: true, checkedAt: new Date() };
+    } catch (e) {
+      return { healthy: false, error: String(e), checkedAt: new Date() };
+    }
+  }
+
+  async close(): Promise<void> {
+    await this.sql?.end();
+    this.sql = null;
+  }
+
+  // ─── Private helpers ────────────────────────────────────────────────────────
+
+  private async *syncTable(
+    tableConf: TableConfig,
+    options: SyncOptions,
+  ): AsyncGenerator<SemanticEntity> {
+    if (!this.sql) return;
+
+    const tableName = tableConf.name;
+    const cursor = options.lastSyncedAt && tableConf.updatedAtColumn
+      ? options.lastSyncedAt
+      : null;
+
+    let offset = 0;
+
+    while (true) {
+      type Row = Record<string, unknown>;
+
+      const rows = cursor && tableConf.updatedAtColumn
+        ? await this.sql<Row[]>`
+            SELECT * FROM ${this.sql(tableName)}
+            WHERE ${this.sql(tableConf.updatedAtColumn)} > ${cursor}
+            ORDER BY ${this.sql(tableConf.updatedAtColumn)} ASC
+            LIMIT ${BATCH_SIZE} OFFSET ${offset}
+          `
+        : await this.sql<Row[]>`
+            SELECT * FROM ${this.sql(tableName)}
+            LIMIT ${BATCH_SIZE} OFFSET ${offset}
+          `;
+
+      if (rows.length === 0) break;
+
+      for (const row of rows) {
+        yield this.rowToEntity(row, tableConf);
+      }
+
+      if (rows.length < BATCH_SIZE) break;
+      offset += BATCH_SIZE;
+    }
+  }
+
+  private rowToEntity(row: Record<string, unknown>, tableConf: TableConfig): SemanticEntity {
+    const id = String(row['id'] ?? row['ID'] ?? Object.values(row)[0] ?? 'unknown');
+    const label = tableConf.labelColumn && row[tableConf.labelColumn]
+      ? String(row[tableConf.labelColumn])
+      : `${tableConf.name}:${id}`;
+
+    const updatedAtValue = tableConf.updatedAtColumn ? row[tableConf.updatedAtColumn] : null;
+    const lastModified =
+      updatedAtValue instanceof Date
+        ? updatedAtValue
+        : typeof updatedAtValue === 'string'
+          ? new Date(updatedAtValue)
+          : new Date();
+
+    const attributes: Record<string, AttributeValue> = {};
+    for (const [key, value] of Object.entries(row)) {
+      if (value === null || value === undefined) {
+        attributes[key] = null;
+      } else if (
+        typeof value === 'string' ||
+        typeof value === 'number' ||
+        typeof value === 'boolean'
+      ) {
+        attributes[key] = value;
+      } else if (value instanceof Date) {
+        attributes[key] = value.toISOString();
+      } else {
+        attributes[key] = String(value);
+      }
+    }
+
+    return {
+      id: `postgres:${tableConf.entityType}:${id}`,
+      type: tableConf.entityType,
+      label,
+      attributes,
+      relationships: [],
+      lastModified,
+      sourceId: `postgres:${tableConf.name}:${id}`,
+    };
+  }
+}
+
+function pgTypeToAttributeType(pgType: string): 'string' | 'number' | 'boolean' | 'date' {
+  if (['integer', 'bigint', 'smallint', 'numeric', 'real', 'double precision'].includes(pgType)) {
+    return 'number';
+  }
+  if (pgType === 'boolean') return 'boolean';
+  if (['timestamp', 'timestamptz', 'date', 'time', 'timetz'].some((t) => pgType.startsWith(t))) {
+    return 'date';
+  }
+  return 'string';
+}

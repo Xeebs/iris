@@ -301,7 +301,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: PostgreSQL Connector
 - **Layer**: 9 — Additional Connectors
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: Medium
 - **Description**: Direct Postgres connector in packages/connectors/postgres/. User configures which tables to index. Connector reads table schemas, syncs rows as SemanticEntity with field names as attributes. Supports incremental sync via updated_at column. API-key auth (connection string).
 - **Files**:
@@ -318,7 +318,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Dashboard Scaffold
 - **Layer**: 10 — Dashboard
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: Medium
 - **Description**: Scaffold apps/dashboard as a Next.js 14 app with App Router, shadcn/ui, Clerk auth. Pages: /dashboard (overview), /connectors (list + setup), /queries (audit log), /settings. Wire up to the REST API. Basic connector health status cards on overview.
 - **Files**:
