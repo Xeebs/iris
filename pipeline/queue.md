@@ -217,7 +217,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Compression Pipeline
 - **Layer**: 6 — Compression
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: High
 - **Description**: Implement packages/compression/src/pipeline.ts. A chain of stages: (1) deduplicate entities by ID, (2) truncate low-relevance entities to fit contextBudget, (3) serialize to compact structured format (not raw JSON). Each stage is a pure function. Export compress(entities, budget) which runs all stages. Full unit tests with varied budgets.
 - **Files**:
