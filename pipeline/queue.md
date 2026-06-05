@@ -29,7 +29,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Local Infrastructure
 - **Layer**: 0 — Foundation
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: High
 - **Description**: Create docker-compose.yml for local dev services: Postgres 16 with pgvector extension, Redis 7, Qdrant latest. Include init SQL to enable pgvector and create the iris database. Add a db:migrate script stub.
 - **Files**:
