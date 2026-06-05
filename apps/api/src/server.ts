@@ -12,6 +12,7 @@ import { createQueryRoutes } from './routes/queries.js';
 import { createAuditRoutes } from './routes/audit.js';
 import { createGlossaryRoutes } from './routes/glossary.js';
 import { createMetricRoutes } from './routes/metrics.js';
+import { createAnalyticsRoutes } from './routes/analytics.js';
 
 export { createApp };
 
@@ -30,6 +31,7 @@ function createApp(vectorStore: PgvectorStore, sql: ReturnType<typeof postgres>,
   authed.route('/audit', createAuditRoutes(sql));
   authed.route('/glossary', createGlossaryRoutes(sql));
   authed.route('/metrics', createMetricRoutes(sql));
+  authed.route('/analytics', createAnalyticsRoutes(sql));
 
   app.route('/api/v1', authed);
 

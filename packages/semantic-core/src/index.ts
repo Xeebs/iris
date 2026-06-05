@@ -10,3 +10,5 @@ export type { GlossaryTerm } from './glossary.js';
 export { GlossaryService } from './glossary.js';
 export type { Metric } from './metrics.js';
 export { MetricRegistry } from './metrics.js';
+export type { TokenEventInput, DailyTokenSummary, TokenAnalyticsSummary } from './token-analytics.js';
+export { TokenAnalytics } from './token-analytics.js';

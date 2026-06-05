@@ -90,3 +90,37 @@ export async function testConnector(instanceId: string): Promise<{ healthy: bool
   );
   return res.data;
 }
+
+export interface DailyTokenSummary {
+  date: string;
+  tokensSpent: number;
+  tokensSavedByCaching: number;
+  tokensSavedByCompression: number;
+  totalTokensSaved: number;
+  queryCount: number;
+  cacheHitRate: number;
+}
+
+export interface TokenAnalyticsSummary {
+  days: DailyTokenSummary[];
+  totals: {
+    tokensSpent: number;
+    tokensSaved: number;
+    cacheHitRate: number;
+    compressionRatio: number;
+  };
+}
+
+/**
+ * Fetch token analytics for a workspace.
+ *
+ * @param workspaceId - Workspace ID
+ * @param days - Number of days of history (default 30)
+ */
+export async function getTokenAnalytics(
+  workspaceId: string,
+  days = 30,
+): Promise<ApiResponse<TokenAnalyticsSummary>> {
+  const params = new URLSearchParams({ workspaceId, days: String(days) });
+  return apiFetch<ApiResponse<TokenAnalyticsSummary>>(`/analytics/tokens?${params.toString()}`);
+}

@@ -478,7 +478,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Token Analytics Service & Dashboard
 - **Layer**: 15 — Dashboard & Analytics
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: High
 - **Description**: Implement packages/semantic-core/src/token-analytics.ts with TokenAnalytics class. Methods: logQuery(workspaceId, tokensSpent, tokensSavedByCaching, tokensSavedByCompression), getAnalytics(workspaceId, timeframe). Persist to Postgres (token_events table with timestamp, workspace_id, tokens_spent, tokens_saved_caching, tokens_saved_compression). Expose GET /api/v1/analytics/tokens endpoint returning time-series data. Wire up to the dashboard at apps/dashboard/app/analytics/page.tsx with a chart showing daily token spend, cache hit rate, and compression ratio. Include unit + integration tests.
 - **Files**:
