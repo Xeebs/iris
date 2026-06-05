@@ -8,7 +8,7 @@
  * @see .claude/rules/connector-patterns.md
  */
 
-import type { ConnectorManifest, BaseConnector, SemanticEntity } from './base-connector';
+import type { ConnectorManifest, BaseConnector, SemanticEntity } from './base-connector.js';
 
 export type ConnectorFactory<TConfig = unknown> = (
   config: TConfig,

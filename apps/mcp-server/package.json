@@ -1,0 +1,33 @@
+{
+  "name": "@iris/mcp-server",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "main": "./dist/server.js",
+  "scripts": {
+    "build": "tsc --build",
+    "dev": "tsx --watch src/server.ts",
+    "start": "node dist/server.js",
+    "test": "vitest run --coverage",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src --ext .ts"
+  },
+  "dependencies": {
+    "@iris/cache": "workspace:*",
+    "@iris/compression": "workspace:*",
+    "@iris/connector-sdk": "workspace:*",
+    "@iris/core": "workspace:*",
+    "@iris/semantic-core": "workspace:*",
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "neverthrow": "^6.2.1",
+    "postgres": "^3.4.4",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "@vitest/coverage-v8": "^1.6.0",
+    "tsx": "^4.0.0",
+    "typescript": "^5.5.0",
+    "vitest": "^1.6.0"
+  }
+}

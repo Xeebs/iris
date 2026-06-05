@@ -10,7 +10,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Package Manifests
 - **Layer**: 0 — Foundation
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: High
 - **Description**: Create package.json files for all packages and apps with correct names, dependencies, and build scripts. Also create turbo.json pipeline config. Packages: @iris/core, @iris/connector-sdk, @iris/connectors, @iris/semantic-core, @iris/cache, @iris/compression, @iris/graph. Apps: @iris/mcp-server, @iris/api, @iris/dashboard.
 - **Files**:

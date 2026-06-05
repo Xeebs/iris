@@ -14,7 +14,6 @@
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
-    "composite": true,
     "paths": {
       "@iris/connector-sdk": ["./packages/connector-sdk/src/index.ts"],
       "@iris/connector-sdk/*": ["./packages/connector-sdk/src/*.ts"],
