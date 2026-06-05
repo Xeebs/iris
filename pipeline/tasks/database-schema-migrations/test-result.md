@@ -1,0 +1,1 @@
+PASS — SQL DDL reviewed. 3 migration files created: 001_initial_schema (workspaces + connector_instances), 002_add_glossary (glossary_terms), 003_add_metrics (metrics). All use workspace_id FK, gen_random_uuid() PKs, proper indexes, and UNIQUE constraints.

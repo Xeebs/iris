@@ -331,3 +331,94 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
   - apps/dashboard/components/connector-card.tsx
 - **Depends on**: API Server Bootstrap
 - **Added**: 2026-06-04
+
+---
+
+## Layer 11: Data Persistence & Glossary
+
+### Task: Database Schema Migrations
+- **Layer**: 11 — Data Persistence
+- **Status**: COMMITTED
+- **Priority**: High
+- **Description**: Create SQL migration files in apps/api/migrations/ for the core data model. Define tables: workspaces (id, name, createdAt), connector_instances (id, workspaceId, connectorId, config, status, lastSyncedAt), glossary_terms (id, workspaceId, term, definition, exampleValue), metrics (id, workspaceId, name, formula, description). All tables use workspace_id for tenant isolation. Include indexes on (workspace_id, type) for query performance. Follow the migration naming convention: 001_initial_schema.sql, 002_add_glossary.sql, etc. Reference apps/api/src/db/migrate.ts for how migrations are executed.
+- **Files**:
+  - apps/api/migrations/001_initial_schema.sql
+  - apps/api/migrations/002_add_glossary.sql
+  - apps/api/migrations/002_add_metrics.sql
+- **Depends on**: API Server Bootstrap
+- **Added**: 2026-06-05
+
+### Task: Glossary Service & API
+- **Layer**: 11 — Data Persistence
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Implement packages/semantic-core/src/glossary.ts with GlossaryService class. Methods: addTerm(workspaceId, term, definition, exampleValue), getTerm(workspaceId, term), listTerms(workspaceId, filter?), deleteTerm(workspaceId, term). Persist to postgres via pg pool. Wire up to apps/api/src/routes/glossary.ts with GET /api/v1/glossary, POST /api/v1/glossary (create term), DELETE /api/v1/glossary/:term endpoints. All endpoints require workspaceId. Full unit + integration tests.
+- **Files**:
+  - packages/semantic-core/src/glossary.ts
+  - packages/semantic-core/src/__tests__/glossary.test.ts
+  - packages/semantic-core/src/__tests__/glossary.integration.test.ts
+  - apps/api/src/routes/glossary.ts
+  - apps/api/src/__tests__/glossary.test.ts
+- **Depends on**: Database Schema Migrations
+- **Added**: 2026-06-05
+
+### Task: Metric Registry Service & API
+- **Layer**: 11 — Data Persistence
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Implement packages/semantic-core/src/metrics.ts with MetricRegistry class. Methods: defineMetric(workspaceId, name, formula, description), getMetric(workspaceId, name), listMetrics(workspaceId), deleteMetric(workspaceId, name). Persist to postgres. Wire up to apps/api/src/routes/metrics.ts with GET /api/v1/metrics, POST /api/v1/metrics, DELETE /api/v1/metrics/:name. Update the MCP tools get-metric and list-glossary (in apps/mcp-server) to call these services instead of returning stubs. Full unit + integration tests.
+- **Files**:
+  - packages/semantic-core/src/metrics.ts
+  - packages/semantic-core/src/__tests__/metrics.test.ts
+  - packages/semantic-core/src/__tests__/metrics.integration.test.ts
+  - apps/api/src/routes/metrics.ts
+  - apps/api/src/__tests__/metrics.test.ts
+  - apps/mcp-server/src/tools/get-metric.ts (update)
+  - apps/mcp-server/src/tools/list-glossary.ts (update)
+- **Depends on**: Database Schema Migrations
+- **Added**: 2026-06-05
+
+---
+
+## Layer 12: Additional Connectors
+
+### Task: Google Drive Connector
+- **Layer**: 12 — Additional Connectors
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Implement Google Drive connector in packages/connectors/google-drive/. Sync files and folders as SemanticEntity objects. Use OAuth2 (Google API). Support incremental sync via modifiedTime cursor. Extract file content for indexing (text files only). ConnectorManifest with name, icon, OAuth scopes. MSW tests with fixture responses. See connector-patterns.md for sync generator and entity transformation rules.
+- **Files**:
+  - packages/connectors/google-drive/src/google-drive-connector.ts
+  - packages/connectors/google-drive/src/manifest.ts
+  - packages/connectors/google-drive/src/transformers.ts
+  - packages/connectors/google-drive/src/__tests__/google-drive-connector.test.ts
+  - packages/connectors/google-drive/tests/fixtures/files.json
+  - packages/connectors/google-drive/package.json
+- **Depends on**: HubSpot Connector
+- **Added**: 2026-06-05
+
+### Task: Snowflake Connector
+- **Layer**: 12 — Additional Connectors
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Implement Snowflake connector in packages/connectors/snowflake/. Allow users to configure which tables to sync. Connector reads table schemas and syncs rows as SemanticEntity objects with field names as attributes. Support incremental sync via UPDATED_AT column filter. API-key auth (account, user, password, warehouse config). MSW tests with fixture SQL responses.
+- **Files**:
+  - packages/connectors/snowflake/src/snowflake-connector.ts
+  - packages/connectors/snowflake/src/manifest.ts
+  - packages/connectors/snowflake/src/__tests__/snowflake-connector.test.ts
+  - packages/connectors/snowflake/tests/fixtures/tables.json
+  - packages/connectors/snowflake/package.json
+- **Depends on**: HubSpot Connector
+- **Added**: 2026-06-05
+
+### Task: Connector Instance Management API
+- **Layer**: 12 — Additional Connectors
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Extend apps/api/src/routes/connectors.ts to fully support connector instance persistence and lifecycle. Add endpoints: POST /connectors (create instance, store config in DB), GET /connectors/:id (fetch instance), PUT /connectors/:id (update config), DELETE /connectors/:id. Add POST /connectors/:id/sync (trigger sync job via BullMQ), POST /connectors/:id/test (health check). Store instance status (active|error|syncing) and lastSyncedAt. Integrate with the database schema from Database Schema Migrations task. Full tests with real DB.
+- **Files**:
+  - apps/api/src/routes/connectors.ts (update)
+  - apps/api/src/services/connector-service.ts
+  - apps/api/src/__tests__/connectors.test.ts (update)
+- **Depends on**: Database Schema Migrations
+- **Added**: 2026-06-05
