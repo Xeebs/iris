@@ -36,10 +36,10 @@ Rules:
 - Read pipeline/state.json first and resume from the recorded phase and active task
 - Run all phases in direct sequence for each task: Plan → Implement → Test → Commit → next task
 - After committing a task, immediately pick the next UNWORKED High task and continue — do NOT stop
-- Run task research only if fewer than 3 UNWORKED items remain AND last_research is not today
-- Only stop if: (a) the Claude API returns a rate-limit error, or (b) the queue has no UNWORKED High/Medium tasks left
+- Run task research (spawn the task-researcher subagent) whenever fewer than 3 UNWORKED items remain — no date restriction; researcher will generate the next batch
+- Only stop if: (a) the Claude API returns a rate-limit error, or (b) the queue has no UNWORKED High/Medium tasks left AND task research produced 0 new tasks
 - On rate-limit: write rate_limit_hit=true and current phase/task to pipeline/state.json, then exit
-- On queue exhausted: write current_phase=IDLE to pipeline/state.json, then exit
+- On queue exhausted after research: write current_phase=IDLE to pipeline/state.json, then exit
 - Write pipeline/state.json after every phase transition so a crash is recoverable
 
 Do not treat this as a one-task-per-invocation boundary. Drive all work forward until genuinely blocked."

@@ -80,9 +80,7 @@ Read `pipeline/state.json`. Identify `current_phase` and `active_task`. If a tas
 
 ### Phase 1 — Task Research (conditional)
 
-Spawn the **task-researcher** subagent if: (a) fewer than 3 UNWORKED items remain in `pipeline/queue.md` AND (b) `last_research` in state is not today. Otherwise skip to Phase 2.
-
-The researcher scans the PRD, existing stubs, and TODO comments to generate 3–5 new tasks. It updates `pipeline/state.json` with `last_research: <today>`.
+Spawn the **task-researcher** subagent whenever fewer than 3 UNWORKED items remain in `pipeline/queue.md`. There is no date restriction — run it every cycle if needed until new tasks are added. The researcher scans the PRD, existing stubs, and TODO comments to generate 3–5 new tasks. It updates `pipeline/state.json` with `last_research: <today>`.
 
 ### Phase 2 — Plan
 
@@ -118,9 +116,9 @@ If tests pass:
 
 **Only stop** under one of these two conditions:
 1. **Rate limited** — write `rate_limit_hit: true` and current phase/task to state, then exit.
-2. **Queue exhausted** — no UNWORKED High or Medium tasks. Write `current_phase: IDLE` to state, then exit.
+2. **Queue exhausted after research** — task-researcher ran and produced 0 new tasks. Write `current_phase: IDLE` to state, then exit.
 
-Never stop after a single task. Drive all work forward until genuinely blocked.
+Never stop after a single task. Never stop because `last_research` is today — always attempt research when the queue is low. Drive all work forward until genuinely blocked.
 
 ---
 

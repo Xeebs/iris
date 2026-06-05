@@ -23,9 +23,9 @@ LOG_DIR     = IRIS / "logs"
 CLAUDE      = Path.home() / ".local" / "bin" / "claude"
 ENV_FILE    = IRIS / ".env"
 
-SLEEP_RATE_LIMITED  = 3600      # 1 hour
-SLEEP_QUEUE_EMPTY   = 2 * 3600  # 2 hours — task research will add new items
-SLEEP_UNEXPECTED    = 120       # 2 min retry on unexpected exit
+SLEEP_RATE_LIMITED  = 3600  # 1 hour
+SLEEP_QUEUE_EMPTY   = 3600  # 1 hour — matches heartbeat cadence; researcher adds new tasks
+SLEEP_UNEXPECTED    = 120   # 2 min retry on unexpected exit
 
 PROMPT = """\
 Run the Iris build pipeline as defined in CLAUDE.md. This is a wake-up trigger \
@@ -35,12 +35,12 @@ Rules:
 - Read pipeline/state.json first and resume from the recorded phase and active task
 - Run all phases in direct sequence for each task: Plan → Implement → Test → Commit → next task
 - After committing a task, immediately pick the next UNWORKED High task and continue — do NOT stop
-- Run task research (spawn the task-researcher subagent) only if: (a) fewer than 3 UNWORKED items remain \
-AND (b) last_research is not today; skip otherwise
+- Run task research (spawn the task-researcher subagent) whenever fewer than 3 UNWORKED items remain — \
+no date restriction; the researcher will generate the next batch and update last_research in state
 - Only stop if: (a) the Claude API returns a rate-limit error, or (b) the queue has no UNWORKED \
-High or Medium tasks left
+High or Medium tasks left AND task research produced 0 new tasks
 - On rate-limit: write rate_limit_hit=true and current phase/task to pipeline/state.json, then exit
-- On queue exhausted: write current_phase=IDLE to pipeline/state.json, then exit
+- On queue exhausted after research: write current_phase=IDLE to pipeline/state.json, then exit
 - Write pipeline/state.json after every phase transition so a crash is recoverable
 
 Do not treat this as a one-task-per-invocation boundary. Drive all work forward until genuinely blocked.\
@@ -165,7 +165,7 @@ def main() -> None:
             write_daemon("sleeping", "Rate limited — resuming in 1 hour", wake_iso(sleep_sec))
         elif phase == "IDLE":
             sleep_sec = SLEEP_QUEUE_EMPTY
-            write_daemon("sleeping", "Queue exhausted — resuming in 2 hours for task research", wake_iso(sleep_sec))
+            write_daemon("sleeping", "Queue exhausted — resuming in 1 hour for task research", wake_iso(sleep_sec))
         else:
             sleep_sec = SLEEP_UNEXPECTED
             write_daemon("sleeping", f"Unexpected exit (code {returncode}) — retrying in 2 minutes", wake_iso(sleep_sec))

@@ -505,3 +505,84 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
   - apps/dashboard/app/connectors/setup/__tests__/page.test.tsx
 - **Depends on**: Dashboard Scaffold, Connector Instance Management API
 - **Added**: 2026-06-05
+
+---
+
+## Layer 16: Production Hardening
+
+### Task: MCP Server API Key Authentication & Workspace Isolation
+- **Layer**: 16 — Production Hardening
+- **Status**: IN_PROGRESS
+- **Priority**: High
+- **Description**: Implement API key-based authentication for the MCP server to enforce workspace isolation and access control. Create apps/api/migrations/007_add_mcp_api_keys.sql with tables: mcp_api_keys (id, workspace_id, key_hash, display_name, createdAt, lastUsedAt, revokedAt) and mcp_audit_sessions (session_id, api_key_id, workspace_id, connectedAt, disconnectedAt). Update apps/mcp-server/src/server.ts to validate incoming MCP requests via an API key passed in the MCP initialize message (or via StdioServerTransport metadata). Ensure all MCP tools check workspace_id from the authenticated key and return 403 if accessing resources outside that workspace. Add integration tests with real Postgres. Reference api-conventions.md for auth patterns.
+- **Files**:
+  - apps/api/migrations/007_add_mcp_api_keys.sql
+  - packages/semantic-core/src/api-key-manager.ts
+  - apps/mcp-server/src/auth.ts
+  - apps/mcp-server/src/server.ts (update)
+  - apps/mcp-server/src/tools/query-context.ts (update)
+  - apps/mcp-server/src/tools/list-entities.ts (update)
+  - apps/mcp-server/src/tools/get-entity.ts (update)
+  - apps/mcp-server/src/tools/get-metric.ts (update)
+  - apps/mcp-server/src/tools/list-glossary.ts (update)
+  - packages/semantic-core/src/__tests__/api-key-manager.test.ts
+  - apps/mcp-server/src/__tests__/auth.test.ts
+  - apps/mcp-server/src/__tests__/server.integration.test.ts
+- **Depends on**: MCP Server Bootstrap
+- **Added**: 2026-06-05
+
+### Task: REST API Rate Limiting & Request Throttling
+- **Layer**: 16 — Production Hardening
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Implement rate limiting middleware for the REST API to prevent abuse and ensure fair resource usage. Create apps/api/src/middleware/rate-limiter.ts using Redis-backed sliding window counters with per-workspace limits. Defaults: 100 requests/minute per workspace, 10 requests/minute for sync triggers (POST /api/v1/connectors/:id/sync). Make limits configurable via env vars. Return 429 with Retry-After header when exceeded. Update apps/api/src/server.ts to register the middleware globally and selectively per route. Add unit tests with mocked Redis and integration tests with real Redis. See api-conventions.md for HTTP status code rules.
+- **Files**:
+  - apps/api/src/middleware/rate-limiter.ts
+  - apps/api/src/server.ts (update)
+  - apps/api/src/__tests__/rate-limiter.test.ts
+  - apps/api/src/__tests__/rate-limiter.integration.test.ts
+- **Depends on**: API Server Bootstrap
+- **Added**: 2026-06-05
+
+### Task: Sync Worker Implementation & Connector Invocation
+- **Layer**: 16 — Production Hardening
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Complete the sync-worker.ts stub in apps/api/src/workers/sync-worker.ts to actually execute connector syncs. The worker should: (1) look up the connector instance from the database, (2) instantiate the registered connector with its config, (3) call connector.sync() to get an AsyncGenerator of entities, (4) yield entities to the semantic indexer (packages/semantic-core/src/indexer.ts), (5) update connector_instances.lastSyncedAt on completion, (6) emit sync events to an audit log. Handle errors with retry logic (3 retries, exponential backoff already configured in BullMQ). Log sync start/progress/completion. Add integration tests with mocked Postgres and a real Redis queue.
+- **Files**:
+  - apps/api/src/workers/sync-worker.ts (update)
+  - apps/api/src/workers/__tests__/sync-worker.integration.test.ts
+  - packages/semantic-core/src/sync-events.ts (new)
+- **Depends on**: BullMQ Job Queue Infrastructure, Connector Instance Management API
+- **Added**: 2026-06-05
+
+### Task: E2E Tests for Critical User Flows
+- **Layer**: 16 — Production Hardening
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Write end-to-end tests using Playwright in tests/e2e/ covering critical user flows: (1) Dashboard connector setup flow (select type → OAuth → schema discovery → create instance), (2) MCP query flow (authenticate with API key → query-context returns relevant entities → cache hit on repeat query), (3) Token analytics flow (trigger sync → verify tokens logged → check analytics page shows usage). Tests should use real API server and MCP server running locally, with Postgres and Redis via docker-compose. Include fixtures for connector OAuth mocks and test data. Target: 3–5 test suites with 10–15 tests total.
+- **Files**:
+  - tests/e2e/connector-setup.spec.ts
+  - tests/e2e/mcp-query.spec.ts
+  - tests/e2e/token-analytics.spec.ts
+  - tests/e2e/fixtures/auth-mocks.ts
+  - tests/e2e/utils/test-setup.ts
+  - tests/playwright.config.ts
+- **Depends on**: Connector Setup UI Flow, MCP Server Bootstrap, Token Analytics Service & Dashboard
+- **Added**: 2026-06-05
+
+### Task: Connector Health Monitoring & Dashboard Integration
+- **Layer**: 16 — Production Hardening
+- **Status**: UNWORKED
+- **Priority**: Medium
+- **Description**: Complete connector health monitoring by: (1) extending packages/semantic-core/src to export a ConnectorHealthService that periodically calls connector.healthCheck() for each active instance and stores results in a new connector_health table (instance_id, status, lastChecked, errorMessage), (2) wiring the service into apps/api/src/routes/connectors.ts to expose GET /api/v1/connectors/:id/health and GET /api/v1/connectors/health (all instances), (3) building a dashboard component at apps/dashboard/components/connector-health-card.tsx showing live status (green/yellow/red), lastSyncedAt, and error details if unhealthy. Add health check triggers on sync completion and manual refresh endpoint. Full tests with mocked health responses.
+- **Files**:
+  - packages/semantic-core/src/connector-health-service.ts
+  - apps/api/migrations/008_add_connector_health.sql
+  - apps/api/src/routes/connectors.ts (update)
+  - apps/dashboard/components/connector-health-card.tsx
+  - apps/dashboard/app/connectors/page.tsx (update)
+  - packages/semantic-core/src/__tests__/connector-health-service.test.ts
+  - apps/api/src/__tests__/connectors.test.ts (update)
+- **Depends on**: BullMQ Job Queue Infrastructure, Connector Instance Management API
+- **Added**: 2026-06-05
