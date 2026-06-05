@@ -33,9 +33,8 @@ const LEVEL_PRIORITY: Record<LogLevel, number> = {
 };
 
 function createLogger(baseContext: LogMetadata = {}): Logger {
-  const minLevel: LogLevel = (process.env.LOG_LEVEL as LogLevel) ?? 'info';
-
   function log(level: LogLevel, message: string, metadata: LogMetadata = {}): void {
+    const minLevel: LogLevel = (process.env['LOG_LEVEL'] as LogLevel | undefined) ?? 'info';
     if (LEVEL_PRIORITY[level] < LEVEL_PRIORITY[minLevel]) return;
 
     // Scrub sensitive keys before logging
@@ -48,10 +47,11 @@ function createLogger(baseContext: LogMetadata = {}): Logger {
       ...safe,
     };
 
+    const output = JSON.stringify(entry) + '\n';
     if (level === 'error') {
-      process.stderr.write(JSON.stringify(entry) + '\n');
+      process.stderr.write(output);
     } else {
-      process.stdout.write(JSON.stringify(entry) + '\n');
+      process.stdout.write(output);
     }
   }
 
