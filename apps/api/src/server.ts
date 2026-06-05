@@ -1,11 +1,12 @@
 import { Hono } from 'hono';
 import { serve } from '@hono/node-server';
 import postgres from 'postgres';
+import { Redis } from 'ioredis';
 import { clerkMiddleware } from '@hono/clerk-auth';
 import { PgvectorStore } from '@iris/semantic-core';
 import { logger } from '@iris/core/logger';
 
-import { requireAuth, errorHandler } from './middleware/index.js';
+import { requireAuth, errorHandler, defaultRateLimiter, syncRateLimiter } from './middleware/index.js';
 import { createConnectorRoutes } from './routes/connectors.js';
 import { createEntityRoutes } from './routes/entities.js';
 import { createQueryRoutes } from './routes/queries.js';
@@ -18,14 +19,32 @@ export { createApp };
 
 const log = logger.child({ service: 'api' });
 
-function createApp(vectorStore: PgvectorStore, sql: ReturnType<typeof postgres>, openAiKey: string): Hono {
+function createApp(
+  vectorStore: PgvectorStore,
+  sql: ReturnType<typeof postgres>,
+  openAiKey: string,
+  redis?: InstanceType<typeof Redis>,
+): Hono {
   const app = new Hono();
 
   app.use('*', clerkMiddleware());
 
   const authed = new Hono();
   authed.use('*', requireAuth);
-  authed.route('/connectors', createConnectorRoutes(sql));
+
+  // Global rate limit: 100 req/min per user
+  if (redis) {
+    authed.use('*', defaultRateLimiter(redis));
+  }
+
+  const connectorRoutes = createConnectorRoutes(sql);
+
+  // Tighter limit on sync triggers: 10 req/min per user
+  if (redis) {
+    connectorRoutes.use('/:id/sync', syncRateLimiter(redis));
+  }
+
+  authed.route('/connectors', connectorRoutes);
   authed.route('/entities', createEntityRoutes(vectorStore));
   authed.route('/queries', createQueryRoutes(vectorStore, openAiKey));
   authed.route('/audit', createAuditRoutes(sql));
@@ -54,11 +73,13 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
+  const redisUrl = process.env['REDIS_URL'] ?? 'redis://localhost:6379';
   const sql = postgres(pgUrl);
   const vectorStore = new PgvectorStore(pgUrl);
   await vectorStore.initialize();
+  const redis = new Redis(redisUrl);
 
-  const app = createApp(vectorStore, sql, openAiKey);
+  const app = createApp(vectorStore, sql, openAiKey, redis);
 
   serve({ fetch: app.fetch, port }, (info) => {
     log.info('Iris API server started', { port: info.port });
