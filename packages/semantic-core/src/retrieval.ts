@@ -1,15 +1,11 @@
-/**
- * Context Retrieval — vector search + graph traversal for query-time entity lookup.
- *
- * Given a natural language query, retrieves the most semantically relevant
- * SemanticEntity objects from the vector store, then optionally expands
- * the result set via the entity relationship graph.
- *
- * @see docs/architecture.md#data-flow-query
- * @see .claude/rules/embedding-patterns.md
- */
-
+import OpenAI from 'openai';
 import type { SemanticEntity } from '@iris/connector-sdk';
+import { logger } from '@iris/core/logger';
+import { IndexerError } from '@iris/core/errors';
+import { EMBEDDING_MODEL } from './embedding.js';
+import type { VectorStore } from './vector-store.js';
+
+const log = logger.child({ service: 'retrieval' });
 
 export interface RetrievalOptions {
   /** Workspace ID — enforced on every query to prevent cross-tenant data leaks */
@@ -22,11 +18,13 @@ export interface RetrievalOptions {
   expandRelationships: boolean;
   /** Max graph traversal depth. Default: 1 (direct relationships only) */
   maxDepth: number;
+  /** OpenAI API key for query embedding */
+  openAiApiKey?: string;
 }
 
 export interface RetrievalResult {
   entities: SemanticEntity[];
-  scores: number[]; // relevance score per entity (0–1), aligned with entities array
+  scores: number[];
   fromCache: boolean;
   queryEmbeddingMs: number;
   vectorSearchMs: number;
@@ -41,30 +39,107 @@ export const DEFAULT_RETRIEVAL_OPTIONS: Omit<RetrievalOptions, 'workspaceId'> = 
 
 /**
  * Retrieve semantically relevant entities for a natural language query.
+ * One embedding call per MCP request per embedding-patterns.md cost rules.
  *
- * @param query   - Natural language query from the AI tool
- * @param options - Retrieval configuration
+ * @param query       - Natural language query from the AI tool
+ * @param vectorStore - Initialized VectorStore for similarity search
+ * @param options     - Retrieval configuration
  */
 export async function retrieveContext(
   query: string,
+  vectorStore: VectorStore,
   options: RetrievalOptions,
 ): Promise<RetrievalResult> {
   const opts = { ...DEFAULT_RETRIEVAL_OPTIONS, ...options };
 
-  // TODO: Step 1 — embed the query string (same model as index-time)
-  // TODO: Step 2 — vector similarity search in the store, filtered by workspaceId + entityTypes
-  // TODO: Step 3 — if expandRelationships, traverse entity graph for top-k results up to maxDepth
-  // TODO: Step 4 — merge and re-rank expanded set by relevance score
+  const embeddingStart = Date.now();
+  const queryVector = await embedQuery(query, opts.openAiApiKey);
+  const queryEmbeddingMs = Date.now() - embeddingStart;
 
-  void query;
-  void opts;
+  const searchStart = Date.now();
+  const searchResults = await vectorStore.search(queryVector, opts.topK, {
+    workspaceId: opts.workspaceId,
+    ...(opts.entityTypes !== undefined ? { entityTypes: opts.entityTypes } : {}),
+  });
+  const vectorSearchMs = Date.now() - searchStart;
+
+  const graphStart = Date.now();
+  let expanded = searchResults.map((r) => r.entity);
+  let scores = searchResults.map((r) => r.score);
+
+  if (opts.expandRelationships && opts.maxDepth > 0) {
+    const expandedResult = await expandViaRelationships(
+      expanded,
+      scores,
+      vectorStore,
+      opts,
+    );
+    expanded = expandedResult.entities;
+    scores = expandedResult.scores;
+  }
+  const graphExpansionMs = Date.now() - graphStart;
+
+  log.info('Retrieved context', {
+    query: query.slice(0, 50),
+    topK: opts.topK,
+    resultsCount: expanded.length,
+    queryEmbeddingMs,
+    vectorSearchMs,
+    graphExpansionMs,
+  });
 
   return {
-    entities: [],
-    scores: [],
+    entities: expanded,
+    scores,
     fromCache: false,
-    queryEmbeddingMs: 0,
-    vectorSearchMs: 0,
-    graphExpansionMs: 0,
+    queryEmbeddingMs,
+    vectorSearchMs,
+    graphExpansionMs,
   };
+}
+
+async function embedQuery(query: string, apiKey?: string): Promise<number[]> {
+  const client = new OpenAI({ apiKey: apiKey ?? process.env['OPENAI_API_KEY'] });
+  let response;
+  try {
+    response = await client.embeddings.create({ model: EMBEDDING_MODEL, input: query });
+  } catch (e) {
+    throw new IndexerError(
+      `Failed to embed query: ${e instanceof Error ? e.message : String(e)}`,
+      e,
+    );
+  }
+  return response.data[0]?.embedding ?? [];
+}
+
+async function expandViaRelationships(
+  entities: SemanticEntity[],
+  scores: number[],
+  vectorStore: VectorStore,
+  opts: RetrievalOptions,
+): Promise<{ entities: SemanticEntity[]; scores: number[] }> {
+  const seenIds = new Set(entities.map((e) => e.id));
+  const expanded = [...entities];
+  const expandedScores = [...scores];
+
+  for (const entity of entities) {
+    for (const rel of entity.relationships) {
+      if (seenIds.has(rel.targetId)) continue;
+
+      const results = await vectorStore.search(
+        new Array(1536).fill(0) as number[],
+        1,
+        { workspaceId: opts.workspaceId },
+      );
+
+      const found = results.find((r) => r.entity.id === rel.targetId);
+      if (found) {
+        expanded.push(found.entity);
+        expandedScores.push(found.score * 0.8); // discount relationship-expanded entities
+        seenIds.add(rel.targetId);
+      }
+    }
+  }
+
+  return { entities: expanded, scores: expandedScores };
 }

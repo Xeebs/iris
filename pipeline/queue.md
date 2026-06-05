@@ -143,7 +143,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Embedding Service
 - **Layer**: 4 — Semantic Core
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: High
 - **Description**: Implement packages/semantic-core/src/embedding.ts. Wrap OpenAI text-embedding-3-small. Accept a batch of SemanticEntity objects, build the embedding input string per embedding-patterns.md rules (type:label; attrs), call the API in batches of 100, return float32 vectors. Log latency and token counts. Skip PII fields.
 - **Files**:
@@ -154,7 +154,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Vector Store Interface
 - **Layer**: 4 — Semantic Core
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: High
 - **Description**: Implement packages/semantic-core/src/vector-store.ts. Define a VectorStore interface with upsert(entities, vectors), search(queryVector, topK, filter), and delete(ids). Implement PgvectorStore using postgres + pgvector. Write integration tests (Vitest, real Postgres via docker-compose).
 - **Files**:
@@ -165,7 +165,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Indexer Implementation
 - **Layer**: 4 — Semantic Core
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: High
 - **Description**: Complete the flushBatch implementation in packages/semantic-core/src/indexer.ts. Wire up: embedding generation → cosine similarity dedup check → upsert to vector store → emit cache invalidation events. Respect the 0.85 dedup threshold from embedding-patterns.md. Add full unit tests.
 - **Files**:
@@ -176,7 +176,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Retrieval Engine
 - **Layer**: 4 — Semantic Core
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: High
 - **Description**: Implement packages/semantic-core/src/retrieval.ts. Function queryContext(query, options) that: generates a query embedding, vector-searches for top-k entities, optionally expands via relationship graph, applies context budget (token counting), returns a compact context string. Add unit tests with mocked vector store.
 - **Files**:

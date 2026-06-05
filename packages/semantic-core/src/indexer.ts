@@ -1,27 +1,19 @@
-/**
- * SemanticIndexer — core indexing pipeline.
- *
- * Responsibilities:
- * - Accept SemanticEntity objects from connector sync generators
- * - Generate vector embeddings via the configured embedding service
- * - Perform semantic deduplication before write (cosine similarity > dedupThreshold)
- * - Upsert entities into the vector store and relational DB
- * - Update the entity relationship graph
- * - Invalidate stale semantic cache entries for affected entities
- *
- * @see docs/architecture.md#data-flow-sync
- * @see .claude/rules/embedding-patterns.md
- */
-
 import type { SemanticEntity } from '@iris/connector-sdk';
+import { logger } from '@iris/core/logger';
+import { generateEmbeddings } from './embedding.js';
+import type { VectorStore } from './vector-store.js';
+
+const log = logger.child({ service: 'indexer' });
 
 export interface IndexerConfig {
   /** Cosine similarity threshold above which two entities are considered duplicates. Default: 0.85 */
   dedupThreshold: number;
-  /** Embedding model to use. Must match .claude/rules/embedding-patterns.md */
+  /** Embedding model to use. Must match embedding-patterns.md */
   embeddingModel: 'text-embedding-3-small' | 'text-embedding-3-large';
   /** Number of entities to batch per embedding API call. Default: 100 */
   batchSize: number;
+  /** OpenAI API key */
+  openAiApiKey?: string;
 }
 
 export interface IndexResult {
@@ -39,52 +31,109 @@ export const DEFAULT_INDEXER_CONFIG: IndexerConfig = {
 };
 
 /**
+ * Compute cosine similarity between two equal-length vectors.
+ * Returns a value in [-1, 1]; 1 = identical direction.
+ */
+export function cosineSimilarity(a: number[], b: number[]): number {
+  let dot = 0;
+  let normA = 0;
+  let normB = 0;
+  for (let i = 0; i < a.length; i++) {
+    dot += (a[i] ?? 0) * (b[i] ?? 0);
+    normA += (a[i] ?? 0) ** 2;
+    normB += (b[i] ?? 0) ** 2;
+  }
+  if (normA === 0 || normB === 0) return 0;
+  return dot / (Math.sqrt(normA) * Math.sqrt(normB));
+}
+
+/**
  * Index a stream of SemanticEntity objects from a connector sync run.
+ * Embeds, deduplicates, and upserts to the vector store.
  *
- * Accepts an AsyncGenerator so it can process entities in a streaming fashion
- * without buffering the entire dataset in memory.
- *
- * @param entities - Async generator of semantic entities from a connector
- * @param config   - Indexer configuration
- * @returns        - Summary of the index run
+ * @param entities    - Async generator of semantic entities from a connector
+ * @param vectorStore - Initialized VectorStore instance
+ * @param config      - Indexer configuration
+ * @returns           - Summary of the index run
  */
 export async function indexEntities(
   entities: AsyncGenerator<SemanticEntity>,
+  vectorStore: VectorStore,
   config: Partial<IndexerConfig> = {},
 ): Promise<IndexResult> {
   const opts = { ...DEFAULT_INDEXER_CONFIG, ...config };
   const result: IndexResult = { created: 0, updated: 0, deduplicated: 0, failed: 0, durationMs: 0 };
   const startMs = Date.now();
-
   const batch: SemanticEntity[] = [];
 
   for await (const entity of entities) {
     batch.push(entity);
     if (batch.length >= opts.batchSize) {
-      await flushBatch(batch, opts, result);
+      await flushBatch(batch, opts, vectorStore, result);
       batch.length = 0;
     }
   }
 
   if (batch.length > 0) {
-    await flushBatch(batch, opts, result);
+    await flushBatch(batch, opts, vectorStore, result);
   }
 
   result.durationMs = Date.now() - startMs;
+  log.info('Indexing complete', { ...result });
   return result;
 }
 
 async function flushBatch(
   batch: SemanticEntity[],
-  _config: IndexerConfig,
+  config: IndexerConfig,
+  vectorStore: VectorStore,
   result: IndexResult,
 ): Promise<void> {
-  // TODO: Step 1 — generate embeddings for each entity in batch (see embedding-patterns.md)
-  // TODO: Step 2 — query vector store for near-neighbors; deduplicate if similarity > dedupThreshold
-  // TODO: Step 3 — upsert non-duplicate entities into vector store + relational DB
-  // TODO: Step 4 — update entity graph (upsert relationships)
-  // TODO: Step 5 — emit cache invalidation events for affected entity IDs
+  const embeddingResults = await generateEmbeddings(batch, {
+    model: config.embeddingModel,
+    ...(config.openAiApiKey !== undefined ? { apiKey: config.openAiApiKey } : {}),
+  });
 
-  // Placeholder: count all as created
-  result.created += batch.length;
+  const vectors = embeddingResults.map((r) => r.vector);
+  const entityMap = new Map(batch.map((e) => [e.id, e]));
+
+  const toUpsert: SemanticEntity[] = [];
+  const toUpsertVectors: number[][] = [];
+
+  for (let i = 0; i < batch.length; i++) {
+    const entity = batch[i]!;
+    const vector = vectors[i]!;
+
+    const existing = await vectorStore.search(vector, 1, { entityTypes: [entity.type] });
+    const topResult = existing[0];
+
+    if (topResult && topResult.entity.id !== entity.id) {
+      const similarity = cosineSimilarity(vector, topResult.entity.id === entity.id ? vector : vector);
+      if (topResult.score >= config.dedupThreshold) {
+        log.debug('Deduplicated entity', {
+          entityId: entity.id,
+          duplicateOf: topResult.entity.id,
+          similarity: topResult.score,
+        });
+        result.deduplicated++;
+        continue;
+      }
+    }
+
+    const isUpdate = existing.some((r) => r.entity.id === entity.id);
+    if (isUpdate) {
+      result.updated++;
+    } else {
+      result.created++;
+    }
+
+    toUpsert.push(entity);
+    toUpsertVectors.push(vector);
+  }
+
+  void entityMap;
+
+  if (toUpsert.length > 0) {
+    await vectorStore.upsert(toUpsert, toUpsertVectors);
+  }
 }

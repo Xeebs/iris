@@ -1,4 +1,8 @@
 export type { IndexerConfig, IndexResult } from './indexer.js';
-export { DEFAULT_INDEXER_CONFIG, indexEntities } from './indexer.js';
+export { DEFAULT_INDEXER_CONFIG, indexEntities, cosineSimilarity } from './indexer.js';
 export type { RetrievalOptions, RetrievalResult } from './retrieval.js';
 export { DEFAULT_RETRIEVAL_OPTIONS, retrieveContext } from './retrieval.js';
+export type { EmbeddingResult, EmbeddingServiceOptions } from './embedding.js';
+export { buildEmbeddingInput, generateEmbeddings, EMBEDDING_MODEL, EMBEDDING_DIMENSIONS, BATCH_SIZE } from './embedding.js';
+export type { VectorStore, VectorSearchFilter, VectorSearchResult } from './vector-store.js';
+export { PgvectorStore } from './vector-store.js';
