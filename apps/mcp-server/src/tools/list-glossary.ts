@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { GlossaryService } from '@iris/semantic-core';
+import { assertWorkspace } from '../workspace-guard.js';
 
 const inputSchema = {
   workspaceId: z.string().min(1).describe('Workspace ID for tenant isolation'),
@@ -14,8 +15,13 @@ const inputSchema = {
  * Register the list-glossary tool on an McpServer instance.
  * @param server - MCP server to register on
  * @param glossaryService - GlossaryService instance
+ * @param authenticatedWorkspaceId - Workspace from validated API key, or null in dev mode
  */
-export function registerListGlossary(server: McpServer, glossaryService: GlossaryService): void {
+export function registerListGlossary(
+  server: McpServer,
+  glossaryService: GlossaryService,
+  authenticatedWorkspaceId: string | null = null,
+): void {
   server.registerTool(
     'list-glossary',
     {
@@ -26,6 +32,11 @@ export function registerListGlossary(server: McpServer, glossaryService: Glossar
       inputSchema,
     },
     async (params) => {
+      const authError = assertWorkspace(params.workspaceId, authenticatedWorkspaceId);
+      if (authError) {
+        return { content: [{ type: 'text' as const, text: authError }] };
+      }
+
       const result = await glossaryService.listTerms(params.workspaceId, params.filter);
       if (result.isErr()) {
         return {

@@ -3,6 +3,7 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { serializeEntity } from '@iris/compression';
 import type { VectorStore } from '@iris/semantic-core';
 import { logger } from '@iris/core/logger';
+import { assertWorkspace } from '../workspace-guard.js';
 
 const log = logger.child({ tool: 'get-entity' });
 
@@ -16,8 +17,13 @@ const inputSchema = {
  *
  * @param server      - MCP server to register on
  * @param vectorStore - Initialized vector store
+ * @param authenticatedWorkspaceId - Workspace from validated API key, or null in dev mode
  */
-export function registerGetEntity(server: McpServer, vectorStore: VectorStore): void {
+export function registerGetEntity(
+  server: McpServer,
+  vectorStore: VectorStore,
+  authenticatedWorkspaceId: string | null = null,
+): void {
   server.registerTool(
     'get-entity',
     {
@@ -27,6 +33,9 @@ export function registerGetEntity(server: McpServer, vectorStore: VectorStore): 
     },
     async (params) => {
       try {
+        const authError = assertWorkspace(params.workspaceId, authenticatedWorkspaceId);
+        if (authError) return { content: [{ type: 'text' as const, text: authError }] };
+
         const entity = await vectorStore.getById(params.workspaceId, params.id);
 
         if (!entity) {

@@ -5,6 +5,7 @@ import { compress } from '@iris/compression';
 import type { VectorStore } from '@iris/semantic-core';
 import { retrieveContext } from '@iris/semantic-core';
 import { logger } from '@iris/core/logger';
+import { assertWorkspace } from '../workspace-guard.js';
 
 const log = logger.child({ tool: 'query-context' });
 
@@ -37,13 +38,16 @@ const inputSchema = {
  * @param vectorStore - Initialized vector store for semantic search
  * @param cache       - Semantic cache instance
  * @param openAiKey   - OpenAI API key for query embedding
+ * @param authenticatedWorkspaceId - Workspace from validated API key, or null in dev mode
  */
 export function registerQueryContext(
   server: McpServer,
   vectorStore: VectorStore,
   cache: SemanticCache,
   openAiKey: string,
+  authenticatedWorkspaceId: string | null = null,
 ): void {
+  // @ts-ignore TS2589 — MCP SDK registerTool generics exceed TypeScript's depth limit for this 5-field schema
   server.registerTool(
     'query-context',
     {
@@ -56,6 +60,8 @@ export function registerQueryContext(
     async (params) => {
       const start = Date.now();
       try {
+        const authError = assertWorkspace(params.workspaceId, authenticatedWorkspaceId);
+        if (authError) return { content: [{ type: 'text' as const, text: authError }] };
         const queryEmbeddingPlaceholder: number[] = [];
 
         const cacheHit = queryEmbeddingPlaceholder.length > 0

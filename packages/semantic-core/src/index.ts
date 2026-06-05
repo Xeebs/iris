@@ -12,3 +12,5 @@ export type { Metric } from './metrics.js';
 export { MetricRegistry } from './metrics.js';
 export type { TokenEventInput, DailyTokenSummary, TokenAnalyticsSummary } from './token-analytics.js';
 export { TokenAnalytics } from './token-analytics.js';
+export type { ApiKeyRecord, ValidatedKey } from './api-key-manager.js';
+export { ApiKeyManager, generateRawKey } from './api-key-manager.js';

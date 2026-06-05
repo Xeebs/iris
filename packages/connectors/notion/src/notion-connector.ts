@@ -178,7 +178,7 @@ export class NotionConnector extends BaseConnector<NotionConfig> {
           'Notion-Version': NOTION_API_VERSION,
           'Content-Type': 'application/json',
         },
-        body: body !== undefined ? JSON.stringify(body) : undefined,
+        ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
         signal: controller.signal,
       });
 

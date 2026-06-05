@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { MetricRegistry } from '@iris/semantic-core';
+import { assertWorkspace } from '../workspace-guard.js';
 
 const inputSchema = {
   metricId: z.string().min(1).describe('Metric identifier (e.g., monthly_revenue, churn_rate)'),
@@ -11,8 +12,13 @@ const inputSchema = {
  * Register the get-metric tool on an McpServer instance.
  * @param server - MCP server to register on
  * @param metricRegistry - MetricRegistry instance
+ * @param authenticatedWorkspaceId - Workspace from validated API key, or null in dev mode
  */
-export function registerGetMetric(server: McpServer, metricRegistry: MetricRegistry): void {
+export function registerGetMetric(
+  server: McpServer,
+  metricRegistry: MetricRegistry,
+  authenticatedWorkspaceId: string | null = null,
+): void {
   server.registerTool(
     'get-metric',
     {
@@ -23,6 +29,10 @@ export function registerGetMetric(server: McpServer, metricRegistry: MetricRegis
       inputSchema,
     },
     async (params) => {
+      const authError = assertWorkspace(params.workspaceId, authenticatedWorkspaceId);
+      if (authError) {
+        return { content: [{ type: 'text' as const, text: authError }] };
+      }
       const result = await metricRegistry.getMetric(params.workspaceId, params.metricId);
       if (result.isErr()) {
         return {
