@@ -11,6 +11,7 @@ import { createEntityRoutes } from './routes/entities.js';
 import { createQueryRoutes } from './routes/queries.js';
 import { createAuditRoutes } from './routes/audit.js';
 import { createGlossaryRoutes } from './routes/glossary.js';
+import { createMetricRoutes } from './routes/metrics.js';
 
 export { createApp };
 
@@ -29,6 +30,7 @@ function createApp(vectorStore: PgvectorStore, sql: ReturnType<typeof postgres>,
   authed.route('/queries', createQueryRoutes(vectorStore, openAiKey));
   authed.route('/audit', createAuditRoutes(sql));
   authed.route('/glossary', createGlossaryRoutes(sql));
+  authed.route('/metrics', createMetricRoutes(sql));
 
   app.route('/api/v1', authed);
 

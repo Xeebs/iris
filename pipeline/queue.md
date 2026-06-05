@@ -364,7 +364,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Metric Registry Service & API
 - **Layer**: 11 — Data Persistence
-- **Status**: IN_PROGRESS
+- **Status**: COMMITTED
 - **Priority**: High
 - **Description**: Implement packages/semantic-core/src/metrics.ts with MetricRegistry class. Methods: defineMetric(workspaceId, name, formula, description), getMetric(workspaceId, name), listMetrics(workspaceId), deleteMetric(workspaceId, name). Persist to postgres. Wire up to apps/api/src/routes/metrics.ts with GET /api/v1/metrics, POST /api/v1/metrics, DELETE /api/v1/metrics/:name. Update the MCP tools get-metric and list-glossary (in apps/mcp-server) to call these services instead of returning stubs. Full unit + integration tests.
 - **Files**:

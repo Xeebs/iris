@@ -8,3 +8,5 @@ export type { VectorStore, VectorSearchFilter, VectorSearchResult } from './vect
 export { PgvectorStore } from './vector-store.js';
 export type { GlossaryTerm } from './glossary.js';
 export { GlossaryService } from './glossary.js';
+export type { Metric } from './metrics.js';
+export { MetricRegistry } from './metrics.js';

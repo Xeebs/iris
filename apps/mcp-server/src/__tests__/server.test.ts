@@ -9,6 +9,7 @@ import { registerListEntities } from '../tools/list-entities.js';
 import { registerGetEntity } from '../tools/get-entity.js';
 import { registerGetMetric } from '../tools/get-metric.js';
 import { registerListGlossary } from '../tools/list-glossary.js';
+import type { GlossaryService, MetricRegistry } from '@iris/semantic-core';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -154,21 +155,45 @@ describe('get-entity tool', () => {
 describe('get-metric tool', () => {
   let server: McpServer;
   let getHandler: (name: string) => ToolHandler;
+  let metricRegistry: MetricRegistry;
 
-  beforeEach(() => {
+  beforeEach(async () => {
+    const { ok } = await import('neverthrow');
+    metricRegistry = {
+      getMetric: vi.fn().mockResolvedValue(ok(null)),
+      defineMetric: vi.fn(),
+      listMetrics: vi.fn(),
+      deleteMetric: vi.fn(),
+    } as unknown as MetricRegistry;
     ({ server, getHandler } = makeMockServer());
-    registerGetMetric(server);
+    registerGetMetric(server, metricRegistry);
   });
 
   it('registers the tool', () => {
     expect(server.registerTool).toHaveBeenCalledWith('get-metric', expect.anything(), expect.any(Function));
   });
 
-  it('returns placeholder message for unknown metric', async () => {
+  it('returns "not defined" message for unknown metric', async () => {
     const handler = getHandler('get-metric');
     const result = await handler({ metricId: 'monthly_revenue', workspaceId: 'ws1' });
     expect(result.content[0]?.text).toContain('monthly_revenue');
-    expect(result.content[0]?.text).toContain('under development');
+    expect(result.content[0]?.text).toContain('not defined');
+  });
+
+  it('returns metric details when found', async () => {
+    const { ok } = await import('neverthrow');
+    vi.mocked(metricRegistry.getMetric).mockResolvedValue(ok({
+      id: 'm1',
+      workspaceId: 'ws1',
+      name: 'monthly_revenue',
+      formula: 'SUM(amount)',
+      description: 'Monthly revenue',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }));
+    const handler = getHandler('get-metric');
+    const result = await handler({ metricId: 'monthly_revenue', workspaceId: 'ws1' });
+    expect(result.content[0]?.text).toContain('SUM(amount)');
   });
 });
 
@@ -177,10 +202,18 @@ describe('get-metric tool', () => {
 describe('list-glossary tool', () => {
   let server: McpServer;
   let getHandler: (name: string) => ToolHandler;
+  let glossaryService: GlossaryService;
 
-  beforeEach(() => {
+  beforeEach(async () => {
+    const { ok } = await import('neverthrow');
+    glossaryService = {
+      listTerms: vi.fn().mockResolvedValue(ok([])),
+      addTerm: vi.fn(),
+      getTerm: vi.fn(),
+      deleteTerm: vi.fn(),
+    } as unknown as GlossaryService;
     ({ server, getHandler } = makeMockServer());
-    registerListGlossary(server);
+    registerListGlossary(server, glossaryService);
   });
 
   it('registers the tool', () => {
@@ -193,7 +226,18 @@ describe('list-glossary tool', () => {
     expect(result.content[0]?.text).toContain('No glossary terms');
   });
 
-  it('includes filter text in the response', async () => {
+  it('returns formatted terms when glossary has entries', async () => {
+    const { ok } = await import('neverthrow');
+    vi.mocked(glossaryService.listTerms).mockResolvedValue(ok([
+      { id: 't1', workspaceId: 'ws1', term: 'ARR', definition: 'Annual Recurring Revenue', exampleValue: '$1.2M', createdAt: new Date(), updatedAt: new Date() },
+    ]));
+    const handler = getHandler('list-glossary');
+    const result = await handler({ workspaceId: 'ws1' });
+    expect(result.content[0]?.text).toContain('ARR');
+    expect(result.content[0]?.text).toContain('Annual Recurring Revenue');
+  });
+
+  it('includes filter text in "no terms" response', async () => {
     const handler = getHandler('list-glossary');
     const result = await handler({ workspaceId: 'ws1', filter: 'churn' });
     expect(result.content[0]?.text).toContain('churn');
