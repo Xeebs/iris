@@ -81,7 +81,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Connector Registry
 - **Layer**: 2 — Connector SDK
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: High
 - **Description**: Implement packages/connector-sdk/src/registry.ts. A class that holds registered ConnectorManifests, can look up by id, list all registered connectors, and validate a config against the connector's configSchema. Include unit tests with 2+ connectors.
 - **Files**:
