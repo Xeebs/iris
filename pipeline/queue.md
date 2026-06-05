@@ -494,7 +494,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Connector Setup UI Flow
 - **Layer**: 15 — Dashboard & Analytics
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: High
 - **Description**: Build a multi-step connector setup wizard in the dashboard at apps/dashboard/app/connectors/setup/page.tsx. Step 1: select connector type (list manifests from GET /api/v1/connectors/types). Step 2: OAuth redirect or API key entry (per manifest.auth config). Step 3: schema auto-discovery (call connector.getSchema()). Step 4: field mapping confirmation (show table/column summary). Step 5: review and create instance (POST /api/v1/connectors). Use shadcn/ui Stepper component. Full tests with mocked API responses.
 - **Files**:
