@@ -36,6 +36,17 @@ export interface VectorStore {
    * Delete entities by their IDs.
    */
   delete(ids: string[]): Promise<void>;
+
+  /**
+   * List entities of a given type within a workspace, ordered by most recently modified.
+   */
+  listByType(workspaceId: string, entityType: string, limit: number): Promise<SemanticEntity[]>;
+
+  /**
+   * Retrieve a single entity by its globally unique ID within a workspace.
+   * Returns null if not found.
+   */
+  getById(workspaceId: string, id: string): Promise<SemanticEntity | null>;
 }
 
 /**
@@ -157,6 +168,68 @@ export class PgvectorStore implements VectorStore {
     if (ids.length === 0) return;
     await this.sql`DELETE FROM iris_entities WHERE id = ANY(${ids})`;
     log.debug('Deleted entities', { count: ids.length });
+  }
+
+  async listByType(workspaceId: string, entityType: string, limit: number): Promise<SemanticEntity[]> {
+    const rows = await this.sql<
+      Array<{
+        id: string;
+        type: string;
+        label: string;
+        attributes: Record<string, unknown>;
+        relationships: Array<{ type: string; targetId: string }>;
+        last_modified: Date;
+        source_id: string;
+      }>
+    >`
+      SELECT id, type, label, attributes, relationships, last_modified, source_id
+      FROM iris_entities
+      WHERE workspace_id = ${workspaceId} AND type = ${entityType}
+      ORDER BY last_modified DESC
+      LIMIT ${limit}
+    `;
+
+    return rows.map((r) => ({
+      id: r.id,
+      type: r.type,
+      label: r.label,
+      attributes: r.attributes as SemanticEntity['attributes'],
+      relationships: r.relationships,
+      lastModified: r.last_modified,
+      sourceId: r.source_id,
+    }));
+  }
+
+  async getById(workspaceId: string, id: string): Promise<SemanticEntity | null> {
+    const rows = await this.sql<
+      Array<{
+        id: string;
+        type: string;
+        label: string;
+        attributes: Record<string, unknown>;
+        relationships: Array<{ type: string; targetId: string }>;
+        last_modified: Date;
+        source_id: string;
+      }>
+    >`
+      SELECT id, type, label, attributes, relationships, last_modified, source_id
+      FROM iris_entities
+      WHERE workspace_id = ${workspaceId} AND id = ${id}
+      LIMIT 1
+    `;
+
+    const r = rows[0];
+    if (!r) return null;
+
+    return {
+      id: r.id,
+      type: r.type,
+      label: r.label,
+      attributes: r.attributes as SemanticEntity['attributes'],
+      relationships: r.relationships,
+      lastModified: r.last_modified,
+      sourceId: r.source_id,
+    };
   }
 
   async close(): Promise<void> {

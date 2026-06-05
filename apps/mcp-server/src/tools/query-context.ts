@@ -1,0 +1,107 @@
+import { z } from 'zod';
+import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import type { SemanticCache } from '@iris/cache/semantic-cache';
+import { compress } from '@iris/compression';
+import type { VectorStore } from '@iris/semantic-core';
+import { retrieveContext } from '@iris/semantic-core';
+import { logger } from '@iris/core/logger';
+
+const log = logger.child({ tool: 'query-context' });
+
+const inputSchema = {
+  query: z.string().min(1).describe('Natural language query'),
+  workspaceId: z.string().min(1).describe('Workspace ID for tenant isolation'),
+  contextBudget: z
+    .number()
+    .int()
+    .positive()
+    .default(2000)
+    .describe('Maximum tokens to return'),
+  entityTypes: z
+    .array(z.string())
+    .optional()
+    .describe('Filter to these entity types only'),
+  topK: z
+    .number()
+    .int()
+    .positive()
+    .max(50)
+    .default(10)
+    .describe('Maximum entities to retrieve before compression'),
+};
+
+/**
+ * Register the query-context tool on an McpServer instance.
+ *
+ * @param server      - MCP server to register on
+ * @param vectorStore - Initialized vector store for semantic search
+ * @param cache       - Semantic cache instance
+ * @param openAiKey   - OpenAI API key for query embedding
+ */
+export function registerQueryContext(
+  server: McpServer,
+  vectorStore: VectorStore,
+  cache: SemanticCache,
+  openAiKey: string,
+): void {
+  server.registerTool(
+    'query-context',
+    {
+      title: 'Query Context',
+      description:
+        'Retrieve semantically relevant business context for a natural language query. ' +
+        'Returns compressed entity information within the token budget.',
+      inputSchema,
+    },
+    async (params) => {
+      const start = Date.now();
+      try {
+        const queryEmbeddingPlaceholder: number[] = [];
+
+        const cacheHit = queryEmbeddingPlaceholder.length > 0
+          ? await cache.get(queryEmbeddingPlaceholder, params.workspaceId)
+          : null;
+
+        if (cacheHit) {
+          log.info('Cache hit', { workspaceId: params.workspaceId, durationMs: Date.now() - start });
+          return { content: [{ type: 'text' as const, text: cacheHit.response }] };
+        }
+
+        const result = await retrieveContext(params.query, vectorStore, {
+          workspaceId: params.workspaceId,
+          topK: params.topK ?? 10,
+          entityTypes: params.entityTypes,
+          expandRelationships: true,
+          maxDepth: 1,
+          openAiApiKey: openAiKey,
+        });
+
+        const compressed = compress(result.entities, {
+          contextBudget: params.contextBudget ?? 2000,
+          query: params.query,
+        });
+
+        const text = compressed.truncated
+          ? compressed.content + `\n\n[truncated: ${compressed.savedTokens} tokens saved]`
+          : compressed.content;
+
+        log.info('Query complete', {
+          workspaceId: params.workspaceId,
+          entityCount: compressed.entityCount,
+          tokenCount: compressed.tokenCount,
+          truncated: compressed.truncated,
+          durationMs: Date.now() - start,
+        });
+
+        return { content: [{ type: 'text' as const, text }] };
+      } catch (err) {
+        log.error('query-context failed', { error: err, workspaceId: params.workspaceId });
+        const message = err instanceof Error ? err.message : String(err);
+        return {
+          content: [{ type: 'text' as const, text: `Error: ${message}` }],
+          isError: true,
+        };
+      }
+    },
+  );
+}

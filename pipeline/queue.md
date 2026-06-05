@@ -235,7 +235,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: MCP Server Bootstrap
 - **Layer**: 7 — MCP Server
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: High
 - **Description**: Implement apps/mcp-server/src/server.ts fully. Use @modelcontextprotocol/sdk to create an McpServer on stdio transport. Register the 5 tools: query-context, list-entities, get-entity, get-metric, list-glossary. Wire up services (retrieval engine, semantic cache, audit logger). All tool inputs validated with zod. Tools never throw — return errors as structured content.
 - **Files**:
