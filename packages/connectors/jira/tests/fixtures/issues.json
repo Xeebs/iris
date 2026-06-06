@@ -1,0 +1,64 @@
+{
+  "issues": [
+    {
+      "id": "issue-001",
+      "key": "ENG-1",
+      "fields": {
+        "summary": "Fix login page crash on mobile",
+        "description": "Users on iOS 17 experience a crash when logging in.",
+        "issuetype": { "id": "10000", "name": "Bug" },
+        "status": { "name": "In Progress", "statusCategory": { "key": "indeterminate" } },
+        "priority": { "name": "High" },
+        "assignee": { "accountId": "user-001", "displayName": "Alice Smith" },
+        "reporter": { "accountId": "user-003", "displayName": "Carol White" },
+        "labels": ["mobile", "crash", "ios"],
+        "project": { "id": "10001", "key": "ENG", "name": "Engineering" },
+        "created": "2026-05-10T09:00:00.000Z",
+        "updated": "2026-05-20T14:30:00.000Z",
+        "resolutiondate": null,
+        "customfield_10014": null
+      }
+    },
+    {
+      "id": "issue-002",
+      "key": "ENG-2",
+      "fields": {
+        "summary": "Add dark mode support",
+        "description": "Implement dark mode across all dashboard views.",
+        "issuetype": { "id": "10001", "name": "Story" },
+        "status": { "name": "To Do", "statusCategory": { "key": "new" } },
+        "priority": { "name": "Medium" },
+        "assignee": null,
+        "reporter": { "accountId": "user-002", "displayName": "Bob Jones" },
+        "labels": ["ui", "dark-mode"],
+        "project": { "id": "10001", "key": "ENG", "name": "Engineering" },
+        "created": "2026-05-12T11:00:00.000Z",
+        "updated": "2026-05-15T09:00:00.000Z",
+        "resolutiondate": null,
+        "customfield_10014": "epic-001"
+      }
+    },
+    {
+      "id": "issue-003",
+      "key": "OPS-1",
+      "fields": {
+        "summary": "Database backup failure",
+        "description": "Nightly backup job failed for the last 3 days.",
+        "issuetype": { "id": "10004", "name": "Incident" },
+        "status": { "name": "Done", "statusCategory": { "key": "done" } },
+        "priority": { "name": "Critical" },
+        "assignee": { "accountId": "user-002", "displayName": "Bob Jones" },
+        "reporter": { "accountId": "user-001", "displayName": "Alice Smith" },
+        "labels": ["database", "backup", "incident"],
+        "project": { "id": "10002", "key": "OPS", "name": "Operations" },
+        "created": "2026-05-18T06:00:00.000Z",
+        "updated": "2026-05-19T10:00:00.000Z",
+        "resolutiondate": "2026-05-19T10:00:00.000Z",
+        "customfield_10014": null
+      }
+    }
+  ],
+  "total": 3,
+  "startAt": 0,
+  "maxResults": 50
+}

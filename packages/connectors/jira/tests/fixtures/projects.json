@@ -1,0 +1,39 @@
+{
+  "values": [
+    {
+      "id": "10001",
+      "key": "ENG",
+      "name": "Engineering",
+      "description": "Main engineering project",
+      "projectTypeKey": "software",
+      "lead": {
+        "accountId": "user-001",
+        "displayName": "Alice Smith"
+      },
+      "issueTypes": [
+        { "id": "10000", "name": "Bug" },
+        { "id": "10001", "name": "Story" },
+        { "id": "10002", "name": "Epic" }
+      ]
+    },
+    {
+      "id": "10002",
+      "key": "OPS",
+      "name": "Operations",
+      "description": "Operations and infrastructure",
+      "projectTypeKey": "service_desk",
+      "lead": {
+        "accountId": "user-002",
+        "displayName": "Bob Jones"
+      },
+      "issueTypes": [
+        { "id": "10003", "name": "Task" },
+        { "id": "10004", "name": "Incident" }
+      ]
+    }
+  ],
+  "isLast": true,
+  "maxResults": 50,
+  "startAt": 0,
+  "total": 2
+}

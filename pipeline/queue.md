@@ -688,7 +688,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Jira Connector
 - **Layer**: 18 — Additional Connectors
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: High
 - **Description**: Implement Jira connector in packages/connectors/jira/. Connect via OAuth2 to Jira Cloud API. Sync projects, issues, and epics as SemanticEntity objects. Support incremental sync via updated >= cursor. Extract issue metadata (status, assignee, labels, custom fields). Apply workspace filtering via JQL. Use MSW for tests with fixture responses. Include ConnectorManifest with icon and OAuth scope configuration. Follow connector-patterns.md for entity transformation and sync generator rules.
 - **Files**:
