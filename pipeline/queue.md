@@ -642,7 +642,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Sync Scheduling & Frequency Configuration
 - **Layer**: 17 — Advanced Connectors
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: High
 - **Description**: Extend connector_instances table and sync job infrastructure to support configurable sync frequency. Add migration 010_add_sync_schedule.sql with fields: sync_frequency (real-time|hourly|daily|weekly|manual), sync_schedule_cron (for custom schedules), syncStartTime (for daily/weekly). Implement SyncScheduleService in packages/queue/src/sync-schedule-service.ts to manage recurring sync jobs via node-cron and BullMQ repeatable jobs. Update the dashboard connector setup wizard (apps/dashboard/app/connectors/setup/page.tsx) step 4 to include frequency picker. Wire up GET/PUT /api/v1/connectors/:id/schedule endpoints. Full tests with fake timers (vi.useFakeTimers()).
 - **Files**:
@@ -669,3 +669,162 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
   - packages/connectors/hubspot/src/__tests__/webhook-handler.test.ts
 - **Depends on**: Sync Worker Implementation & Connector Invocation, Slack Connector
 - **Added**: 2026-06-05
+
+---
+
+## Layer 18: Additional Connectors & V1 Enhancements
+
+### Task: Query Decomposition & Entity Type Detection
+- **Layer**: 18 — Advanced Features
+- **Status**: IN_PROGRESS
+- **Priority**: High
+- **Description**: Implement QueryDecomposer service in packages/semantic-core/src/query-decomposer.ts to analyze incoming queries and extract: entity types mentioned or implied, data domains (sales, finance, ops), relevance keywords. Use OpenAI's text-davinci-003 or gpt-4o-mini for lightweight NLP analysis (cached to reduce cost). Export detectEntityTypes(query, schema) and getDomainKeywords(query). Integrate into retrieval engine to pre-filter vector search results and improve relevance. Add unit tests with varied business queries and schema configurations.
+- **Files**:
+  - packages/semantic-core/src/query-decomposer.ts
+  - packages/semantic-core/src/__tests__/query-decomposer.test.ts
+  - packages/semantic-core/src/retrieval.ts (update)
+- **Depends on**: Retrieval Engine
+- **Added**: 2026-06-06
+
+### Task: Jira Connector
+- **Layer**: 18 — Additional Connectors
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Implement Jira connector in packages/connectors/jira/. Connect via OAuth2 to Jira Cloud API. Sync projects, issues, and epics as SemanticEntity objects. Support incremental sync via updated >= cursor. Extract issue metadata (status, assignee, labels, custom fields). Apply workspace filtering via JQL. Use MSW for tests with fixture responses. Include ConnectorManifest with icon and OAuth scope configuration. Follow connector-patterns.md for entity transformation and sync generator rules.
+- **Files**:
+  - packages/connectors/jira/src/jira-connector.ts
+  - packages/connectors/jira/src/manifest.ts
+  - packages/connectors/jira/src/transformers.ts
+  - packages/connectors/jira/src/__tests__/jira-connector.test.ts
+  - packages/connectors/jira/tests/fixtures/issues.json
+  - packages/connectors/jira/tests/fixtures/projects.json
+  - packages/connectors/jira/package.json
+- **Depends on**: HubSpot Connector
+- **Added**: 2026-06-06
+
+### Task: Confluence Connector
+- **Layer**: 18 — Additional Connectors
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Implement Confluence connector in packages/connectors/confluence/. Connect via OAuth2 to Confluence Cloud API. Sync pages, spaces, and content as SemanticEntity objects. Extract text content and metadata (author, lastModified, labels). Support incremental sync via lastUpdatedDate cursor. Convert page hierarchy into entity relationships (page.parent_id). Use MSW for tests. Include ConnectorManifest with OAuth configuration. Follow connector-patterns.md for entity transformation rules.
+- **Files**:
+  - packages/connectors/confluence/src/confluence-connector.ts
+  - packages/connectors/confluence/src/manifest.ts
+  - packages/connectors/confluence/src/transformers.ts
+  - packages/connectors/confluence/src/__tests__/confluence-connector.test.ts
+  - packages/connectors/confluence/tests/fixtures/pages.json
+  - packages/connectors/confluence/tests/fixtures/spaces.json
+  - packages/connectors/confluence/package.json
+- **Depends on**: HubSpot Connector
+- **Added**: 2026-06-06
+
+### Task: Role-Based Context Segmentation
+- **Layer**: 18 — Additional Connectors
+- **Status**: UNWORKED
+- **Priority**: Medium
+- **Description**: Implement role-based context access control. Create apps/api/migrations/012_add_context_permissions.sql with tables: context_roles (id, workspace_id, role_name, description), role_entity_type_permissions (role_id, entity_type, allowed_fields). Implement ContextPermissionService in packages/semantic-core/src/context-permissions.ts with methods: filterContextByRole(context, role, schema) that removes unauthorized entity types and fields. Update retrieval engine and all MCP tools (query-context, list-entities, get-entity) to filter results per API key's assigned role. Add unit + integration tests verifying access control enforcement.
+- **Files**:
+  - apps/api/migrations/012_add_context_permissions.sql
+  - packages/semantic-core/src/context-permissions.ts
+  - packages/semantic-core/src/__tests__/context-permissions.test.ts
+  - packages/semantic-core/src/retrieval.ts (update)
+  - apps/mcp-server/src/tools/query-context.ts (update)
+  - apps/mcp-server/src/tools/list-entities.ts (update)
+  - apps/mcp-server/src/tools/get-entity.ts (update)
+- **Depends on**: MCP Server API Key Authentication & Workspace Isolation
+- **Added**: 2026-06-06
+
+### Task: Knowledge Graph Visualization Dashboard
+- **Layer**: 18 — Additional Connectors
+- **Status**: UNWORKED
+- **Priority**: Medium
+- **Description**: Build a knowledge graph visualization page in the dashboard at apps/dashboard/app/graph/page.tsx. Use react-force-graph or similar library to render entity nodes and relationship edges. Allow filtering by entity type and relationship type. Support clicking an entity to show details (attributes, relationships, source connector). Support expanding relationships to depth-N. Fetch graph data from a new GET /api/v1/graph/query endpoint that returns nodes/edges. Include search by entity label and fulltext attributes. Target: functional graph visualization with filter and detail panels.
+- **Files**:
+  - apps/dashboard/app/graph/page.tsx
+  - apps/dashboard/components/graph-visualization.tsx
+  - apps/dashboard/components/entity-detail-panel.tsx
+  - apps/api/src/routes/graph.ts
+  - apps/api/src/__tests__/graph.test.ts
+- **Depends on**: Entity Relationship Indexing, Knowledge Graph Service (Neo4j)
+- **Added**: 2026-06-06
+
+---
+
+## Layer 19: Additional Connectors & V1 Completion
+
+### Task: Linear Connector
+- **Layer**: 19 — Additional Connectors & V1 Completion
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Implement Linear connector in packages/connectors/linear/. Connect via OAuth2 to Linear API. Sync issues, projects, and cycles as SemanticEntity objects. Support incremental sync via updatedAt cursor. Extract issue metadata (status, priority, assignee, labels, team). Include ConnectorManifest with icon and OAuth scope configuration. Use MSW for tests with fixture responses. Follow connector-patterns.md for entity transformation and sync generator rules.
+- **Files**:
+  - packages/connectors/linear/src/linear-connector.ts
+  - packages/connectors/linear/src/manifest.ts
+  - packages/connectors/linear/src/transformers.ts
+  - packages/connectors/linear/src/__tests__/linear-connector.test.ts
+  - packages/connectors/linear/tests/fixtures/issues.json
+  - packages/connectors/linear/tests/fixtures/projects.json
+  - packages/connectors/linear/package.json
+- **Depends on**: HubSpot Connector
+- **Added**: 2026-06-06
+
+### Task: NetSuite Connector
+- **Layer**: 19 — Additional Connectors & V1 Completion
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Implement NetSuite connector in packages/connectors/netsuite/. Connect via OAuth2 to NetSuite REST API. Sync customers, vendors, items, and transactions as SemanticEntity objects. Support incremental sync via lastModifiedDate filtering. Extract entity metadata (subsidiary, status, categories). Handle rate limiting per NetSuite's API guidance. Use MSW for tests with fixture responses. Include ConnectorManifest with OAuth scope configuration following connector-patterns.md.
+- **Files**:
+  - packages/connectors/netsuite/src/netsuite-connector.ts
+  - packages/connectors/netsuite/src/manifest.ts
+  - packages/connectors/netsuite/src/transformers.ts
+  - packages/connectors/netsuite/src/__tests__/netsuite-connector.test.ts
+  - packages/connectors/netsuite/tests/fixtures/customers.json
+  - packages/connectors/netsuite/tests/fixtures/items.json
+  - packages/connectors/netsuite/package.json
+- **Depends on**: HubSpot Connector
+- **Added**: 2026-06-06
+
+### Task: QuickBooks Connector
+- **Layer**: 19 — Additional Connectors & V1 Completion
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Implement QuickBooks connector in packages/connectors/quickbooks/. Connect via OAuth2 to QuickBooks Online API. Sync customers, vendors, invoices, and expense transactions as SemanticEntity objects. Support incremental sync via TxnDate filtering. Extract financial metadata (account, amount, status). Handle QuickBooks' 10-minute rate limit with backoff. Use MSW for tests. Include ConnectorManifest with OAuth configuration per connector-patterns.md.
+- **Files**:
+  - packages/connectors/quickbooks/src/quickbooks-connector.ts
+  - packages/connectors/quickbooks/src/manifest.ts
+  - packages/connectors/quickbooks/src/transformers.ts
+  - packages/connectors/quickbooks/src/__tests__/quickbooks-connector.test.ts
+  - packages/connectors/quickbooks/tests/fixtures/customers.json
+  - packages/connectors/quickbooks/tests/fixtures/invoices.json
+  - packages/connectors/quickbooks/package.json
+- **Depends on**: HubSpot Connector
+- **Added**: 2026-06-06
+
+### Task: OSI (Open Semantic Interchange) Standard Export
+- **Layer**: 19 — Additional Connectors & V1 Completion
+- **Status**: UNWORKED
+- **Priority**: Medium
+- **Description**: Implement OSI standard export functionality to allow Iris index data to be exported in an open, portable format. Create packages/semantic-core/src/osi-exporter.ts with exportToOSI(workspaceId, options) that queries the semantic index and transforms entities into OSI standard JSON-LD format. Include entity types, relationships, glossary terms, and metric definitions. Expose GET /api/v1/export/osi endpoint in apps/api/src/routes/export.ts with optional filters (entity types, date range). Add unit tests with schema validation against OSI spec and integration tests verifying round-trip export/import. See embedding-patterns.md for data structuring rules.
+- **Files**:
+  - packages/semantic-core/src/osi-exporter.ts
+  - packages/semantic-core/src/__tests__/osi-exporter.test.ts
+  - packages/semantic-core/src/__tests__/osi-exporter.integration.test.ts
+  - apps/api/src/routes/export.ts
+  - apps/api/src/__tests__/export.test.ts
+- **Depends on**: Indexer Implementation, Metric Registry Service & API, Glossary Service & API
+- **Added**: 2026-06-06
+
+### Task: Business Glossary Sharing & Collaboration Features
+- **Layer**: 19 — Additional Connectors & V1 Completion
+- **Status**: UNWORKED
+- **Priority**: Medium
+- **Description**: Enhance glossary management with team collaboration features. Update packages/semantic-core/src/glossary.ts to add: termApprovals (workflows for business term standardization), glossaryVersionHistory (track term definition changes), termUsageTracking (count how often a term appears in indexed entities). Extend apps/api/src/routes/glossary.ts with PUT /api/v1/glossary/:term/approve, GET /api/v1/glossary/:term/history, GET /api/v1/glossary/usage endpoints. Build dashboard component at apps/dashboard/components/glossary-collaborator.tsx showing term suggestions, approval queue, and usage analytics. Add audit logging for all glossary changes. Full unit + integration tests.
+- **Files**:
+  - packages/semantic-core/src/glossary.ts (update)
+  - apps/api/migrations/013_add_glossary_collaboration.sql
+  - apps/api/src/routes/glossary.ts (update)
+  - apps/dashboard/components/glossary-collaborator.tsx
+  - packages/semantic-core/src/__tests__/glossary.test.ts (update)
+  - apps/api/src/__tests__/glossary.test.ts (update)
+- **Depends on**: Glossary Service & API
+- **Added**: 2026-06-06

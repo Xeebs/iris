@@ -16,3 +16,5 @@ export type { ApiKeyRecord, ValidatedKey } from './api-key-manager.js';
 export { ApiKeyManager, generateRawKey } from './api-key-manager.js';
 export type { IndexCoverageByType, IndexStatus } from './index-status.js';
 export { IndexStatusService } from './index-status.js';
+export type { DomainAnalysis } from './query-decomposer.js';
+export { detectEntityTypes, getDomainKeywords, clearDetectionCache } from './query-decomposer.js';

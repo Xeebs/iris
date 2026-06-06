@@ -4,6 +4,7 @@ import { logger } from '@iris/core/logger';
 import { IndexerError } from '@iris/core/errors';
 import { EMBEDDING_MODEL } from './embedding.js';
 import type { VectorStore } from './vector-store.js';
+import { detectEntityTypes } from './query-decomposer.js';
 import type { Result } from 'neverthrow';
 
 // Minimal graph interface — Neo4jGraphStore satisfies this via structural typing
@@ -26,16 +27,20 @@ export interface RetrievalOptions {
   workspaceId: string;
   /** Maximum entities to return. Default: 10 */
   topK: number;
-  /** Optionally filter by entity type (e.g., ['deal', 'contact']) */
+  /** Optionally filter by entity type (e.g., ['deal', 'contact']) — auto-detected when omitted */
   entityTypes?: string[];
+  /** All entity types indexed in this workspace — used for auto-detection when entityTypes is unset */
+  availableEntityTypes?: string[];
   /** Whether to expand results via relationship graph traversal. Default: true */
   expandRelationships: boolean;
   /** Max graph traversal depth. Default: 1 (direct relationships only) */
   maxDepth: number;
-  /** OpenAI API key for query embedding */
+  /** OpenAI API key for query embedding and entity type detection */
   openAiApiKey?: string;
   /** Optional graph store for relationship expansion. When omitted, falls back to entity.relationships */
   graphStore?: GraphExpander;
+  /** When true, use QueryDecomposer to auto-detect entity types from the query */
+  autoDetectEntityTypes?: boolean;
 }
 
 export interface RetrievalResult {
@@ -72,10 +77,20 @@ export async function retrieveContext(
   const queryVector = await embedQuery(query, opts.openAiApiKey);
   const queryEmbeddingMs = Date.now() - embeddingStart;
 
+  // Auto-detect entity types from the query when caller hasn't specified them
+  let resolvedEntityTypes = opts.entityTypes;
+  if (opts.autoDetectEntityTypes && resolvedEntityTypes === undefined && opts.availableEntityTypes) {
+    const detected = await detectEntityTypes(query, opts.availableEntityTypes, opts.openAiApiKey);
+    if (detected.length < opts.availableEntityTypes.length) {
+      resolvedEntityTypes = detected;
+      log.debug('Auto-detected entity types', { types: resolvedEntityTypes });
+    }
+  }
+
   const searchStart = Date.now();
   const searchResults = await vectorStore.search(queryVector, opts.topK, {
     workspaceId: opts.workspaceId,
-    ...(opts.entityTypes !== undefined ? { entityTypes: opts.entityTypes } : {}),
+    ...(resolvedEntityTypes !== undefined ? { entityTypes: resolvedEntityTypes } : {}),
   });
   const vectorSearchMs = Date.now() - searchStart;
 
