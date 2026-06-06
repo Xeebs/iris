@@ -1,0 +1,33 @@
+{
+  "QueryResponse": {
+    "Customer": [
+      {
+        "Id": "1",
+        "DisplayName": "Acme Corp",
+        "CompanyName": "Acme Corporation",
+        "Active": true,
+        "Balance": 2500.00,
+        "CurrencyRef": { "value": "USD", "name": "United States Dollar" },
+        "MetaData": {
+          "CreateTime": "2026-01-10T08:00:00Z",
+          "LastUpdatedTime": "2026-05-20T10:00:00Z"
+        }
+      },
+      {
+        "Id": "2",
+        "DisplayName": "Globex Inc",
+        "CompanyName": "Globex Incorporated",
+        "Active": true,
+        "Balance": 0.00,
+        "CurrencyRef": { "value": "USD", "name": "United States Dollar" },
+        "MetaData": {
+          "CreateTime": "2026-02-01T09:00:00Z",
+          "LastUpdatedTime": "2026-06-01T08:30:00Z"
+        }
+      }
+    ],
+    "startPosition": 1,
+    "maxResults": 100,
+    "totalCount": 2
+  }
+}

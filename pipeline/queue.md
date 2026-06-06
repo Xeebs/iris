@@ -786,7 +786,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: QuickBooks Connector
 - **Layer**: 19 — Additional Connectors & V1 Completion
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: High
 - **Description**: Implement QuickBooks connector in packages/connectors/quickbooks/. Connect via OAuth2 to QuickBooks Online API. Sync customers, vendors, invoices, and expense transactions as SemanticEntity objects. Support incremental sync via TxnDate filtering. Extract financial metadata (account, amount, status). Handle QuickBooks' 10-minute rate limit with backoff. Use MSW for tests. Include ConnectorManifest with OAuth configuration per connector-patterns.md.
 - **Files**:

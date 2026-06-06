@@ -1,0 +1,80 @@
+{
+  "vendors": {
+    "QueryResponse": {
+      "Vendor": [
+        {
+          "Id": "10",
+          "DisplayName": "Office Supplies Ltd",
+          "CompanyName": "Office Supplies Ltd",
+          "Active": true,
+          "Balance": 800.00,
+          "CurrencyRef": { "value": "USD", "name": "United States Dollar" },
+          "MetaData": {
+            "CreateTime": "2026-01-15T10:00:00Z",
+            "LastUpdatedTime": "2026-04-15T12:00:00Z"
+          }
+        }
+      ],
+      "startPosition": 1,
+      "maxResults": 100
+    }
+  },
+  "invoices": {
+    "QueryResponse": {
+      "Invoice": [
+        {
+          "Id": "100",
+          "DocNumber": "INV-001",
+          "CustomerRef": { "value": "1", "name": "Acme Corp" },
+          "TotalAmt": 4999.00,
+          "Balance": 4999.00,
+          "DueDate": "2026-06-15",
+          "TxnDate": "2026-05-15",
+          "CurrencyRef": { "value": "USD", "name": "United States Dollar" },
+          "EmailStatus": "EmailSent",
+          "MetaData": {
+            "CreateTime": "2026-05-15T14:00:00Z",
+            "LastUpdatedTime": "2026-05-15T16:00:00Z"
+          }
+        },
+        {
+          "Id": "101",
+          "DocNumber": null,
+          "CustomerRef": { "value": "2", "name": "Globex Inc" },
+          "TotalAmt": 1250.00,
+          "Balance": 0.00,
+          "DueDate": null,
+          "TxnDate": "2026-05-20",
+          "CurrencyRef": null,
+          "EmailStatus": null,
+          "MetaData": {
+            "CreateTime": "2026-05-20T11:00:00Z",
+            "LastUpdatedTime": "2026-05-20T11:00:00Z"
+          }
+        }
+      ],
+      "startPosition": 1,
+      "maxResults": 100
+    }
+  },
+  "expenses": {
+    "QueryResponse": {
+      "Purchase": [
+        {
+          "Id": "200",
+          "PaymentType": "Cash",
+          "EntityRef": { "value": "10", "name": "Office Supplies Ltd" },
+          "TotalAmt": 150.00,
+          "TxnDate": "2026-05-22",
+          "CurrencyRef": { "value": "USD", "name": "United States Dollar" },
+          "MetaData": {
+            "CreateTime": "2026-05-22T09:00:00Z",
+            "LastUpdatedTime": "2026-05-22T09:00:00Z"
+          }
+        }
+      ],
+      "startPosition": 1,
+      "maxResults": 100
+    }
+  }
+}
