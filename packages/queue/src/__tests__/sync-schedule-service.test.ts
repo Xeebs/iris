@@ -28,7 +28,10 @@ describe('SyncScheduleService', () => {
   let service: InstanceType<typeof SyncScheduleService>;
 
   beforeEach(() => {
-    vi.clearAllMocks();
+    mockAdd.mockReset();
+    mockClose.mockReset();
+    mockGetRepeatableJobs.mockReset();
+    mockRemoveRepeatableByKey.mockReset();
     sql = vi.fn().mockResolvedValue([]);
     service = new SyncScheduleService(sql as never, 'redis://localhost:6379');
   });
