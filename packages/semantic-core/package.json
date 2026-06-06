@@ -13,7 +13,8 @@
     "./vector-store": "./dist/vector-store.js",
     "./glossary": "./dist/glossary.js",
     "./metrics": "./dist/metrics.js",
-    "./sync-events": "./dist/sync-events.js"
+    "./sync-events": "./dist/sync-events.js",
+    "./connector-health-service": "./dist/connector-health-service.js"
   },
   "scripts": {
     "build": "tsc --build",
