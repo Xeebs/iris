@@ -2,6 +2,8 @@ import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { serializeEntity } from '@iris/compression';
 import type { VectorStore } from '@iris/semantic-core';
+import type { ContextPermissions } from '@iris/semantic-core';
+import { filterContextByRole } from '@iris/semantic-core';
 import { logger } from '@iris/core/logger';
 import { assertWorkspace } from '../workspace-guard.js';
 
@@ -15,14 +17,16 @@ const inputSchema = {
 /**
  * Register the get-entity tool on an McpServer instance.
  *
- * @param server      - MCP server to register on
- * @param vectorStore - Initialized vector store
+ * @param server                   - MCP server to register on
+ * @param vectorStore              - Initialized vector store
  * @param authenticatedWorkspaceId - Workspace from validated API key, or null in dev mode
+ * @param contextPermissions       - Role-based access permissions, or null for unrestricted
  */
 export function registerGetEntity(
   server: McpServer,
   vectorStore: VectorStore,
   authenticatedWorkspaceId: string | null = null,
+  contextPermissions: ContextPermissions | null = null,
 ): void {
   server.registerTool(
     'get-entity',
@@ -49,8 +53,23 @@ export function registerGetEntity(
           };
         }
 
-        log.info('get-entity complete', { workspaceId: params.workspaceId, id: params.id });
+        if (contextPermissions) {
+          const [filtered] = filterContextByRole([entity], contextPermissions);
+          if (!filtered) {
+            return {
+              content: [
+                {
+                  type: 'text' as const,
+                  text: `Access denied: entity type "${entity.type}" is not permitted for this API key's role.`,
+                },
+              ],
+            };
+          }
+          log.info('get-entity complete', { workspaceId: params.workspaceId, id: params.id, roleFiltered: true });
+          return { content: [{ type: 'text' as const, text: serializeEntity(filtered) }] };
+        }
 
+        log.info('get-entity complete', { workspaceId: params.workspaceId, id: params.id });
         return { content: [{ type: 'text' as const, text: serializeEntity(entity) }] };
       } catch (err) {
         log.error('get-entity failed', { error: err, id: params.id });

@@ -18,3 +18,5 @@ export type { IndexCoverageByType, IndexStatus } from './index-status.js';
 export { IndexStatusService } from './index-status.js';
 export type { DomainAnalysis } from './query-decomposer.js';
 export { detectEntityTypes, getDomainKeywords, clearDetectionCache } from './query-decomposer.js';
+export type { ContextRole, EntityTypePermission, ContextPermissions } from './context-permissions.js';
+export { ContextPermissionService, filterContextByRole } from './context-permissions.js';

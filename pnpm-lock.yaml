@@ -8,6 +8,9 @@ importers:
 
   .:
     devDependencies:
+      '@playwright/test':
+        specifier: ^1.45.0
+        version: 1.60.0
       '@types/node':
         specifier: ^20.14.0
         version: 20.19.41
@@ -86,7 +89,7 @@ importers:
     dependencies:
       '@clerk/nextjs':
         specifier: ^5.2.0
-        version: 5.7.6(next@14.2.35(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+        version: 5.7.6(next@14.2.35(@playwright/test@1.60.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@radix-ui/react-dialog':
         specifier: ^1.1.1
         version: 1.1.15(@types/react-dom@18.3.7(@types/react@18.3.30))(@types/react@18.3.30)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -119,7 +122,7 @@ importers:
         version: 0.408.0(react@18.3.1)
       next:
         specifier: ^14.2.5
-        version: 14.2.35(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+        version: 14.2.35(@playwright/test@1.60.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       react:
         specifier: ^18.3.1
         version: 18.3.1
@@ -297,6 +300,68 @@ importers:
         specifier: ^1.6.0
         version: 1.6.1(@types/node@20.19.41)
 
+  packages/connectors/airtable:
+    dependencies:
+      '@iris/connector-sdk':
+        specifier: workspace:*
+        version: link:../../connector-sdk
+      '@iris/core':
+        specifier: workspace:*
+        version: link:../../core
+      neverthrow:
+        specifier: ^6.2.1
+        version: 6.2.2
+      zod:
+        specifier: ^3.23.8
+        version: 3.25.76
+    devDependencies:
+      '@types/node':
+        specifier: ^20.14.0
+        version: 20.19.41
+      '@vitest/coverage-v8':
+        specifier: ^1.6.0
+        version: 1.6.1(vitest@1.6.1(@types/node@20.19.41))
+      msw:
+        specifier: ^2.3.1
+        version: 2.14.6(@types/node@20.19.41)(typescript@5.9.3)
+      typescript:
+        specifier: ^5.5.0
+        version: 5.9.3
+      vitest:
+        specifier: ^1.6.0
+        version: 1.6.1(@types/node@20.19.41)
+
+  packages/connectors/confluence:
+    dependencies:
+      '@iris/connector-sdk':
+        specifier: workspace:*
+        version: link:../../connector-sdk
+      '@iris/core':
+        specifier: workspace:*
+        version: link:../../core
+      neverthrow:
+        specifier: ^6.2.1
+        version: 6.2.2
+      zod:
+        specifier: ^3.23.8
+        version: 3.25.76
+    devDependencies:
+      '@types/node':
+        specifier: ^20.14.0
+        version: 20.19.41
+      '@vitest/coverage-v8':
+        specifier: ^1.6.0
+        version: 1.6.1(vitest@1.6.1(@types/node@20.19.41))
+      msw:
+        specifier: ^2.3.1
+        version: 2.14.6(@types/node@20.19.41)(typescript@5.9.3)
+      typescript:
+        specifier: ^5.5.0
+        version: 5.9.3
+      vitest:
+        specifier: ^1.6.0
+        version: 1.6.1(@types/node@20.19.41)
+
   packages/connectors/google-drive:
     dependencies:
       '@iris/connector-sdk':
@@ -329,6 +394,99 @@ importers:
         version: 1.6.1(@types/node@20.19.41)
 
   packages/connectors/hubspot:
+    dependencies:
+      '@iris/connector-sdk':
+        specifier: workspace:*
+        version: link:../../connector-sdk
+      '@iris/core':
+        specifier: workspace:*
+        version: link:../../core
+      neverthrow:
+        specifier: ^6.2.1
+        version: 6.2.2
+      zod:
+        specifier: ^3.23.8
+        version: 3.25.76
+    devDependencies:
+      '@types/node':
+        specifier: ^20.14.0
+        version: 20.19.41
+      '@vitest/coverage-v8':
+        specifier: ^1.6.0
+        version: 1.6.1(vitest@1.6.1(@types/node@20.19.41))
+      msw:
+        specifier: ^2.3.1
+        version: 2.14.6(@types/node@20.19.41)(typescript@5.9.3)
+      typescript:
+        specifier: ^5.5.0
+        version: 5.9.3
+      vitest:
+        specifier: ^1.6.0
+        version: 1.6.1(@types/node@20.19.41)
+
+  packages/connectors/jira:
+    dependencies:
+      '@iris/connector-sdk':
+        specifier: workspace:*
+        version: link:../../connector-sdk
+      '@iris/core':
+        specifier: workspace:*
+        version: link:../../core
+      neverthrow:
+        specifier: ^6.2.1
+        version: 6.2.2
+      zod:
+        specifier: ^3.23.8
+        version: 3.25.76
+    devDependencies:
+      '@types/node':
+        specifier: ^20.14.0
+        version: 20.19.41
+      '@vitest/coverage-v8':
+        specifier: ^1.6.0
+        version: 1.6.1(vitest@1.6.1(@types/node@20.19.41))
+      msw:
+        specifier: ^2.3.1
+        version: 2.14.6(@types/node@20.19.41)(typescript@5.9.3)
+      typescript:
+        specifier: ^5.5.0
+        version: 5.9.3
+      vitest:
+        specifier: ^1.6.0
+        version: 1.6.1(@types/node@20.19.41)
+
+  packages/connectors/linear:
+    dependencies:
+      '@iris/connector-sdk':
+        specifier: workspace:*
+        version: link:../../connector-sdk
+      '@iris/core':
+        specifier: workspace:*
+        version: link:../../core
+      neverthrow:
+        specifier: ^6.2.1
+        version: 6.2.2
+      zod:
+        specifier: ^3.23.8
+        version: 3.25.76
+    devDependencies:
+      '@types/node':
+        specifier: ^20.14.0
+        version: 20.19.41
+      '@vitest/coverage-v8':
+        specifier: ^1.6.0
+        version: 1.6.1(vitest@1.6.1(@types/node@20.19.41))
+      msw:
+        specifier: ^2.3.1
+        version: 2.14.6(@types/node@20.19.41)(typescript@5.9.3)
+      typescript:
+        specifier: ^5.5.0
+        version: 5.9.3
+      vitest:
+        specifier: ^1.6.0
+        version: 1.6.1(@types/node@20.19.41)
+
+  packages/connectors/netsuite:
     dependencies:
       '@iris/connector-sdk':
         specifier: workspace:*
@@ -421,7 +579,69 @@ importers:
         specifier: ^1.6.0
         version: 1.6.1(@types/node@20.19.41)
 
+  packages/connectors/quickbooks:
+    dependencies:
+      '@iris/connector-sdk':
+        specifier: workspace:*
+        version: link:../../connector-sdk
+      '@iris/core':
+        specifier: workspace:*
+        version: link:../../core
+      neverthrow:
+        specifier: ^6.2.1
+        version: 6.2.2
+      zod:
+        specifier: ^3.23.8
+        version: 3.25.76
+    devDependencies:
+      '@types/node':
+        specifier: ^20.14.0
+        version: 20.19.41
+      '@vitest/coverage-v8':
+        specifier: ^1.6.0
+        version: 1.6.1(vitest@1.6.1(@types/node@20.19.41))
+      msw:
+        specifier: ^2.3.1
+        version: 2.14.6(@types/node@20.19.41)(typescript@5.9.3)
+      typescript:
+        specifier: ^5.5.0
+        version: 5.9.3
+      vitest:
+        specifier: ^1.6.0
+        version: 1.6.1(@types/node@20.19.41)
+
   packages/connectors/salesforce:
+    dependencies:
+      '@iris/connector-sdk':
+        specifier: workspace:*
+        version: link:../../connector-sdk
+      '@iris/core':
+        specifier: workspace:*
+        version: link:../../core
+      neverthrow:
+        specifier: ^6.2.1
+        version: 6.2.2
+      zod:
+        specifier: ^3.23.8
+        version: 3.25.76
+    devDependencies:
+      '@types/node':
+        specifier: ^20.14.0
+        version: 20.19.41
+      '@vitest/coverage-v8':
+        specifier: ^1.6.0
+        version: 1.6.1(vitest@1.6.1(@types/node@20.19.41))
+      msw:
+        specifier: ^2.3.1
+        version: 2.14.6(@types/node@20.19.41)(typescript@5.9.3)
+      typescript:
+        specifier: ^5.5.0
+        version: 5.9.3
+      vitest:
+        specifier: ^1.6.0
+        version: 1.6.1(@types/node@20.19.41)
+
+  packages/connectors/slack:
     dependencies:
       '@iris/connector-sdk':
         specifier: workspace:*
@@ -1183,6 +1403,11 @@ packages:
 
   '@open-draft/until@2.1.0':
     resolution: {integrity: sha512-U69T3ItWHvLwGg5eJ0n3I62nWuE6ilHlmz7zM0npLBRvPRd7e6NYmg54vvRtP5mZG7kZqZCFVdsTWo7BPtBujg==}
+
+  '@playwright/test@1.60.0':
+    resolution: {integrity: sha512-O71yZIbAh/PxDMNGns37GHBIfrVkEVyn+AXyIa5dOTfb4/xNvRWV+Vv/NMbNCtODB/pO7vLlF2OTmMVLhmr7Ag==}
+    engines: {node: '>=18'}
+    hasBin: true
 
   '@radix-ui/number@1.1.1':
     resolution: {integrity: sha512-MkKCwxlXTgz6CFoJx3pCwn07GKp36+aZyu/u2Ln2VrA5DcdyCZkASEDBTd8x5whTQQL5CiYf4prXKLcgQdv29g==}
@@ -2246,6 +2471,11 @@ packages:
   fs.realpath@1.0.0:
     resolution: {integrity: sha512-OO0pH2lK6a0hZnAdau5ItzHPI6pUlvI7jMVnxUQRtw4owF2wk8lOSabtGDCTP4Ggrg2MbGnWO9X8K1t4+fGMDw==}
 
+  fsevents@2.3.2:
+    resolution: {integrity: sha512-xiqMQR4xAeHTuB9uWm+fFRcIOgKBMiOBP+eXiyT7jsgVCq1bkVygt00oASowB7EdtpOHaaPgKt812P9ab+DDKA==}
+    engines: {node: ^8.16.0 || ^10.6.0 || >=11.0.0}
+    os: [darwin]
+
   fsevents@2.3.3:
     resolution: {integrity: sha512-5xoDfX+fL7faATnagmWPpbFtwh/R77WmMMqqHGS65C3vvB0YHrgF+B1YmZ3441tMj5n63k0212XNoJwzlhffQw==}
     engines: {node: ^8.16.0 || ^10.6.0 || >=11.0.0}
@@ -2755,6 +2985,16 @@ packages:
 
   pkg-types@1.3.1:
     resolution: {integrity: sha512-/Jm5M4RvtBFVkKWRu2BLUTNP8/M2a+UwuAX+ae4770q1qVGtfjG+WTCupoZixokjmHiry8uI+dlY8KXYV5HVVQ==}
+
+  playwright-core@1.60.0:
+    resolution: {integrity: sha512-9bW6zvX/m0lEbgTKJ6YppOKx8H3VOPBMOCFh2irXFOT4BbHgrx5hPjwJYLT40Lu+4qtD36qKc/Hn56StUW57IA==}
+    engines: {node: '>=18'}
+    hasBin: true
+
+  playwright@1.60.0:
+    resolution: {integrity: sha512-hheHdokM8cdqCb0lcE3s+zT4t4W+vvjpGxsZlDnikarzx8tSzMebh3UiFtgqwFwnTnjYQcsyMF8ei2mCO/tpeA==}
+    engines: {node: '>=18'}
+    hasBin: true
 
   postcss-import@15.1.0:
     resolution: {integrity: sha512-hpr+J05B2FVYUAXHeK1YyI267J/dDDhMU6B6civm8hSY1jYJnBXxzKDKDswzJmtLHryrjhnDjqqp/49t8FALew==}
@@ -3397,14 +3637,14 @@ snapshots:
       react-dom: 18.3.1(react@18.3.1)
       tslib: 2.4.1
 
-  '@clerk/nextjs@5.7.6(next@14.2.35(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)':
+  '@clerk/nextjs@5.7.6(next@14.2.35(@playwright/test@1.60.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)':
     dependencies:
       '@clerk/backend': 1.14.1(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@clerk/clerk-react': 5.12.0(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@clerk/shared': 2.9.2(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@clerk/types': 4.26.0
       crypto-js: 4.2.0
-      next: 14.2.35(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      next: 14.2.35(@playwright/test@1.60.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       react: 18.3.1
       react-dom: 18.3.1(react@18.3.1)
       server-only: 0.0.1
@@ -3751,6 +3991,10 @@ snapshots:
       outvariant: 1.4.3
 
   '@open-draft/until@2.1.0': {}
+
+  '@playwright/test@1.60.0':
+    dependencies:
+      playwright: 1.60.0
 
   '@radix-ui/number@1.1.1': {}
 
@@ -4800,6 +5044,9 @@ snapshots:
 
   fs.realpath@1.0.0: {}
 
+  fsevents@2.3.2:
+    optional: true
+
   fsevents@2.3.3:
     optional: true
 
@@ -5163,7 +5410,7 @@ snapshots:
 
   neverthrow@6.2.2: {}
 
-  next@14.2.35(react-dom@18.3.1(react@18.3.1))(react@18.3.1):
+  next@14.2.35(@playwright/test@1.60.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1):
     dependencies:
       '@next/env': 14.2.35
       '@swc/helpers': 0.5.5
@@ -5184,6 +5431,7 @@ snapshots:
       '@next/swc-win32-arm64-msvc': 14.2.33
       '@next/swc-win32-ia32-msvc': 14.2.33
       '@next/swc-win32-x64-msvc': 14.2.33
+      '@playwright/test': 1.60.0
     transitivePeerDependencies:
       - '@babel/core'
       - babel-plugin-macros
@@ -5289,6 +5537,14 @@ snapshots:
       confbox: 0.1.8
       mlly: 1.8.2
       pathe: 2.0.3
+
+  playwright-core@1.60.0: {}
+
+  playwright@1.60.0:
+    dependencies:
+      playwright-core: 1.60.0
+    optionalDependencies:
+      fsevents: 2.3.2
 
   postcss-import@15.1.0(postcss@8.5.15):
     dependencies:

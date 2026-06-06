@@ -17,6 +17,8 @@ export default defineConfig({
       '@iris/semantic-core': path.resolve(__dirname, '../../packages/semantic-core/src/index.ts'),
       '@iris/compression': path.resolve(__dirname, '../../packages/compression/src/index.ts'),
       '@iris/queue': path.resolve(__dirname, '../../packages/queue/src/sync-job-queue.ts'),
+      '@iris/connector-hubspot/webhook-handler': path.resolve(__dirname, '../../packages/connectors/hubspot/src/webhook-handler.ts'),
+      '@iris/connector-slack/webhook-handler': path.resolve(__dirname, '../../packages/connectors/slack/src/webhook-handler.ts'),
     },
   },
   test: {

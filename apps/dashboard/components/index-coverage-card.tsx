@@ -1,6 +1,18 @@
 'use client';
 
-import type { IndexStatus } from '@iris/semantic-core';
+type IndexCoverageByType = {
+  entityType: string;
+  entityCount: number;
+  totalBytes: number;
+  lastIndexedAt: Date;
+};
+
+type IndexStatus = {
+  totalEntities: number;
+  totalBytes: number;
+  lastIndexedAt: Date | null;
+  coverageByType: IndexCoverageByType[];
+};
 
 interface Props {
   status: IndexStatus | null;

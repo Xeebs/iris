@@ -36,12 +36,12 @@ export function assertWorkspace(
  *
  * @param rawKey - Raw API key from environment
  * @param sql - Postgres client
- * @returns Authenticated workspace ID and key ID
+ * @returns Authenticated workspace ID, key ID, and optional role ID
  */
 export async function validateMcpApiKey(
   rawKey: string,
   sql: SqlClient,
-): Promise<Result<{ workspaceId: string; keyId: string }, Error>> {
+): Promise<Result<{ workspaceId: string; keyId: string; roleId: string | null }, Error>> {
   const manager = new ApiKeyManager(sql);
   const result = await manager.validateKey(rawKey);
   if (result.isErr()) {

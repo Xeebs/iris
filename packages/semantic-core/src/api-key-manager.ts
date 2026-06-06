@@ -25,11 +25,13 @@ type ApiKeyRow = {
   created_at: Date;
   last_used_at: Date | null;
   revoked_at: Date | null;
+  role_id: string | null;
 };
 
 export type ValidatedKey = {
   keyId: string;
   workspaceId: string;
+  roleId: string | null;
 };
 
 const KEY_PREFIX = 'iris_';
@@ -94,7 +96,7 @@ export class ApiKeyManager {
     try {
       const keyHash = hashKey(rawKey);
       const [row] = await this.sql<ApiKeyRow[]>`
-        SELECT id, workspace_id, display_name, created_at, last_used_at, revoked_at
+        SELECT id, workspace_id, display_name, created_at, last_used_at, revoked_at, role_id
         FROM mcp_api_keys
         WHERE key_hash = ${keyHash}
           AND revoked_at IS NULL
@@ -110,7 +112,7 @@ export class ApiKeyManager {
       `;
 
       log.info('API key validated', { keyId: row.id, workspaceId: row.workspace_id });
-      return ok({ keyId: row.id, workspaceId: row.workspace_id });
+      return ok({ keyId: row.id, workspaceId: row.workspace_id, roleId: row.role_id ?? null });
     } catch (e) {
       log.error('Failed to validate API key', { error: e });
       return err(e instanceof Error ? e : new Error(String(e)));

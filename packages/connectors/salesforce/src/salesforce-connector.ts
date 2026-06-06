@@ -108,32 +108,32 @@ export class SalesforceConnector extends BaseConnector<SalesforceConfig> {
         {
           name: 'contact',
           attributes: [
-            { name: 'email', type: 'string' },
-            { name: 'phone', type: 'string' },
-            { name: 'title', type: 'string' },
-            { name: 'leadSource', type: 'string' },
-            { name: 'ownerId', type: 'string' },
+            { name: 'email', type: 'string' as const, nullable: true, pii: true },
+            { name: 'phone', type: 'string' as const, nullable: true, pii: true },
+            { name: 'title', type: 'string' as const, nullable: true },
+            { name: 'leadSource', type: 'string' as const, nullable: true },
+            { name: 'ownerId', type: 'string' as const, nullable: true },
           ],
         },
         {
           name: 'account',
           attributes: [
-            { name: 'industry', type: 'string' },
-            { name: 'website', type: 'string' },
-            { name: 'employees', type: 'number' },
-            { name: 'annualRevenue', type: 'number' },
-            { name: 'city', type: 'string' },
-            { name: 'country', type: 'string' },
+            { name: 'industry', type: 'string' as const, nullable: true },
+            { name: 'website', type: 'string' as const, nullable: true },
+            { name: 'employees', type: 'number' as const, nullable: true },
+            { name: 'annualRevenue', type: 'number' as const, nullable: true },
+            { name: 'city', type: 'string' as const, nullable: true },
+            { name: 'country', type: 'string' as const, nullable: true },
           ],
         },
         {
           name: 'opportunity',
           attributes: [
-            { name: 'stage', type: 'string' },
-            { name: 'amount', type: 'number' },
-            { name: 'closeDate', type: 'string' },
-            { name: 'probability', type: 'number' },
-            { name: 'leadSource', type: 'string' },
+            { name: 'stage', type: 'string' as const, nullable: true },
+            { name: 'amount', type: 'number' as const, nullable: true },
+            { name: 'closeDate', type: 'string' as const, nullable: true },
+            { name: 'probability', type: 'number' as const, nullable: true },
+            { name: 'leadSource', type: 'string' as const, nullable: true },
           ],
         },
       ],
@@ -143,15 +143,15 @@ export class SalesforceConnector extends BaseConnector<SalesforceConfig> {
 
   async healthCheck(): Promise<HealthStatus> {
     if (!this.tokens) {
-      return { healthy: false, message: 'No OAuth tokens — connect() has not been called' };
+      return { healthy: false, error: 'No OAuth tokens — connect() has not been called', checkedAt: new Date() };
     }
     try {
       const url = `${this.tokens.instanceUrl}/services/data/${SF_API_VERSION}/limits`;
       const res = await this.fetchWithAuth(url);
-      if (res.ok) return { healthy: true };
-      return { healthy: false, message: `Salesforce returned ${res.status}` };
+      if (res.ok) return { healthy: true, checkedAt: new Date() };
+      return { healthy: false, error: `Salesforce returned ${res.status}`, checkedAt: new Date() };
     } catch (e) {
-      return { healthy: false, message: String(e) };
+      return { healthy: false, error: String(e), checkedAt: new Date() };
     }
   }
 

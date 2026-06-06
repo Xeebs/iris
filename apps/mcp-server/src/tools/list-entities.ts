@@ -2,6 +2,8 @@ import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { compress } from '@iris/compression';
 import type { VectorStore } from '@iris/semantic-core';
+import type { ContextPermissions } from '@iris/semantic-core';
+import { filterContextByRole } from '@iris/semantic-core';
 import { logger } from '@iris/core/logger';
 import { assertWorkspace } from '../workspace-guard.js';
 
@@ -28,14 +30,16 @@ const inputSchema = {
 /**
  * Register the list-entities tool on an McpServer instance.
  *
- * @param server      - MCP server to register on
- * @param vectorStore - Initialized vector store
+ * @param server                   - MCP server to register on
+ * @param vectorStore              - Initialized vector store
  * @param authenticatedWorkspaceId - Workspace from validated API key, or null in dev mode
+ * @param contextPermissions       - Role-based access permissions, or null for unrestricted
  */
 export function registerListEntities(
   server: McpServer,
   vectorStore: VectorStore,
   authenticatedWorkspaceId: string | null = null,
+  contextPermissions: ContextPermissions | null = null,
 ): void {
   server.registerTool(
     'list-entities',
@@ -49,6 +53,17 @@ export function registerListEntities(
       try {
         const authError = assertWorkspace(params.workspaceId, authenticatedWorkspaceId);
         if (authError) return { content: [{ type: 'text' as const, text: authError }] };
+
+        if (contextPermissions && !contextPermissions.allowedEntityTypes.has(params.entityType)) {
+          return {
+            content: [
+              {
+                type: 'text' as const,
+                text: `Access denied: entity type "${params.entityType}" is not permitted for this API key's role.`,
+              },
+            ],
+          };
+        }
 
         const entities = await vectorStore.listByType(
           params.workspaceId,
@@ -67,7 +82,11 @@ export function registerListEntities(
           };
         }
 
-        const compressed = compress(entities, { contextBudget: params.contextBudget ?? 2000 });
+        const filtered = contextPermissions
+          ? filterContextByRole(entities, contextPermissions)
+          : entities;
+
+        const compressed = compress(filtered, { contextBudget: params.contextBudget ?? 2000 });
 
         const text = compressed.truncated
           ? compressed.content + `\n\n[truncated: ${compressed.savedTokens} tokens saved]`
@@ -78,6 +97,7 @@ export function registerListEntities(
           entityType: params.entityType,
           entityCount: compressed.entityCount,
           tokenCount: compressed.tokenCount,
+          roleFiltered: !!contextPermissions,
         });
 
         return { content: [{ type: 'text' as const, text }] };

@@ -8,7 +8,9 @@
     "incremental": true,
     "plugins": [{ "name": "next" }],
     "paths": {
-      "@/*": ["./*"]
+      "@/*": ["./*"],
+      "@iris/semantic-core": ["../../packages/semantic-core/dist/index.d.ts"],
+      "@iris/semantic-core/*": ["../../packages/semantic-core/dist/*.d.ts"]
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],

@@ -4,6 +4,8 @@ import type { SemanticCache } from '@iris/cache/semantic-cache';
 import { compress } from '@iris/compression';
 import type { VectorStore } from '@iris/semantic-core';
 import { retrieveContext } from '@iris/semantic-core';
+import type { ContextPermissions } from '@iris/semantic-core';
+import { filterContextByRole } from '@iris/semantic-core';
 import { logger } from '@iris/core/logger';
 import { assertWorkspace } from '../workspace-guard.js';
 
@@ -34,11 +36,12 @@ const inputSchema = {
 /**
  * Register the query-context tool on an McpServer instance.
  *
- * @param server      - MCP server to register on
- * @param vectorStore - Initialized vector store for semantic search
- * @param cache       - Semantic cache instance
- * @param openAiKey   - OpenAI API key for query embedding
+ * @param server                   - MCP server to register on
+ * @param vectorStore              - Initialized vector store for semantic search
+ * @param cache                    - Semantic cache instance
+ * @param openAiKey                - OpenAI API key for query embedding
  * @param authenticatedWorkspaceId - Workspace from validated API key, or null in dev mode
+ * @param contextPermissions       - Role-based access permissions, or null for unrestricted
  */
 export function registerQueryContext(
   server: McpServer,
@@ -46,6 +49,7 @@ export function registerQueryContext(
   cache: SemanticCache,
   openAiKey: string,
   authenticatedWorkspaceId: string | null = null,
+  contextPermissions: ContextPermissions | null = null,
 ): void {
   // @ts-ignore TS2589 — MCP SDK registerTool generics exceed TypeScript's depth limit for this 5-field schema
   server.registerTool(
@@ -85,7 +89,11 @@ export function registerQueryContext(
         }
         const result = await retrieveContext(params.query, vectorStore, retrievalOpts);
 
-        const compressed = compress(result.entities, {
+        const entities = contextPermissions
+          ? filterContextByRole(result.entities, contextPermissions)
+          : result.entities;
+
+        const compressed = compress(entities, {
           contextBudget: params.contextBudget ?? 2000,
           query: params.query,
         });
@@ -99,6 +107,7 @@ export function registerQueryContext(
           entityCount: compressed.entityCount,
           tokenCount: compressed.tokenCount,
           truncated: compressed.truncated,
+          roleFiltered: !!contextPermissions,
           durationMs: Date.now() - start,
         });
 

@@ -14,7 +14,8 @@
     "./glossary": "./dist/glossary.js",
     "./metrics": "./dist/metrics.js",
     "./sync-events": "./dist/sync-events.js",
-    "./connector-health-service": "./dist/connector-health-service.js"
+    "./connector-health-service": "./dist/connector-health-service.js",
+    "./context-permissions": "./dist/context-permissions.js"
   },
   "scripts": {
     "build": "tsc --build",
