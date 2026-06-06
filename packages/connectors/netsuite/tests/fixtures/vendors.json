@@ -1,0 +1,16 @@
+{
+  "items": [
+    {
+      "id": "vendor-001",
+      "entityId": "Supplier A",
+      "companyName": "Supplier A Ltd",
+      "email": "orders@suppliera.com",
+      "subsidiary": { "id": "sub-001", "refName": "Global HQ" },
+      "lastModifiedDate": "2026-04-15T12:00:00.000Z"
+    }
+  ],
+  "count": 1,
+  "hasMore": false,
+  "offset": 0,
+  "totalResults": 1
+}

@@ -770,7 +770,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: NetSuite Connector
 - **Layer**: 19 — Additional Connectors & V1 Completion
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: High
 - **Description**: Implement NetSuite connector in packages/connectors/netsuite/. Connect via OAuth2 to NetSuite REST API. Sync customers, vendors, items, and transactions as SemanticEntity objects. Support incremental sync via lastModifiedDate filtering. Extract entity metadata (subsidiary, status, categories). Handle rate limiting per NetSuite's API guidance. Use MSW for tests with fixture responses. Include ConnectorManifest with OAuth scope configuration following connector-patterns.md.
 - **Files**:

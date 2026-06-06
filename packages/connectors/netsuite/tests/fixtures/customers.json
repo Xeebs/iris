@@ -1,0 +1,28 @@
+{
+  "items": [
+    {
+      "id": "cust-001",
+      "entityId": "Acme Corp",
+      "companyName": "Acme Corporation",
+      "email": "billing@acme.com",
+      "phone": "555-0100",
+      "subsidiary": { "id": "sub-001", "refName": "Global HQ" },
+      "status": { "id": "status-001", "refName": "Customer" },
+      "lastModifiedDate": "2026-05-20T10:00:00.000Z"
+    },
+    {
+      "id": "cust-002",
+      "entityId": "Globex Inc",
+      "companyName": "Globex Incorporated",
+      "email": "ap@globex.com",
+      "phone": "555-0200",
+      "subsidiary": { "id": "sub-001", "refName": "Global HQ" },
+      "status": { "id": "status-002", "refName": "Prospect" },
+      "lastModifiedDate": "2026-06-01T08:30:00.000Z"
+    }
+  ],
+  "count": 2,
+  "hasMore": false,
+  "offset": 0,
+  "totalResults": 2
+}
