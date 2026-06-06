@@ -1,0 +1,51 @@
+{
+  "data": {
+    "issues": {
+      "nodes": [
+        {
+          "id": "issue-001",
+          "title": "Fix login page crash on mobile",
+          "identifier": "ENG-1",
+          "priority": 1,
+          "priorityLabel": "Urgent",
+          "state": { "id": "state-001", "name": "In Progress", "type": "started" },
+          "team": { "id": "team-001", "name": "Engineering", "key": "ENG" },
+          "assignee": { "id": "user-001", "name": "Alice Smith" },
+          "labels": { "nodes": [{ "id": "label-001", "name": "bug" }, { "id": "label-002", "name": "mobile" }] },
+          "updatedAt": "2026-05-20T10:00:00.000Z",
+          "createdAt": "2026-05-15T09:00:00.000Z",
+          "cycleId": "cycle-001"
+        },
+        {
+          "id": "issue-002",
+          "title": "Implement dark mode",
+          "identifier": "ENG-2",
+          "priority": 2,
+          "priorityLabel": "High",
+          "state": { "id": "state-002", "name": "Todo", "type": "unstarted" },
+          "team": { "id": "team-001", "name": "Engineering", "key": "ENG" },
+          "assignee": null,
+          "labels": { "nodes": [] },
+          "updatedAt": "2026-05-18T14:00:00.000Z",
+          "createdAt": "2026-05-10T08:00:00.000Z",
+          "cycleId": null
+        },
+        {
+          "id": "issue-003",
+          "title": "Update pricing page copy",
+          "identifier": "MKTG-5",
+          "priority": 3,
+          "priorityLabel": "Medium",
+          "state": { "id": "state-003", "name": "Done", "type": "completed" },
+          "team": { "id": "team-002", "name": "Marketing", "key": "MKTG" },
+          "assignee": { "id": "user-002", "name": "Bob Jones" },
+          "labels": { "nodes": [{ "id": "label-003", "name": "content" }] },
+          "updatedAt": "2026-06-01T16:00:00.000Z",
+          "createdAt": "2026-05-25T11:00:00.000Z",
+          "cycleId": null
+        }
+      ],
+      "pageInfo": { "hasNextPage": false, "endCursor": "cursor-abc" }
+    }
+  }
+}

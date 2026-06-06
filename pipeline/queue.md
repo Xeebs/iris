@@ -754,7 +754,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Linear Connector
 - **Layer**: 19 — Additional Connectors & V1 Completion
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: High
 - **Description**: Implement Linear connector in packages/connectors/linear/. Connect via OAuth2 to Linear API. Sync issues, projects, and cycles as SemanticEntity objects. Support incremental sync via updatedAt cursor. Extract issue metadata (status, priority, assignee, labels, team). Include ConnectorManifest with icon and OAuth scope configuration. Use MSW for tests with fixture responses. Follow connector-patterns.md for entity transformation and sync generator rules.
 - **Files**:

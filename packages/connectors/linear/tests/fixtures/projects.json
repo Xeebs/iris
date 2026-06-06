@@ -1,0 +1,48 @@
+{
+  "data": {
+    "projects": {
+      "nodes": [
+        {
+          "id": "project-001",
+          "name": "Mobile App Relaunch",
+          "description": "Full redesign and performance overhaul of the mobile application",
+          "state": "started",
+          "updatedAt": "2026-05-28T12:00:00.000Z",
+          "teams": {
+            "nodes": [
+              { "id": "team-001", "name": "Engineering", "key": "ENG" },
+              { "id": "team-002", "name": "Marketing", "key": "MKTG" }
+            ]
+          }
+        },
+        {
+          "id": "project-002",
+          "name": "Q3 Growth Initiative",
+          "description": null,
+          "state": "planned",
+          "updatedAt": "2026-06-02T09:00:00.000Z",
+          "teams": {
+            "nodes": [
+              { "id": "team-002", "name": "Marketing", "key": "MKTG" }
+            ]
+          }
+        }
+      ],
+      "pageInfo": { "hasNextPage": false, "endCursor": "cursor-xyz" }
+    },
+    "cycles": {
+      "nodes": [
+        {
+          "id": "cycle-001",
+          "name": "Sprint 12",
+          "number": 12,
+          "startsAt": "2026-05-19T00:00:00.000Z",
+          "endsAt": "2026-06-01T23:59:59.000Z",
+          "updatedAt": "2026-05-19T00:00:00.000Z",
+          "team": { "id": "team-001", "name": "Engineering", "key": "ENG" }
+        }
+      ],
+      "pageInfo": { "hasNextPage": false, "endCursor": "cursor-def" }
+    }
+  }
+}
