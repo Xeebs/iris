@@ -720,7 +720,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Role-Based Context Segmentation
 - **Layer**: 18 — Additional Connectors
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: Medium
 - **Description**: Implement role-based context access control. Create apps/api/migrations/012_add_context_permissions.sql with tables: context_roles (id, workspace_id, role_name, description), role_entity_type_permissions (role_id, entity_type, allowed_fields). Implement ContextPermissionService in packages/semantic-core/src/context-permissions.ts with methods: filterContextByRole(context, role, schema) that removes unauthorized entity types and fields. Update retrieval engine and all MCP tools (query-context, list-entities, get-entity) to filter results per API key's assigned role. Add unit + integration tests verifying access control enforcement.
 - **Files**:
