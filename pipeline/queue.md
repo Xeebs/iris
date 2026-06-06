@@ -512,7 +512,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: MCP Server API Key Authentication & Workspace Isolation
 - **Layer**: 16 — Production Hardening
-- **Status**: IN_PROGRESS
+- **Status**: COMMITTED
 - **Priority**: High
 - **Description**: Implement API key-based authentication for the MCP server to enforce workspace isolation and access control. Create apps/api/migrations/007_add_mcp_api_keys.sql with tables: mcp_api_keys (id, workspace_id, key_hash, display_name, createdAt, lastUsedAt, revokedAt) and mcp_audit_sessions (session_id, api_key_id, workspace_id, connectedAt, disconnectedAt). Update apps/mcp-server/src/server.ts to validate incoming MCP requests via an API key passed in the MCP initialize message (or via StdioServerTransport metadata). Ensure all MCP tools check workspace_id from the authenticated key and return 403 if accessing resources outside that workspace. Add integration tests with real Postgres. Reference api-conventions.md for auth patterns.
 - **Files**:
@@ -533,7 +533,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: REST API Rate Limiting & Request Throttling
 - **Layer**: 16 — Production Hardening
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: High
 - **Description**: Implement rate limiting middleware for the REST API to prevent abuse and ensure fair resource usage. Create apps/api/src/middleware/rate-limiter.ts using Redis-backed sliding window counters with per-workspace limits. Defaults: 100 requests/minute per workspace, 10 requests/minute for sync triggers (POST /api/v1/connectors/:id/sync). Make limits configurable via env vars. Return 429 with Retry-After header when exceeded. Update apps/api/src/server.ts to register the middleware globally and selectively per route. Add unit tests with mocked Redis and integration tests with real Redis. See api-conventions.md for HTTP status code rules.
 - **Files**:
@@ -546,7 +546,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Sync Worker Implementation & Connector Invocation
 - **Layer**: 16 — Production Hardening
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: High
 - **Description**: Complete the sync-worker.ts stub in apps/api/src/workers/sync-worker.ts to actually execute connector syncs. The worker should: (1) look up the connector instance from the database, (2) instantiate the registered connector with its config, (3) call connector.sync() to get an AsyncGenerator of entities, (4) yield entities to the semantic indexer (packages/semantic-core/src/indexer.ts), (5) update connector_instances.lastSyncedAt on completion, (6) emit sync events to an audit log. Handle errors with retry logic (3 retries, exponential backoff already configured in BullMQ). Log sync start/progress/completion. Add integration tests with mocked Postgres and a real Redis queue.
 - **Files**:
@@ -558,7 +558,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: E2E Tests for Critical User Flows
 - **Layer**: 16 — Production Hardening
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: High
 - **Description**: Write end-to-end tests using Playwright in tests/e2e/ covering critical user flows: (1) Dashboard connector setup flow (select type → OAuth → schema discovery → create instance), (2) MCP query flow (authenticate with API key → query-context returns relevant entities → cache hit on repeat query), (3) Token analytics flow (trigger sync → verify tokens logged → check analytics page shows usage). Tests should use real API server and MCP server running locally, with Postgres and Redis via docker-compose. Include fixtures for connector OAuth mocks and test data. Target: 3–5 test suites with 10–15 tests total.
 - **Files**:

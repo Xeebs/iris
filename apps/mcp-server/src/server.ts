@@ -4,7 +4,7 @@ import { SemanticCache } from '@iris/cache/semantic-cache';
 import { PgvectorStore, GlossaryService, MetricRegistry } from '@iris/semantic-core';
 import type { VectorStore } from '@iris/semantic-core';
 import { logger } from '@iris/core/logger';
-import Redis from 'ioredis';
+import { Redis } from 'ioredis';
 import postgres from 'postgres';
 
 import { registerQueryContext } from './tools/query-context.js';
