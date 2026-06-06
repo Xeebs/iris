@@ -27,18 +27,19 @@ services:
     volumes:
       - qdrant_data:/qdrant/storage
 
-  # Optional: Neo4j for knowledge graph features
-  # neo4j:
-  #   image: neo4j:5-community
-  #   environment:
-  #     NEO4J_AUTH: neo4j/password
-  #   ports:
-  #     - '7474:7474'
-  #     - '7687:7687'
-  #   volumes:
-  #     - neo4j_data:/data
+  neo4j:
+    image: neo4j:5-community
+    environment:
+      NEO4J_AUTH: neo4j/iris_password
+      NEO4J_PLUGINS: '["apoc"]'
+      NEO4J_dbms_security_procedures_unrestricted: apoc.*
+    ports:
+      - '7474:7474'
+      - '7687:7687'
+    volumes:
+      - neo4j_data:/data
 
 volumes:
   postgres_data:
   qdrant_data:
-  # neo4j_data:
+  neo4j_data:

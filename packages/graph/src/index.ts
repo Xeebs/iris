@@ -1,2 +1,2 @@
-// Graph package — knowledge graph interface (Neo4j)
-// Implementation pending Layer 4+ tasks
+export { Neo4jGraphStore } from './graph-store.js';
+export type { GraphStore, RelatedEntity } from './graph-store.js';

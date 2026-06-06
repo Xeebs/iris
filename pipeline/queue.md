@@ -447,7 +447,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Knowledge Graph Service (Neo4j)
 - **Layer**: 14 — Knowledge Graph
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: Medium
 - **Description**: Implement packages/graph/src/graph-store.ts as a Neo4j interface. Define a GraphStore interface with methods: addEntity(entity), addRelationship(sourceId, targetId, type), getRelated(entityId, relationshipType, limit), removeEntity(entityId), removeRelationship(sourceId, targetId). Implement Neo4jGraphStore using neo4j-driver. Support read/write across tenants (workspaceId partition). Add unit tests with mocked Neo4j driver and integration tests with real Neo4j via docker-compose. See schema-mapper rules for entity-relationship semantics.
 - **Files**:
