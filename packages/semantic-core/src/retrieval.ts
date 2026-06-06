@@ -4,6 +4,20 @@ import { logger } from '@iris/core/logger';
 import { IndexerError } from '@iris/core/errors';
 import { EMBEDDING_MODEL } from './embedding.js';
 import type { VectorStore } from './vector-store.js';
+import type { Result } from 'neverthrow';
+
+// Minimal graph interface — Neo4jGraphStore satisfies this via structural typing
+interface RelatedEntityResult {
+  id: string;
+  type: string;
+  label: string;
+  relationshipType: string;
+  workspaceId: string;
+}
+
+interface GraphExpander {
+  getRelated(entityId: string, workspaceId: string, relType?: string, limit?: number): Promise<Result<RelatedEntityResult[], Error>>;
+}
 
 const log = logger.child({ service: 'retrieval' });
 
@@ -20,6 +34,8 @@ export interface RetrievalOptions {
   maxDepth: number;
   /** OpenAI API key for query embedding */
   openAiApiKey?: string;
+  /** Optional graph store for relationship expansion. When omitted, falls back to entity.relationships */
+  graphStore?: GraphExpander;
 }
 
 export interface RetrievalResult {
@@ -68,12 +84,7 @@ export async function retrieveContext(
   let scores = searchResults.map((r) => r.score);
 
   if (opts.expandRelationships && opts.maxDepth > 0) {
-    const expandedResult = await expandViaRelationships(
-      expanded,
-      scores,
-      vectorStore,
-      opts,
-    );
+    const expandedResult = await expandViaRelationships(expanded, scores, vectorStore, opts);
     expanded = expandedResult.entities;
     scores = expandedResult.scores;
   }
@@ -122,21 +133,38 @@ async function expandViaRelationships(
   const expanded = [...entities];
   const expandedScores = [...scores];
 
-  for (const entity of entities) {
-    for (const rel of entity.relationships) {
-      if (seenIds.has(rel.targetId)) continue;
+  if (opts.graphStore) {
+    // Preferred path: use the graph store to find related entity IDs, then fetch from vector store
+    for (const entity of entities) {
+      const relResult = await opts.graphStore.getRelated(entity.id, opts.workspaceId);
+      if (relResult.isErr()) {
+        log.warn('Graph expansion failed for entity', { entityId: entity.id, error: relResult.error });
+        continue;
+      }
 
-      const results = await vectorStore.search(
-        new Array(1536).fill(0) as number[],
-        1,
-        { workspaceId: opts.workspaceId },
-      );
+      for (const related of relResult.value) {
+        if (seenIds.has(related.id)) continue;
 
-      const found = results.find((r) => r.entity.id === rel.targetId);
-      if (found) {
-        expanded.push(found.entity);
-        expandedScores.push(found.score * 0.8); // discount relationship-expanded entities
-        seenIds.add(rel.targetId);
+        const found = await vectorStore.getById(opts.workspaceId, related.id);
+        if (found) {
+          expanded.push(found);
+          expandedScores.push(0.5); // relationship-expanded entities get a fixed lower score
+          seenIds.add(related.id);
+        }
+      }
+    }
+  } else {
+    // Fallback path: use inline entity.relationships array and look up by ID
+    for (const entity of entities) {
+      for (const rel of entity.relationships) {
+        if (seenIds.has(rel.targetId)) continue;
+
+        const found = await vectorStore.getById(opts.workspaceId, rel.targetId);
+        if (found) {
+          expanded.push(found);
+          expandedScores.push(0.5);
+          seenIds.add(rel.targetId);
+        }
       }
     }
   }

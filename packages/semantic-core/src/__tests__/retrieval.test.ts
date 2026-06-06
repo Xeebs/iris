@@ -2,11 +2,16 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { retrieveContext } from '../retrieval.js';
 import type { VectorStore } from '../vector-store.js';
 import type { SemanticEntity } from '@iris/connector-sdk';
+import { ok, err } from 'neverthrow';
 import OpenAI from 'openai';
 
 vi.mock('openai');
 
-function makeEntity(id: string, type = 'contact', relationships: SemanticEntity['relationships'] = []): SemanticEntity {
+function makeEntity(
+  id: string,
+  type = 'contact',
+  relationships: SemanticEntity['relationships'] = [],
+): SemanticEntity {
   return {
     id,
     type,
@@ -18,23 +23,33 @@ function makeEntity(id: string, type = 'contact', relationships: SemanticEntity[
   };
 }
 
-function makeMockVectorStore(results: Array<{ entity: SemanticEntity; score: number }> = []): VectorStore {
+function makeMockVectorStore(
+  results: Array<{ entity: SemanticEntity; score: number }> = [],
+): VectorStore {
   return {
     upsert: vi.fn().mockResolvedValue(undefined),
     search: vi.fn().mockResolvedValue(results),
     delete: vi.fn().mockResolvedValue(undefined),
+    listByType: vi.fn().mockResolvedValue([]),
+    getById: vi.fn().mockResolvedValue(null),
   };
 }
 
-const mockQueryVector = Array.from({ length: 1536 }, (_, i) => i === 0 ? 1 : 0);
+function makeMockGraphStore(related: Array<{ id: string; type: string; label: string; relationshipType: string; workspaceId: string }> = []) {
+  return {
+    getRelated: vi.fn().mockResolvedValue(ok(related)),
+  };
+}
+
+const mockQueryVector = Array.from({ length: 1536 }, (_, i) => (i === 0 ? 1 : 0));
 
 describe('retrieveContext', () => {
   const mockCreate = vi.fn();
 
   beforeEach(() => {
-    vi.mocked(OpenAI).mockImplementation(() => ({
-      embeddings: { create: mockCreate },
-    }) as unknown as OpenAI);
+    vi.mocked(OpenAI).mockImplementation(
+      () => ({ embeddings: { create: mockCreate } }) as unknown as OpenAI,
+    );
     mockCreate.mockResolvedValue({
       data: [{ index: 0, embedding: mockQueryVector }],
       model: 'text-embedding-3-small',
@@ -105,16 +120,14 @@ describe('retrieveContext', () => {
     );
   });
 
-  it('expands related entities when expandRelationships=true', async () => {
+  it('expands related entities via entity.relationships (fallback path)', async () => {
     const company = makeEntity('hubspot:company:2');
     const contact = makeEntity('hubspot:contact:1', 'contact', [
       { type: 'belongs_to', targetId: 'hubspot:company:2' },
     ]);
 
     const store = makeMockVectorStore([{ entity: contact, score: 0.9 }]);
-    vi.mocked(store.search)
-      .mockResolvedValueOnce([{ entity: contact, score: 0.9 }])
-      .mockResolvedValueOnce([{ entity: company, score: 0.8 }]);
+    vi.mocked(store.getById).mockResolvedValue(company);
 
     const result = await retrieveContext('query', store, {
       workspaceId: 'ws-1',
@@ -129,21 +142,108 @@ describe('retrieveContext', () => {
     expect(ids).toContain('hubspot:company:2');
   });
 
+  it('expands related entities via graphStore when provided', async () => {
+    const contact = makeEntity('hubspot:contact:1');
+    const company = makeEntity('hubspot:company:2');
+
+    const store = makeMockVectorStore([{ entity: contact, score: 0.9 }]);
+    vi.mocked(store.getById).mockResolvedValue(company);
+
+    const graphStore = makeMockGraphStore([
+      { id: 'hubspot:company:2', type: 'company', label: 'Acme Corp', relationshipType: 'belongs_to', workspaceId: 'ws-1' },
+    ]);
+
+    const result = await retrieveContext('query', store, {
+      workspaceId: 'ws-1',
+      topK: 5,
+      expandRelationships: true,
+      maxDepth: 1,
+      graphStore,
+    });
+
+    expect(graphStore.getRelated).toHaveBeenCalledWith('hubspot:contact:1', 'ws-1');
+    expect(result.entities).toHaveLength(2);
+    expect(result.entities.map((e) => e.id)).toContain('hubspot:company:2');
+  });
+
+  it('assigns a discounted score (0.5) to graph-expanded entities', async () => {
+    const contact = makeEntity('hubspot:contact:1');
+    const company = makeEntity('hubspot:company:2');
+
+    const store = makeMockVectorStore([{ entity: contact, score: 0.95 }]);
+    vi.mocked(store.getById).mockResolvedValue(company);
+
+    const graphStore = makeMockGraphStore([
+      { id: 'hubspot:company:2', type: 'company', label: 'Acme', relationshipType: 'belongs_to', workspaceId: 'ws-1' },
+    ]);
+
+    const result = await retrieveContext('query', store, {
+      workspaceId: 'ws-1',
+      topK: 5,
+      expandRelationships: true,
+      maxDepth: 1,
+      graphStore,
+    });
+
+    const companyScore = result.scores[result.entities.findIndex((e) => e.id === 'hubspot:company:2')];
+    expect(companyScore).toBe(0.5);
+  });
+
+  it('does not add duplicate entities during graph expansion', async () => {
+    const contact = makeEntity('hubspot:contact:1');
+
+    const store = makeMockVectorStore([{ entity: contact, score: 0.9 }]);
+    const graphStore = makeMockGraphStore([
+      // The same entity is returned by the graph store
+      { id: 'hubspot:contact:1', type: 'contact', label: 'Alice', relationshipType: 'self', workspaceId: 'ws-1' },
+    ]);
+
+    const result = await retrieveContext('query', store, {
+      workspaceId: 'ws-1',
+      topK: 5,
+      expandRelationships: true,
+      maxDepth: 1,
+      graphStore,
+    });
+
+    expect(result.entities).toHaveLength(1);
+  });
+
+  it('handles graphStore.getRelated error gracefully', async () => {
+    const contact = makeEntity('hubspot:contact:1');
+    const store = makeMockVectorStore([{ entity: contact, score: 0.9 }]);
+    const graphStore = { getRelated: vi.fn().mockResolvedValue(err(new Error('neo4j down'))) };
+
+    const result = await retrieveContext('query', store, {
+      workspaceId: 'ws-1',
+      topK: 5,
+      expandRelationships: true,
+      maxDepth: 1,
+      graphStore,
+    });
+
+    // Should still return the primary search results
+    expect(result.entities).toHaveLength(1);
+    expect(result.entities[0]?.id).toBe('hubspot:contact:1');
+  });
+
   it('does not expand when expandRelationships=false', async () => {
     const contact = makeEntity('hubspot:contact:1', 'contact', [
       { type: 'belongs_to', targetId: 'hubspot:company:2' },
     ]);
     const store = makeMockVectorStore([{ entity: contact, score: 0.9 }]);
+    const graphStore = makeMockGraphStore([]);
 
     const result = await retrieveContext('query', store, {
       workspaceId: 'ws-1',
       topK: 5,
       expandRelationships: false,
       maxDepth: 0,
+      graphStore,
     });
 
     expect(result.entities).toHaveLength(1);
-    expect(store.search).toHaveBeenCalledOnce();
+    expect(graphStore.getRelated).not.toHaveBeenCalled();
   });
 
   it('throws IndexerError when embedding fails', async () => {

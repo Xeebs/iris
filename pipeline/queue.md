@@ -460,7 +460,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Entity Relationship Indexing
 - **Layer**: 14 — Knowledge Graph
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: Medium
 - **Description**: Extend packages/semantic-core/src/indexer.ts to extract and persist entity relationships during indexing. After embedding an entity, scan its attributes and relationships array, then call graphStore.addRelationship() for each. Also populate the entity_relationships table in Postgres (entity_id, related_entity_id, relationship_type, confidence_score). Update the retrieval engine to expand queries by following relationship edges (depth=1) and including related entities in context. Add unit and integration tests covering relationship discovery and expansion.
 - **Files**:
@@ -585,4 +585,87 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
   - packages/semantic-core/src/__tests__/connector-health-service.test.ts
   - apps/api/src/__tests__/connectors.test.ts (update)
 - **Depends on**: BullMQ Job Queue Infrastructure, Connector Instance Management API
+- **Added**: 2026-06-05
+
+---
+
+## Layer 17: Advanced Connectors & V1 Features
+
+### Task: Airtable Connector
+- **Layer**: 17 — Advanced Connectors
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Implement Airtable connector in packages/connectors/airtable/. Connect via OAuth2 to Airtable API. Sync bases, tables, and records as SemanticEntity objects. Support incremental sync via lastModifiedTime filtering. Extract field schema from Airtable's field definitions. Use MSW for tests with fixture responses from Airtable API. Include ConnectorManifest with icon and OAuth scope configuration.
+- **Files**:
+  - packages/connectors/airtable/src/airtable-connector.ts
+  - packages/connectors/airtable/src/manifest.ts
+  - packages/connectors/airtable/src/transformers.ts
+  - packages/connectors/airtable/src/__tests__/airtable-connector.test.ts
+  - packages/connectors/airtable/tests/fixtures/bases.json
+  - packages/connectors/airtable/tests/fixtures/records.json
+  - packages/connectors/airtable/package.json
+- **Depends on**: HubSpot Connector
+- **Added**: 2026-06-05
+
+### Task: Slack Connector
+- **Layer**: 17 — Advanced Connectors
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Implement Slack connector in packages/connectors/slack/. Connect via OAuth2 to Slack API. Sync channels, users, and messages as SemanticEntity objects. Support incremental sync via ts cursor (message timestamps). Extract user profiles and channel metadata. Apply workspace filtering based on connector config. Use MSW for tests. Reference connector-patterns.md for async generator and entity transformation rules. Include ConnectorManifest.
+- **Files**:
+  - packages/connectors/slack/src/slack-connector.ts
+  - packages/connectors/slack/src/manifest.ts
+  - packages/connectors/slack/src/transformers.ts
+  - packages/connectors/slack/src/__tests__/slack-connector.test.ts
+  - packages/connectors/slack/tests/fixtures/channels.json
+  - packages/connectors/slack/tests/fixtures/users.json
+  - packages/connectors/slack/tests/fixtures/messages.json
+  - packages/connectors/slack/package.json
+- **Depends on**: HubSpot Connector
+- **Added**: 2026-06-05
+
+### Task: Index Status & Coverage Metrics
+- **Layer**: 17 — Advanced Connectors
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Implement IndexStatusService in packages/semantic-core/src/index-status.ts to track index health and coverage. Methods: recordEntityIndex(workspaceId, entityCount, totalBytes), getIndexStatus(workspaceId) returning {totalEntities, totalBytes, lastIndexedAt, coverageByType}. Persist to Postgres (index_status table with workspace_id, entity_type, entity_count, indexed_at). Expose GET /api/v1/index/status endpoint in apps/api/src/routes/index.ts. Build dashboard component at apps/dashboard/components/index-coverage-card.tsx showing entity breakdown by type and total indexed content size. Full unit + integration tests.
+- **Files**:
+  - packages/semantic-core/src/index-status.ts
+  - apps/api/migrations/009_add_index_status.sql
+  - apps/api/src/routes/index.ts
+  - apps/dashboard/components/index-coverage-card.tsx
+  - packages/semantic-core/src/__tests__/index-status.test.ts
+  - packages/semantic-core/src/__tests__/index-status.integration.test.ts
+  - apps/api/src/__tests__/index.test.ts
+- **Depends on**: Indexer Implementation, Semantic Cache
+- **Added**: 2026-06-05
+
+### Task: Sync Scheduling & Frequency Configuration
+- **Layer**: 17 — Advanced Connectors
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Extend connector_instances table and sync job infrastructure to support configurable sync frequency. Add migration 010_add_sync_schedule.sql with fields: sync_frequency (real-time|hourly|daily|weekly|manual), sync_schedule_cron (for custom schedules), syncStartTime (for daily/weekly). Implement SyncScheduleService in packages/queue/src/sync-schedule-service.ts to manage recurring sync jobs via node-cron and BullMQ repeatable jobs. Update the dashboard connector setup wizard (apps/dashboard/app/connectors/setup/page.tsx) step 4 to include frequency picker. Wire up GET/PUT /api/v1/connectors/:id/schedule endpoints. Full tests with fake timers (vi.useFakeTimers()).
+- **Files**:
+  - apps/api/migrations/010_add_sync_schedule.sql
+  - packages/queue/src/sync-schedule-service.ts
+  - packages/queue/src/__tests__/sync-schedule-service.test.ts
+  - apps/api/src/routes/connectors.ts (update)
+  - apps/dashboard/app/connectors/setup/page.tsx (update)
+  - apps/api/src/__tests__/connectors.test.ts (update)
+- **Depends on**: BullMQ Job Queue Infrastructure, Connector Instance Management API
+- **Added**: 2026-06-05
+
+### Task: Webhook-Driven Real-Time Sync
+- **Layer**: 17 — Advanced Connectors
+- **Status**: UNWORKED
+- **Priority**: Medium
+- **Description**: Implement webhook support for real-time connector syncs. Create apps/api/src/routes/webhooks.ts with POST /api/v1/webhooks/:connectorInstanceId/:secret to receive vendor webhook events (HubSpot, Slack, etc.). Validate webhook signatures per vendor. Convert webhook payloads to SemanticEntity deltas and feed them directly into the semantic indexer (trigger incremental update, not full sync). Store webhook verification tokens in connector_instances table. Add webhook registration logic to each connector (HubSpot, Slack, etc.) in their setup flow. Include tests with mocked webhook payloads and signature validation.
+- **Files**:
+  - apps/api/src/routes/webhooks.ts
+  - apps/api/migrations/011_add_webhook_endpoints.sql
+  - packages/connectors/hubspot/src/webhook-handler.ts
+  - packages/connectors/slack/src/webhook-handler.ts
+  - apps/api/src/__tests__/webhooks.test.ts
+  - packages/connectors/hubspot/src/__tests__/webhook-handler.test.ts
+- **Depends on**: Sync Worker Implementation & Connector Invocation, Slack Connector
 - **Added**: 2026-06-05

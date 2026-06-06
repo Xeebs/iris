@@ -2,6 +2,13 @@ import type { SemanticEntity } from '@iris/connector-sdk';
 import { logger } from '@iris/core/logger';
 import { generateEmbeddings } from './embedding.js';
 import type { VectorStore } from './vector-store.js';
+import type { Result } from 'neverthrow';
+
+// Minimal graph interface — Neo4jGraphStore satisfies this via structural typing
+export interface RelationshipStore {
+  addEntity(entity: { id: string; type: string; label: string }, workspaceId: string): Promise<Result<void, Error>>;
+  addRelationship(sourceId: string, targetId: string, type: string, workspaceId: string): Promise<Result<void, Error>>;
+}
 
 const log = logger.child({ service: 'indexer' });
 
@@ -14,6 +21,10 @@ export interface IndexerConfig {
   batchSize: number;
   /** OpenAI API key */
   openAiApiKey?: string;
+  /** Workspace ID — required when graphStore is provided for relationship indexing */
+  workspaceId?: string;
+  /** Optional graph store for persisting entity relationships */
+  graphStore?: RelationshipStore;
 }
 
 export interface IndexResult {
@@ -22,6 +33,7 @@ export interface IndexResult {
   deduplicated: number;
   failed: number;
   durationMs: number;
+  relationshipsIndexed: number;
 }
 
 export const DEFAULT_INDEXER_CONFIG: IndexerConfig = {
@@ -49,11 +61,12 @@ export function cosineSimilarity(a: number[], b: number[]): number {
 
 /**
  * Index a stream of SemanticEntity objects from a connector sync run.
- * Embeds, deduplicates, and upserts to the vector store.
+ * Embeds, deduplicates, upserts to the vector store, and optionally
+ * persists entity relationships to the knowledge graph.
  *
  * @param entities    - Async generator of semantic entities from a connector
  * @param vectorStore - Initialized VectorStore instance
- * @param config      - Indexer configuration
+ * @param config      - Indexer configuration (include graphStore + workspaceId for graph indexing)
  * @returns           - Summary of the index run
  */
 export async function indexEntities(
@@ -62,7 +75,14 @@ export async function indexEntities(
   config: Partial<IndexerConfig> = {},
 ): Promise<IndexResult> {
   const opts = { ...DEFAULT_INDEXER_CONFIG, ...config };
-  const result: IndexResult = { created: 0, updated: 0, deduplicated: 0, failed: 0, durationMs: 0 };
+  const result: IndexResult = {
+    created: 0,
+    updated: 0,
+    deduplicated: 0,
+    failed: 0,
+    durationMs: 0,
+    relationshipsIndexed: 0,
+  };
   const startMs = Date.now();
   const batch: SemanticEntity[] = [];
 
@@ -95,7 +115,6 @@ async function flushBatch(
   });
 
   const vectors = embeddingResults.map((r) => r.vector);
-  const entityMap = new Map(batch.map((e) => [e.id, e]));
 
   const toUpsert: SemanticEntity[] = [];
   const toUpsertVectors: number[][] = [];
@@ -107,17 +126,14 @@ async function flushBatch(
     const existing = await vectorStore.search(vector, 1, { entityTypes: [entity.type] });
     const topResult = existing[0];
 
-    if (topResult && topResult.entity.id !== entity.id) {
-      const similarity = cosineSimilarity(vector, topResult.entity.id === entity.id ? vector : vector);
-      if (topResult.score >= config.dedupThreshold) {
-        log.debug('Deduplicated entity', {
-          entityId: entity.id,
-          duplicateOf: topResult.entity.id,
-          similarity: topResult.score,
-        });
-        result.deduplicated++;
-        continue;
-      }
+    if (topResult && topResult.entity.id !== entity.id && topResult.score >= config.dedupThreshold) {
+      log.debug('Deduplicated entity', {
+        entityId: entity.id,
+        duplicateOf: topResult.entity.id,
+        similarity: topResult.score,
+      });
+      result.deduplicated++;
+      continue;
     }
 
     const isUpdate = existing.some((r) => r.entity.id === entity.id);
@@ -131,9 +147,46 @@ async function flushBatch(
     toUpsertVectors.push(vector);
   }
 
-  void entityMap;
-
   if (toUpsert.length > 0) {
     await vectorStore.upsert(toUpsert, toUpsertVectors);
+  }
+
+  // Persist entity nodes and relationships to the knowledge graph
+  if (config.graphStore && config.workspaceId) {
+    await indexRelationships(toUpsert, config.graphStore, config.workspaceId, result);
+  }
+}
+
+async function indexRelationships(
+  entities: SemanticEntity[],
+  graphStore: RelationshipStore,
+  workspaceId: string,
+  result: IndexResult,
+): Promise<void> {
+  for (const entity of entities) {
+    const addResult = await graphStore.addEntity(entity, workspaceId);
+    if (addResult.isErr()) {
+      log.warn('Failed to add entity to graph', { entityId: entity.id, error: addResult.error });
+      continue;
+    }
+
+    for (const rel of entity.relationships) {
+      const relResult = await graphStore.addRelationship(
+        entity.id,
+        rel.targetId,
+        rel.type,
+        workspaceId,
+      );
+      if (relResult.isOk()) {
+        result.relationshipsIndexed++;
+      } else {
+        log.warn('Failed to index relationship', {
+          sourceId: entity.id,
+          targetId: rel.targetId,
+          type: rel.type,
+          error: relResult.error,
+        });
+      }
+    }
   }
 }
