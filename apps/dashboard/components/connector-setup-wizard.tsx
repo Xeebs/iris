@@ -14,7 +14,15 @@ import {
   buildOAuthUrl,
   buildSchemaFields,
 } from '@/lib/setup-wizard';
-import type { WizardState, SchemaField } from '@/lib/setup-wizard';
+import type { WizardState, SchemaField, SyncFrequency } from '@/lib/setup-wizard';
+
+const FREQUENCY_OPTIONS: { value: SyncFrequency; label: string; description: string }[] = [
+  { value: 'manual', label: 'Manual only', description: 'Sync only when you trigger it manually' },
+  { value: 'hourly', label: 'Hourly', description: 'Sync every hour' },
+  { value: 'daily', label: 'Daily', description: 'Sync once per day at 9:00 AM UTC' },
+  { value: 'weekly', label: 'Weekly', description: 'Sync every Monday at 9:00 AM UTC' },
+  { value: 'real-time', label: 'Real-time (webhooks)', description: 'Sync as events arrive via webhooks' },
+];
 
 type ConnectorSetupWizardProps = {
   connectorTypes: ConnectorManifest[];
@@ -114,6 +122,10 @@ export function ConnectorSetupWizard({
     }));
   }, []);
 
+  const handleFrequencyChange = useCallback((frequency: SyncFrequency) => {
+    setState((s) => ({ ...s, syncFrequency: frequency }));
+  }, []);
+
   const handleCreate = useCallback(async () => {
     if (!state.selectedConnectorId) return;
     setCreating(true);
@@ -132,6 +144,17 @@ export function ConnectorSetupWizard({
         const body = (await res.json()) as { error?: { message?: string } };
         throw new Error(body.error?.message ?? 'Failed to create connector');
       }
+      const created = (await res.json()) as { data: { id: string } };
+      const instanceId = created.data.id;
+
+      if (state.syncFrequency !== 'manual') {
+        await fetch(`${apiBase}/connectors/${instanceId}/schedule?workspaceId=default`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ frequency: state.syncFrequency }),
+        });
+      }
+
       setDone(true);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Unexpected error');
@@ -292,6 +315,37 @@ export function ConnectorSetupWizard({
             Choose which fields to include in the semantic index.
           </p>
           <SchemaMapper fields={state.schemaFields} onToggle={handleFieldToggle} />
+
+          <div className="mt-8">
+            <h3 className="mb-1 text-base font-semibold">Sync Frequency</h3>
+            <p className="mb-3 text-sm text-gray-600">How often should Iris sync this connector?</p>
+            <div className="space-y-2">
+              {FREQUENCY_OPTIONS.map((opt) => (
+                <label
+                  key={opt.value}
+                  className={`flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition-colors ${
+                    state.syncFrequency === opt.value
+                      ? 'border-gray-900 bg-gray-50'
+                      : 'border-gray-200 hover:border-gray-400'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="syncFrequency"
+                    value={opt.value}
+                    checked={state.syncFrequency === opt.value}
+                    onChange={() => handleFrequencyChange(opt.value)}
+                    className="mt-0.5"
+                  />
+                  <div>
+                    <p className="text-sm font-medium">{opt.label}</p>
+                    <p className="text-xs text-gray-500">{opt.description}</p>
+                  </div>
+                </label>
+              ))}
+            </div>
+          </div>
+
           <div className="mt-6 flex gap-3">
             <button onClick={retreat} type="button" className="text-sm text-gray-500 hover:text-gray-700">
               ← Back
@@ -321,6 +375,10 @@ export function ConnectorSetupWizard({
                 <dd className="font-medium">
                   {state.schemaFields.filter((f) => f.included).length} of {state.schemaFields.length}
                 </dd>
+              </div>
+              <div className="flex justify-between">
+                <dt className="text-gray-500">Sync frequency</dt>
+                <dd className="font-medium capitalize">{state.syncFrequency.replace('-', ' ')}</dd>
               </div>
             </dl>
           </div>

@@ -1,5 +1,7 @@
 import type { ConnectorManifest } from './api.js';
 
+export type SyncFrequency = 'real-time' | 'hourly' | 'daily' | 'weekly' | 'manual';
+
 export type WizardStep = 'select' | 'auth' | 'schema' | 'mapping' | 'review';
 
 export const WIZARD_STEPS: WizardStep[] = ['select', 'auth', 'schema', 'mapping', 'review'];
@@ -17,6 +19,7 @@ export type WizardState = {
   selectedConnectorId: string | null;
   authData: Record<string, string>;
   schemaFields: SchemaField[];
+  syncFrequency: SyncFrequency;
   instanceId: string | null;
 };
 
@@ -32,6 +35,7 @@ export const INITIAL_WIZARD_STATE: WizardState = {
   selectedConnectorId: null,
   authData: {},
   schemaFields: [],
+  syncFrequency: 'manual',
   instanceId: null,
 };
 

@@ -6,7 +6,8 @@
   "main": "./dist/sync-job-queue.js",
   "types": "./dist/sync-job-queue.d.ts",
   "exports": {
-    ".": "./dist/sync-job-queue.js"
+    ".": "./dist/sync-job-queue.js",
+    "./sync-schedule-service": "./dist/sync-schedule-service.js"
   },
   "scripts": {
     "build": "tsc --build",

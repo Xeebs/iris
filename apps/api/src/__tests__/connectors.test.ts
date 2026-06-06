@@ -17,6 +17,12 @@ vi.mock('../services/connector-service.js', () => ({
   ConnectorService: vi.fn(),
 }));
 
+const mockScheduleService = {
+  getSchedule: vi.fn(),
+  upsertSchedule: vi.fn(),
+  removeSchedule: vi.fn(),
+};
+
 import { registry } from '@iris/connector-sdk';
 import { ConnectorService } from '../services/connector-service.js';
 import { createConnectorRoutes } from '../routes/connectors.js';
@@ -46,18 +52,24 @@ const FAKE_INSTANCE = {
   updatedAt: new Date('2024-01-01'),
 };
 
-function makeApp(mockMethods: Partial<{
-  createInstance: ReturnType<typeof vi.fn>;
-  getInstance: ReturnType<typeof vi.fn>;
-  listInstances: ReturnType<typeof vi.fn>;
-  updateInstance: ReturnType<typeof vi.fn>;
-  deleteInstance: ReturnType<typeof vi.fn>;
-  updateStatus: ReturnType<typeof vi.fn>;
-}>): Hono {
+function makeApp(
+  mockMethods: Partial<{
+    createInstance: ReturnType<typeof vi.fn>;
+    getInstance: ReturnType<typeof vi.fn>;
+    listInstances: ReturnType<typeof vi.fn>;
+    updateInstance: ReturnType<typeof vi.fn>;
+    deleteInstance: ReturnType<typeof vi.fn>;
+    updateStatus: ReturnType<typeof vi.fn>;
+  }>,
+  withScheduleService = false,
+): Hono {
   vi.mocked(ConnectorService).mockImplementation(() => mockMethods as InstanceType<typeof ConnectorService>);
   const fakeSql = {} as Parameters<typeof createConnectorRoutes>[0];
   const app = new Hono();
-  app.route('/api/v1/connectors', createConnectorRoutes(fakeSql));
+  app.route(
+    '/api/v1/connectors',
+    createConnectorRoutes(fakeSql, undefined, withScheduleService ? mockScheduleService as never : undefined),
+  );
   return app;
 }
 
@@ -353,5 +365,126 @@ describe('POST /api/v1/connectors/:id/test', () => {
     const app = makeApp({ getInstance });
     const res = await app.request(`/api/v1/connectors/${INSTANCE_ID}/test?workspaceId=${WORKSPACE}`, { method: 'POST' });
     expect(res.status).toBe(404);
+  });
+});
+
+// ─── GET /:id/schedule ────────────────────────────────────────────────────────
+
+describe('GET /api/v1/connectors/:id/schedule', () => {
+  it('returns 400 when workspaceId is missing', async () => {
+    const app = makeApp({}, true);
+    const res = await app.request(`/api/v1/connectors/${INSTANCE_ID}/schedule`);
+    expect(res.status).toBe(400);
+  });
+
+  it('returns 503 when schedule service is not configured', async () => {
+    const app = makeApp({});
+    const res = await app.request(`/api/v1/connectors/${INSTANCE_ID}/schedule?workspaceId=${WORKSPACE}`);
+    expect(res.status).toBe(503);
+  });
+
+  it('returns 200 with schedule config when found', async () => {
+    const { ok } = await import('neverthrow');
+    const schedule = { connectorInstanceId: INSTANCE_ID, frequency: 'hourly', cronExpression: null, startTime: null };
+    mockScheduleService.getSchedule.mockResolvedValueOnce(ok(schedule));
+    const app = makeApp({}, true);
+    const res = await app.request(`/api/v1/connectors/${INSTANCE_ID}/schedule?workspaceId=${WORKSPACE}`);
+    expect(res.status).toBe(200);
+    const body = await res.json() as { data: typeof schedule };
+    expect(body.data.frequency).toBe('hourly');
+  });
+
+  it('returns 404 when instance not found', async () => {
+    const { ok } = await import('neverthrow');
+    mockScheduleService.getSchedule.mockResolvedValueOnce(ok(null));
+    const app = makeApp({}, true);
+    const res = await app.request(`/api/v1/connectors/${INSTANCE_ID}/schedule?workspaceId=${WORKSPACE}`);
+    expect(res.status).toBe(404);
+  });
+
+  it('returns 500 when service errors', async () => {
+    const { err } = await import('neverthrow');
+    mockScheduleService.getSchedule.mockResolvedValueOnce(err(new Error('DB fail')));
+    const app = makeApp({}, true);
+    const res = await app.request(`/api/v1/connectors/${INSTANCE_ID}/schedule?workspaceId=${WORKSPACE}`);
+    expect(res.status).toBe(500);
+  });
+});
+
+// ─── PUT /:id/schedule ────────────────────────────────────────────────────────
+
+describe('PUT /api/v1/connectors/:id/schedule', () => {
+  it('returns 400 when workspaceId is missing', async () => {
+    const app = makeApp({}, true);
+    const res = await app.request(`/api/v1/connectors/${INSTANCE_ID}/schedule`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ frequency: 'hourly' }),
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it('returns 503 when schedule service is not configured', async () => {
+    const app = makeApp({});
+    const res = await app.request(`/api/v1/connectors/${INSTANCE_ID}/schedule?workspaceId=${WORKSPACE}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ frequency: 'hourly' }),
+    });
+    expect(res.status).toBe(503);
+  });
+
+  it('returns 400 when frequency is invalid', async () => {
+    const app = makeApp({}, true);
+    const res = await app.request(`/api/v1/connectors/${INSTANCE_ID}/schedule?workspaceId=${WORKSPACE}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ frequency: 'every-second' }),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json() as { error: { code: string } };
+    expect(body.error.code).toBe('VALIDATION_ERROR');
+  });
+
+  it('returns 404 when instance not found', async () => {
+    const { ok } = await import('neverthrow');
+    const getInstance = vi.fn().mockResolvedValue(ok(null));
+    const app = makeApp({ getInstance }, true);
+    const res = await app.request(`/api/v1/connectors/${INSTANCE_ID}/schedule?workspaceId=${WORKSPACE}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ frequency: 'daily' }),
+    });
+    expect(res.status).toBe(404);
+  });
+
+  it('returns 200 with updated schedule on success', async () => {
+    const { ok } = await import('neverthrow');
+    const getInstance = vi.fn().mockResolvedValue(ok(FAKE_INSTANCE));
+    const schedule = { connectorInstanceId: INSTANCE_ID, frequency: 'daily', cronExpression: null, startTime: null };
+    mockScheduleService.upsertSchedule.mockResolvedValueOnce(ok(undefined));
+    mockScheduleService.getSchedule.mockResolvedValueOnce(ok(schedule));
+    const app = makeApp({ getInstance }, true);
+    const res = await app.request(`/api/v1/connectors/${INSTANCE_ID}/schedule?workspaceId=${WORKSPACE}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ frequency: 'daily' }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json() as { data: typeof schedule };
+    expect(body.data.frequency).toBe('daily');
+  });
+
+  it('returns 500 when upsertSchedule fails', async () => {
+    const { ok, err } = await import('neverthrow');
+    const getInstance = vi.fn().mockResolvedValue(ok(FAKE_INSTANCE));
+    mockScheduleService.upsertSchedule.mockResolvedValueOnce(err(new Error('BullMQ error')));
+    const app = makeApp({ getInstance }, true);
+    const res = await app.request(`/api/v1/connectors/${INSTANCE_ID}/schedule?workspaceId=${WORKSPACE}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ frequency: 'hourly' }),
+    });
+    expect(res.status).toBe(500);
   });
 });

@@ -5,6 +5,7 @@ import type { ConnectorManifest } from '@iris/connector-sdk';
 import { registry } from '@iris/connector-sdk';
 import { logger } from '@iris/core/logger';
 import type { SyncJobQueue } from '@iris/queue';
+import type { SyncScheduleService } from '@iris/queue/sync-schedule-service';
 
 import { ConnectorService } from '../services/connector-service.js';
 
@@ -26,11 +27,22 @@ const workspaceQuerySchema = z.object({
   workspaceId: z.string().min(1),
 });
 
+const upsertScheduleSchema = z.object({
+  frequency: z.enum(['real-time', 'hourly', 'daily', 'weekly', 'manual', 'custom']),
+  cronExpression: z.string().optional(),
+  startTime: z.string().regex(/^\d{2}:\d{2}$/).optional(),
+});
+
 /**
  * @param sql - Postgres client for instance persistence
  * @param syncQueue - BullMQ queue for async connector sync jobs
+ * @param scheduleService - Service for managing repeatable sync schedules
  */
-export function createConnectorRoutes(sql: SqlClient, syncQueue?: SyncJobQueue): Hono {
+export function createConnectorRoutes(
+  sql: SqlClient,
+  syncQueue?: SyncJobQueue,
+  scheduleService?: SyncScheduleService,
+): Hono {
   const routes = new Hono();
   const service = new ConnectorService(sql);
 
@@ -211,6 +223,72 @@ export function createConnectorRoutes(sql: SqlClient, syncQueue?: SyncJobQueue):
       return c.json({ error: { code: 'NOT_FOUND', message: `Instance "${id}" not found` } }, 404);
     }
     return c.json({ data: { instanceId: id, healthy: true } });
+  });
+
+  /** GET /api/v1/connectors/:id/schedule?workspaceId= — get sync schedule */
+  routes.get('/:id/schedule', async (c) => {
+    const parsed = workspaceQuerySchema.safeParse(c.req.query());
+    if (!parsed.success) {
+      return c.json({ error: { code: 'VALIDATION_ERROR', message: 'workspaceId is required' } }, 400);
+    }
+    if (!scheduleService) {
+      return c.json({ error: { code: 'NOT_CONFIGURED', message: 'Schedule service not configured' } }, 503);
+    }
+    const id = c.req.param('id');
+    const result = await scheduleService.getSchedule(parsed.data.workspaceId, id);
+    if (result.isErr()) {
+      log.error('Failed to get schedule', { instanceId: id, error: result.error });
+      return c.json({ error: { code: 'INTERNAL_ERROR', message: 'Failed to get schedule' } }, 500);
+    }
+    if (!result.value) {
+      return c.json({ error: { code: 'NOT_FOUND', message: `Instance "${id}" not found` } }, 404);
+    }
+    return c.json({ data: result.value });
+  });
+
+  /** PUT /api/v1/connectors/:id/schedule?workspaceId= — upsert sync schedule */
+  routes.put('/:id/schedule', async (c) => {
+    const parsed = workspaceQuerySchema.safeParse(c.req.query());
+    if (!parsed.success) {
+      return c.json({ error: { code: 'VALIDATION_ERROR', message: 'workspaceId is required' } }, 400);
+    }
+    if (!scheduleService) {
+      return c.json({ error: { code: 'NOT_CONFIGURED', message: 'Schedule service not configured' } }, 503);
+    }
+
+    const body = upsertScheduleSchema.safeParse(await c.req.json());
+    if (!body.success) {
+      return c.json(
+        { error: { code: 'VALIDATION_ERROR', message: 'Invalid schedule config', details: body.error.errors } },
+        400,
+      );
+    }
+
+    const id = c.req.param('id');
+    const instanceResult = await service.getInstance(parsed.data.workspaceId, id);
+    if (instanceResult.isErr()) {
+      return c.json({ error: { code: 'INTERNAL_ERROR', message: 'Failed to fetch connector instance' } }, 500);
+    }
+    if (!instanceResult.value) {
+      return c.json({ error: { code: 'NOT_FOUND', message: `Instance "${id}" not found` } }, 404);
+    }
+
+    const scheduleConfig = {
+      frequency: body.data.frequency,
+      ...(body.data.cronExpression !== undefined ? { cronExpression: body.data.cronExpression } : {}),
+      ...(body.data.startTime !== undefined ? { startTime: body.data.startTime } : {}),
+    };
+    const result = await scheduleService.upsertSchedule(id, parsed.data.workspaceId, scheduleConfig);
+    if (result.isErr()) {
+      log.error('Failed to upsert schedule', { instanceId: id, error: result.error });
+      return c.json({ error: { code: 'INTERNAL_ERROR', message: 'Failed to update schedule' } }, 500);
+    }
+
+    const scheduleResult = await scheduleService.getSchedule(parsed.data.workspaceId, id);
+    if (scheduleResult.isErr() || !scheduleResult.value) {
+      return c.json({ data: { instanceId: id, frequency: body.data.frequency } });
+    }
+    return c.json({ data: scheduleResult.value });
   });
 
   return routes;
