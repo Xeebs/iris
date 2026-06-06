@@ -1,0 +1,22 @@
+{
+  "records": [
+    {
+      "id": "rec001",
+      "createdTime": "2026-01-01T10:00:00.000Z",
+      "fields": {
+        "Name": "Alice Smith",
+        "Email": "alice@example.com",
+        "Status": "Active"
+      }
+    },
+    {
+      "id": "rec002",
+      "createdTime": "2026-01-02T10:00:00.000Z",
+      "fields": {
+        "Name": "Bob Jones",
+        "Email": "bob@example.com",
+        "Status": "Prospect"
+      }
+    }
+  ]
+}

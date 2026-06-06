@@ -1,0 +1,13 @@
+{
+  "tables": [
+    {
+      "id": "tblContacts",
+      "name": "Contacts",
+      "fields": [
+        { "id": "fldName", "name": "Name", "type": "singleLineText" },
+        { "id": "fldEmail", "name": "Email", "type": "email" },
+        { "id": "fldStatus", "name": "Status", "type": "singleSelect" }
+      ]
+    }
+  ]
+}

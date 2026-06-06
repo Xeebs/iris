@@ -1,0 +1,14 @@
+{
+  "bases": [
+    {
+      "id": "appAbc123",
+      "name": "Sales Pipeline",
+      "permissionLevel": "create"
+    },
+    {
+      "id": "appDef456",
+      "name": "Project Tracker",
+      "permissionLevel": "read"
+    }
+  ]
+}

@@ -593,7 +593,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Airtable Connector
 - **Layer**: 17 — Advanced Connectors
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: High
 - **Description**: Implement Airtable connector in packages/connectors/airtable/. Connect via OAuth2 to Airtable API. Sync bases, tables, and records as SemanticEntity objects. Support incremental sync via lastModifiedTime filtering. Extract field schema from Airtable's field definitions. Use MSW for tests with fixture responses from Airtable API. Include ConnectorManifest with icon and OAuth scope configuration.
 - **Files**:
