@@ -1,0 +1,65 @@
+{
+  "results": [
+    {
+      "id": "page-001",
+      "title": "API Design Guidelines",
+      "type": "page",
+      "space": { "key": "ENG", "id": "space-001" },
+      "version": {
+        "number": 5,
+        "by": { "accountId": "user-001", "displayName": "Alice Smith" },
+        "when": "2026-05-10T14:00:00.000Z"
+      },
+      "ancestors": [],
+      "metadata": {
+        "labels": {
+          "results": [
+            { "prefix": "global", "name": "api" },
+            { "prefix": "global", "name": "guidelines" }
+          ]
+        }
+      }
+    },
+    {
+      "id": "page-002",
+      "title": "Authentication Deep Dive",
+      "type": "page",
+      "space": { "key": "ENG", "id": "space-001" },
+      "version": {
+        "number": 2,
+        "by": { "accountId": "user-002", "displayName": "Bob Jones" },
+        "when": "2026-05-15T09:30:00.000Z"
+      },
+      "ancestors": [
+        { "id": "page-001", "title": "API Design Guidelines" }
+      ],
+      "metadata": {
+        "labels": {
+          "results": [
+            { "prefix": "global", "name": "auth" },
+            { "prefix": "global", "name": "security" }
+          ]
+        }
+      }
+    },
+    {
+      "id": "page-003",
+      "title": "Q3 Roadmap",
+      "type": "page",
+      "space": { "key": "PRODUCT", "id": "space-002" },
+      "version": {
+        "number": 8,
+        "by": null,
+        "when": "2026-06-01T11:00:00.000Z"
+      },
+      "ancestors": [],
+      "metadata": {
+        "labels": {
+          "results": []
+        }
+      }
+    }
+  ],
+  "size": 3,
+  "totalSize": 3
+}

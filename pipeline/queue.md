@@ -704,7 +704,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Confluence Connector
 - **Layer**: 18 — Additional Connectors
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: High
 - **Description**: Implement Confluence connector in packages/connectors/confluence/. Connect via OAuth2 to Confluence Cloud API. Sync pages, spaces, and content as SemanticEntity objects. Extract text content and metadata (author, lastModified, labels). Support incremental sync via lastUpdatedDate cursor. Convert page hierarchy into entity relationships (page.parent_id). Use MSW for tests. Include ConnectorManifest with OAuth configuration. Follow connector-patterns.md for entity transformation rules.
 - **Files**:

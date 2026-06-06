@@ -1,0 +1,30 @@
+{
+  "results": [
+    {
+      "id": "space-001",
+      "key": "ENG",
+      "name": "Engineering",
+      "type": "global",
+      "description": {
+        "plain": {
+          "value": "Engineering team knowledge base"
+        }
+      },
+      "homepage": { "id": "page-000" }
+    },
+    {
+      "id": "space-002",
+      "key": "PRODUCT",
+      "name": "Product",
+      "type": "global",
+      "description": {
+        "plain": {
+          "value": "Product team documentation and roadmaps"
+        }
+      }
+    }
+  ],
+  "start": 0,
+  "limit": 50,
+  "size": 2
+}
