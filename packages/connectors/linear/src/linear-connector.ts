@@ -138,8 +138,8 @@ export class LinearConnector extends BaseConnector<LinearConfig> {
     let hasNextPage = true;
 
     while (hasNextPage) {
-      const afterClause = cursor ? `, after: "${cursor}"` : '';
-      const query = `{
+      const afterClause: string = cursor ? `, after: "${cursor}"` : '';
+      const query: string = `{
         issues(first: ${PAGE_SIZE}${afterClause}${filterClause}, orderBy: updatedAt) {
           nodes {
             id title identifier priority priorityLabel
@@ -153,9 +153,8 @@ export class LinearConnector extends BaseConnector<LinearConfig> {
         }
       }`;
 
-      const result = await this.graphql<{
-        issues: { nodes: LinearIssue[]; pageInfo: { hasNextPage: boolean; endCursor: string } };
-      }>(query);
+      type IssueResult = { issues: { nodes: LinearIssue[]; pageInfo: { hasNextPage: boolean; endCursor: string } } };
+      const result: { data: IssueResult; errors?: unknown[] } = await this.graphql<IssueResult>(query);
 
       if (!result.data?.issues) {
         throw new ConnectorError('Linear issues query returned no data', 'API_ERROR', false);
@@ -177,8 +176,8 @@ export class LinearConnector extends BaseConnector<LinearConfig> {
     let hasNextPage = true;
 
     while (hasNextPage) {
-      const afterClause = cursor ? `, after: "${cursor}"` : '';
-      const query = `{
+      const afterClause: string = cursor ? `, after: "${cursor}"` : '';
+      const query: string = `{
         projects(first: ${PAGE_SIZE}${afterClause}) {
           nodes {
             id name description state updatedAt
@@ -188,9 +187,8 @@ export class LinearConnector extends BaseConnector<LinearConfig> {
         }
       }`;
 
-      const result = await this.graphql<{
-        projects: { nodes: LinearProject[]; pageInfo: { hasNextPage: boolean; endCursor: string } };
-      }>(query);
+      type ProjectResult = { projects: { nodes: LinearProject[]; pageInfo: { hasNextPage: boolean; endCursor: string } } };
+      const result: { data: ProjectResult; errors?: unknown[] } = await this.graphql<ProjectResult>(query);
 
       if (!result.data?.projects) {
         throw new ConnectorError('Linear projects query returned no data', 'API_ERROR', false);
@@ -212,8 +210,8 @@ export class LinearConnector extends BaseConnector<LinearConfig> {
     let hasNextPage = true;
 
     while (hasNextPage) {
-      const afterClause = cursor ? `, after: "${cursor}"` : '';
-      const query = `{
+      const afterClause: string = cursor ? `, after: "${cursor}"` : '';
+      const query: string = `{
         cycles(first: ${PAGE_SIZE}${afterClause}) {
           nodes {
             id name number startsAt endsAt updatedAt
@@ -223,9 +221,8 @@ export class LinearConnector extends BaseConnector<LinearConfig> {
         }
       }`;
 
-      const result = await this.graphql<{
-        cycles: { nodes: LinearCycle[]; pageInfo: { hasNextPage: boolean; endCursor: string } };
-      }>(query);
+      type CycleResult = { cycles: { nodes: LinearCycle[]; pageInfo: { hasNextPage: boolean; endCursor: string } } };
+      const result: { data: CycleResult; errors?: unknown[] } = await this.graphql<CycleResult>(query);
 
       if (!result.data?.cycles) {
         throw new ConnectorError('Linear cycles query returned no data', 'API_ERROR', false);
