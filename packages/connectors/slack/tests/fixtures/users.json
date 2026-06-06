@@ -1,0 +1,39 @@
+{
+  "ok": true,
+  "members": [
+    {
+      "id": "U001",
+      "name": "alice.smith",
+      "real_name": "Alice Smith",
+      "profile": {
+        "title": "Software Engineer",
+        "email": "alice@example.com",
+        "display_name": "alice"
+      },
+      "updated": 1700000000,
+      "is_bot": false,
+      "deleted": false
+    },
+    {
+      "id": "UBOT1",
+      "name": "somebot",
+      "real_name": "Some Bot",
+      "is_bot": true,
+      "deleted": false
+    },
+    {
+      "id": "U002",
+      "name": "bob.jones",
+      "real_name": "Bob Jones",
+      "profile": {
+        "title": "Product Manager",
+        "email": "bob@example.com",
+        "display_name": "bob"
+      },
+      "updated": 1700000100,
+      "is_bot": false,
+      "deleted": false
+    }
+  ],
+  "response_metadata": { "next_cursor": "" }
+}

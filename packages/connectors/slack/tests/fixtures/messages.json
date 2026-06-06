@@ -1,0 +1,20 @@
+{
+  "ok": true,
+  "messages": [
+    {
+      "type": "message",
+      "ts": "1700000000.000100",
+      "user": "U001",
+      "text": "Hello team! Excited to be here.",
+      "reply_count": 2
+    },
+    {
+      "type": "message",
+      "ts": "1700000100.000200",
+      "user": "U002",
+      "text": "Welcome Alice! Great to have you.",
+      "reply_count": 0
+    }
+  ],
+  "response_metadata": { "next_cursor": "" }
+}

@@ -609,7 +609,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Slack Connector
 - **Layer**: 17 — Advanced Connectors
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: High
 - **Description**: Implement Slack connector in packages/connectors/slack/. Connect via OAuth2 to Slack API. Sync channels, users, and messages as SemanticEntity objects. Support incremental sync via ts cursor (message timestamps). Extract user profiles and channel metadata. Apply workspace filtering based on connector config. Use MSW for tests. Reference connector-patterns.md for async generator and entity transformation rules. Include ConnectorManifest.
 - **Files**:
