@@ -91,6 +91,42 @@ export async function testConnector(instanceId: string): Promise<{ healthy: bool
   return res.data;
 }
 
+export interface ConnectorHealthSummary {
+  instanceId: string;
+  workspaceId: string;
+  status: 'healthy' | 'degraded' | 'unhealthy';
+  latencyMs: number | null;
+  errorMessage: string | null;
+  checkedAt: string;
+}
+
+/**
+ * Fetch the latest health status for all connector instances in a workspace.
+ *
+ * @param workspaceId - Workspace to fetch health data for
+ */
+export async function getAllConnectorHealth(workspaceId: string): Promise<ConnectorHealthSummary[]> {
+  const params = new URLSearchParams({ workspaceId });
+  const res = await apiFetch<ApiResponse<ConnectorHealthSummary[]>>(`/connectors/health?${params.toString()}`);
+  return res.data;
+}
+
+/**
+ * Fetch the latest health status for a single connector instance.
+ *
+ * @param instanceId  - Connector instance ID
+ * @param workspaceId - Workspace to scope the request
+ */
+export async function getConnectorHealth(instanceId: string, workspaceId: string): Promise<ConnectorHealthSummary | null> {
+  const params = new URLSearchParams({ workspaceId });
+  try {
+    const res = await apiFetch<ApiResponse<ConnectorHealthSummary>>(`/connectors/${instanceId}/health?${params.toString()}`);
+    return res.data;
+  } catch {
+    return null;
+  }
+}
+
 export interface DailyTokenSummary {
   date: string;
   tokensSpent: number;

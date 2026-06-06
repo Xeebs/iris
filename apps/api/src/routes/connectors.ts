@@ -6,6 +6,7 @@ import { registry } from '@iris/connector-sdk';
 import { logger } from '@iris/core/logger';
 import type { SyncJobQueue } from '@iris/queue';
 import type { SyncScheduleService } from '@iris/queue/sync-schedule-service';
+import type { ConnectorHealthService } from '@iris/semantic-core/connector-health-service';
 
 import { ConnectorService } from '../services/connector-service.js';
 
@@ -37,11 +38,13 @@ const upsertScheduleSchema = z.object({
  * @param sql - Postgres client for instance persistence
  * @param syncQueue - BullMQ queue for async connector sync jobs
  * @param scheduleService - Service for managing repeatable sync schedules
+ * @param healthService - Service for reading/writing connector health records
  */
 export function createConnectorRoutes(
   sql: SqlClient,
   syncQueue?: SyncJobQueue,
   scheduleService?: SyncScheduleService,
+  healthService?: ConnectorHealthService,
 ): Hono {
   const routes = new Hono();
   const service = new ConnectorService(sql);
@@ -289,6 +292,44 @@ export function createConnectorRoutes(
       return c.json({ data: { instanceId: id, frequency: body.data.frequency } });
     }
     return c.json({ data: scheduleResult.value });
+  });
+
+  /** GET /api/v1/connectors/health?workspaceId= — get latest health for all instances */
+  routes.get('/health', async (c) => {
+    const parsed = workspaceQuerySchema.safeParse(c.req.query());
+    if (!parsed.success) {
+      return c.json({ error: { code: 'VALIDATION_ERROR', message: 'workspaceId is required' } }, 400);
+    }
+    if (!healthService) {
+      return c.json({ error: { code: 'NOT_CONFIGURED', message: 'Health service not configured' } }, 503);
+    }
+    const result = await healthService.getAllHealth(parsed.data.workspaceId);
+    if (result.isErr()) {
+      log.error('Failed to get connector health', { error: result.error });
+      return c.json({ error: { code: 'INTERNAL_ERROR', message: 'Failed to get connector health' } }, 500);
+    }
+    return c.json({ data: result.value });
+  });
+
+  /** GET /api/v1/connectors/:id/health?workspaceId= — get latest health for one instance */
+  routes.get('/:id/health', async (c) => {
+    const parsed = workspaceQuerySchema.safeParse(c.req.query());
+    if (!parsed.success) {
+      return c.json({ error: { code: 'VALIDATION_ERROR', message: 'workspaceId is required' } }, 400);
+    }
+    if (!healthService) {
+      return c.json({ error: { code: 'NOT_CONFIGURED', message: 'Health service not configured' } }, 503);
+    }
+    const id = c.req.param('id');
+    const result = await healthService.getHealth(id, parsed.data.workspaceId);
+    if (result.isErr()) {
+      log.error('Failed to get connector health', { instanceId: id, error: result.error });
+      return c.json({ error: { code: 'INTERNAL_ERROR', message: 'Failed to get connector health' } }, 500);
+    }
+    if (!result.value) {
+      return c.json({ error: { code: 'NOT_FOUND', message: `No health data for instance "${id}"` } }, 404);
+    }
+    return c.json({ data: result.value });
   });
 
   return routes;

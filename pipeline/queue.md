@@ -573,7 +573,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Connector Health Monitoring & Dashboard Integration
 - **Layer**: 16 — Production Hardening
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: Medium
 - **Description**: Complete connector health monitoring by: (1) extending packages/semantic-core/src to export a ConnectorHealthService that periodically calls connector.healthCheck() for each active instance and stores results in a new connector_health table (instance_id, status, lastChecked, errorMessage), (2) wiring the service into apps/api/src/routes/connectors.ts to expose GET /api/v1/connectors/:id/health and GET /api/v1/connectors/health (all instances), (3) building a dashboard component at apps/dashboard/components/connector-health-card.tsx showing live status (green/yellow/red), lastSyncedAt, and error details if unhealthy. Add health check triggers on sync completion and manual refresh endpoint. Full tests with mocked health responses.
 - **Files**:
