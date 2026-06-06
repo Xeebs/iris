@@ -14,3 +14,5 @@ export type { TokenEventInput, DailyTokenSummary, TokenAnalyticsSummary } from '
 export { TokenAnalytics } from './token-analytics.js';
 export type { ApiKeyRecord, ValidatedKey } from './api-key-manager.js';
 export { ApiKeyManager, generateRawKey } from './api-key-manager.js';
+export type { IndexCoverageByType, IndexStatus } from './index-status.js';
+export { IndexStatusService } from './index-status.js';

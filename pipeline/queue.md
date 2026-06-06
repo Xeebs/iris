@@ -626,7 +626,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Index Status & Coverage Metrics
 - **Layer**: 17 — Advanced Connectors
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: High
 - **Description**: Implement IndexStatusService in packages/semantic-core/src/index-status.ts to track index health and coverage. Methods: recordEntityIndex(workspaceId, entityCount, totalBytes), getIndexStatus(workspaceId) returning {totalEntities, totalBytes, lastIndexedAt, coverageByType}. Persist to Postgres (index_status table with workspace_id, entity_type, entity_count, indexed_at). Expose GET /api/v1/index/status endpoint in apps/api/src/routes/index.ts. Build dashboard component at apps/dashboard/components/index-coverage-card.tsx showing entity breakdown by type and total indexed content size. Full unit + integration tests.
 - **Files**:

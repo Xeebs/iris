@@ -14,6 +14,7 @@ import { createAuditRoutes } from './routes/audit.js';
 import { createGlossaryRoutes } from './routes/glossary.js';
 import { createMetricRoutes } from './routes/metrics.js';
 import { createAnalyticsRoutes } from './routes/analytics.js';
+import { createIndexStatusRoutes } from './routes/index-status.js';
 
 export { createApp };
 
@@ -51,6 +52,7 @@ function createApp(
   authed.route('/glossary', createGlossaryRoutes(sql));
   authed.route('/metrics', createMetricRoutes(sql));
   authed.route('/analytics', createAnalyticsRoutes(sql));
+  authed.route('/index', createIndexStatusRoutes(sql));
 
   app.route('/api/v1', authed);
 
