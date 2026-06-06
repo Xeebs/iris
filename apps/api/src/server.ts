@@ -15,6 +15,7 @@ import { createGlossaryRoutes } from './routes/glossary.js';
 import { createMetricRoutes } from './routes/metrics.js';
 import { createAnalyticsRoutes } from './routes/analytics.js';
 import { createIndexStatusRoutes } from './routes/index-status.js';
+import { createWebhookRoutes } from './routes/webhooks.js';
 
 export { createApp };
 
@@ -53,6 +54,9 @@ function createApp(
   authed.route('/metrics', createMetricRoutes(sql));
   authed.route('/analytics', createAnalyticsRoutes(sql));
   authed.route('/index', createIndexStatusRoutes(sql));
+
+  // Webhook route is unauthenticated (events arrive from external services)
+  app.route('/api/v1/webhooks', createWebhookRoutes(sql));
 
   app.route('/api/v1', authed);
 

@@ -657,7 +657,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Webhook-Driven Real-Time Sync
 - **Layer**: 17 — Advanced Connectors
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: Medium
 - **Description**: Implement webhook support for real-time connector syncs. Create apps/api/src/routes/webhooks.ts with POST /api/v1/webhooks/:connectorInstanceId/:secret to receive vendor webhook events (HubSpot, Slack, etc.). Validate webhook signatures per vendor. Convert webhook payloads to SemanticEntity deltas and feed them directly into the semantic indexer (trigger incremental update, not full sync). Store webhook verification tokens in connector_instances table. Add webhook registration logic to each connector (HubSpot, Slack, etc.) in their setup flow. Include tests with mocked webhook payloads and signature validation.
 - **Files**:
