@@ -676,7 +676,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Query Decomposition & Entity Type Detection
 - **Layer**: 18 — Advanced Features
-- **Status**: IN_PROGRESS
+- **Status**: COMMITTED
 - **Priority**: High
 - **Description**: Implement QueryDecomposer service in packages/semantic-core/src/query-decomposer.ts to analyze incoming queries and extract: entity types mentioned or implied, data domains (sales, finance, ops), relevance keywords. Use OpenAI's text-davinci-003 or gpt-4o-mini for lightweight NLP analysis (cached to reduce cost). Export detectEntityTypes(query, schema) and getDomainKeywords(query). Integrate into retrieval engine to pre-filter vector search results and improve relevance. Add unit tests with varied business queries and schema configurations.
 - **Files**:
