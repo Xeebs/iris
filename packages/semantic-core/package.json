@@ -25,7 +25,8 @@
     "./benchmarking": "./dist/benchmarking.js",
     "./workspace-deletion": "./dist/workspace-deletion.js",
     "./alerts": "./dist/alerts.js",
-    "./query-performance-analyzer": "./dist/query-performance-analyzer.js"
+    "./query-performance-analyzer": "./dist/query-performance-analyzer.js",
+    "./entity-linker": "./dist/entity-linker.js"
   },
   "scripts": {
     "build": "tsc --build",

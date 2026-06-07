@@ -38,6 +38,7 @@ import { createAdminPerformanceRoutes } from './routes/admin-performance.js';
 import { createAdminConsoleRoutes } from './routes/admin-console.js';
 import { createAlertsRoutes } from './routes/alerts.js';
 import { createAdminQueryAnalyticsRoutes } from './routes/admin-query-analytics.js';
+import { createEntityLinkingRoutes } from './routes/entity-linking.js';
 import { openApiSpec } from './openapi.js';
 
 export { createApp };
@@ -140,6 +141,7 @@ function createApp(
   authed.route('/admin', createAdminConsoleRoutes(sql));
   authed.route('/workspace/alerts', createAlertsRoutes(sql));
   authed.route('/admin/analytics', createAdminQueryAnalyticsRoutes(sql));
+  authed.route('/admin/entity-linking', createEntityLinkingRoutes(sql));
 
   // Webhook routes: inbound (unauthenticated) + events status (authenticated)
   app.route('/api/v1/webhooks', createWebhookRoutes(sql));
