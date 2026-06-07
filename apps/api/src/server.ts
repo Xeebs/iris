@@ -48,6 +48,7 @@ import { createSnapshotRoutes } from './routes/snapshots.js';
 import { createEmailTemplateRoutes } from './routes/email-templates.js';
 import { createPerformanceRoutes } from './routes/performance.js';
 import { createSessionRoutes } from './routes/sessions.js';
+import { createBillingRoutes } from './routes/billing.js';
 import { openApiSpec } from './openapi.js';
 
 export { createApp };
@@ -164,6 +165,7 @@ function createApp(
   authed.route('/email-templates', createEmailTemplateRoutes(sql));
   authed.route('/performance', createPerformanceRoutes(sql));
   authed.route('/sessions', createSessionRoutes(sql));
+  authed.route('/billing', createBillingRoutes(sql));
 
   // Webhook routes: inbound (unauthenticated) + events status (authenticated)
   app.route('/api/v1/webhooks', createWebhookRoutes(sql));
