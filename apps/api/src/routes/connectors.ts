@@ -405,6 +405,91 @@ export function createConnectorRoutes(
     return c.json({ data: result.value });
   });
 
+  const syncLogsQuerySchema = z.object({
+    workspaceId: z.string().min(1),
+    limit: z.coerce.number().int().positive().max(200).default(50),
+    cursor: z.string().optional(),
+    severity: z.enum(['debug', 'info', 'warn', 'error']).optional(),
+  });
+
+  /** GET /api/v1/connectors/:id/sync-logs?workspaceId= — recent sync events */
+  routes.get('/:id/sync-logs', async (c) => {
+    const parsed = syncLogsQuerySchema.safeParse(c.req.query());
+    if (!parsed.success) {
+      return c.json({ error: { code: 'VALIDATION_ERROR', message: 'workspaceId is required', details: parsed.error.errors } }, 400);
+    }
+    const { workspaceId, limit, cursor, severity } = parsed.data;
+    const id = c.req.param('id');
+
+    try {
+      type SyncLogRow = {
+        id: string; instance_id: string; workspace_id: string; sync_id: string;
+        event_type: string; severity: string; message: string;
+        details: unknown; timestamp: string;
+      };
+
+      const rows = await sql<SyncLogRow[]>`
+        SELECT id, instance_id, workspace_id, sync_id, event_type, severity, message, details, timestamp::text
+        FROM connector_sync_logs
+        WHERE instance_id = ${id}
+          AND workspace_id = ${workspaceId}
+          ${severity ? sql`AND severity = ${severity}` : sql``}
+          ${cursor ? sql`AND id < ${cursor}` : sql``}
+        ORDER BY timestamp DESC
+        LIMIT ${limit + 1}
+      `;
+
+      const hasMore = rows.length > limit;
+      const items = rows.slice(0, limit).map((r) => ({
+        id: r.id, syncId: r.sync_id, eventType: r.event_type,
+        severity: r.severity, message: r.message, details: r.details, timestamp: r.timestamp,
+      }));
+
+      return c.json({
+        data: items,
+        meta: { hasMore, nextCursor: hasMore ? items[items.length - 1]?.id : undefined },
+      });
+    } catch (e) {
+      log.error('Failed to get sync logs', { instanceId: id, error: e });
+      return c.json({ error: { code: 'INTERNAL_ERROR', message: 'Failed to get sync logs' } }, 500);
+    }
+  });
+
+  /** POST /api/v1/connectors/:id/health/retry — enqueue a manual retry sync */
+  routes.post('/:id/health/retry', async (c) => {
+    let body: unknown;
+    try { body = await c.req.json(); } catch { body = {}; }
+    const parsed = workspaceQuerySchema.safeParse(body);
+    if (!parsed.success) {
+      return c.json({ error: { code: 'VALIDATION_ERROR', message: 'workspaceId is required' } }, 400);
+    }
+    const id = c.req.param('id');
+    const { workspaceId } = parsed.data;
+
+    try {
+      const instance = await service.getInstance(id, workspaceId);
+      if (!instance) {
+        return c.json({ error: { code: 'NOT_FOUND', message: `Connector instance "${id}" not found` } }, 404);
+      }
+
+      if (syncQueue) {
+        await syncQueue.enqueueSync(id, workspaceId);
+      }
+
+      const syncId = `retry-${Date.now()}`;
+      await sql`
+        INSERT INTO connector_sync_logs (instance_id, workspace_id, sync_id, event_type, severity, message)
+        VALUES (${id}, ${workspaceId}, ${syncId}, 'retry', 'info', 'Manual retry triggered via dashboard')
+      `;
+
+      log.info('Manual connector retry enqueued', { instanceId: id, workspaceId });
+      return c.json({ data: { instanceId: id, syncId, queued: !!syncQueue } }, 202);
+    } catch (e) {
+      log.error('Failed to enqueue retry', { instanceId: id, error: e });
+      return c.json({ error: { code: 'INTERNAL_ERROR', message: 'Failed to enqueue retry' } }, 500);
+    }
+  });
+
   return routes;
 }
 

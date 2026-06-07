@@ -1117,7 +1117,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Connector Health Drill-Down & Error Log Viewer
 - **Layer**: 23 — E2E Integration & Testing
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: Medium
 - **Description**: Build a connector health detail page at apps/dashboard/app/connectors/[id]/health/page.tsx showing detailed diagnostic information: (1) current health status (green/yellow/red), (2) last sync attempt timestamp and duration, (3) error logs (if unhealthy) with stack traces, (4) retry queue status (pending, failed, completed), (5) historical sync success rate (last 30 days), (6) manual retry button. Implement backend: POST /api/v1/connectors/:id/health/retry endpoint to retry failed sync jobs. Create connector_sync_logs table (instance_id, sync_id, event_type, message, severity, timestamp) to track detailed sync lifecycle. Build supporting components: HealthStatusBadge, ErrorLogViewer, SyncHistoryChart, RetryButton. Add integration tests with mocked sync failures and retries. Reference connector-health-service.ts for health check patterns.
 - **Files**:
