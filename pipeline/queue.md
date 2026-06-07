@@ -1707,7 +1707,8 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Distributed Request Tracing & Correlation IDs
 - **Layer**: 34 — Observability & Debugging
-- **Status**: IN_PROGRESS
+- **Status**: COMMITTED
+
 - **Priority**: High
 - **Description**: Implement distributed request tracing across all services (API, MCP server, workers) using correlation IDs for end-to-end request tracking. Create packages/core/src/request-context.ts with RequestContext class storing: (correlationId, traceId, spanId, userId, workspaceId, startTime). Add middleware to apps/api/src/middleware/request-context.ts that: (1) generates or extracts correlationId from request headers (X-Correlation-ID), (2) injects context into all downstream calls, (3) logs context with every structured log (via logger.info({...context}, message)). Implement HeaderPropagation in apps/mcp-server/src/context-propagation.ts to forward correlation IDs in MCP request metadata. Update packages/queue/ workers to extract and propagate context. Add GET /api/v1/admin/request/:correlationId endpoint returning full trace timeline (all logs, spans, latencies across services). Build debug dashboard page at apps/dashboard/app/admin/debugging/page.tsx with: request trace explorer (paste correlationId, view timeline), slow request finder (search by endpoint/latency threshold), error trace correlator (group logs by error). Full integration tests verifying correlation IDs flow correctly through async operations and queue jobs. Reference code-style.md for logging patterns.
 - **Files**:
@@ -1724,7 +1725,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Sync Error Recovery & Diagnostic Reports
 - **Layer**: 34 — Observability & Debugging
-- **Status**: UNWORKED
+- **Status**: IN_PROGRESS
 - **Priority**: High
 - **Description**: Enhance sync error handling with detailed diagnostics and automated recovery suggestions. Create packages/semantic-core/src/sync-diagnostics.ts with SyncDiagnosticsService: (1) categorizeError(error) classifying as: auth_failure, rate_limit, network_timeout, schema_mismatch, data_validation, quota_exceeded, (2) generateRecoveryPlan(error, context) suggesting remediation steps (e.g., "re-authorize OAuth", "wait 5 min before retry", "update field mappings"), (3) analyzeConnectorHealth(connectorId, lastNSyncs) detecting patterns (e.g., "failing on Sundays" → schedule conflict). Store diagnostics in sync_diagnostics table (sync_job_id, error_category, recovery_suggestions, is_resolved_at). Expose GET /api/v1/admin/sync-diagnostics/:connectorInstanceId returning: last 10 sync errors with categorization, recovery actions taken, resolution timeline. Build dashboard component at apps/dashboard/components/sync-error-diagnostic.tsx showing: error timeline, category breakdown, suggested actions with one-click execution (trigger retry with parameters). Add Email alerting with recovery steps. Full unit tests with 20+ error scenarios, integration tests with real sync failures. Reference code-style.md error handling patterns.
 - **Files**:
