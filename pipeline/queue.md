@@ -1472,7 +1472,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Advanced MCP Query Features & Aggregations
 - **Layer**: 28 — Cross-Connector Integration & Advanced Features
-- **Status**: IN_PROGRESS
+- **Status**: COMMITTED
 - **Priority**: High
 - **Description**: Extend MCP query tool to support advanced filtering, aggregations, and multi-step queries. Create packages/semantic-core/src/advanced-query-engine.ts with: (1) parseAdvancedQuery(queryString) supporting filter syntax (e.g., "contacts where industry='SaaS' and ARR>100k"), (2) executeAggregation(query, groupBy, aggregate) returning counts, sums, averages (e.g., "sum revenue by region"), (3) chainQueries(queries) executing multi-step queries (first query finds accounts, second finds associated contacts). Add new MCP tool advanced-query-context accepting filter expressions and aggregation specs, returning aggregated results with confidence bounds. Update apps/mcp-server/src/server.ts to register the new tool. Add unit tests with 30+ filter/aggregation test cases, integration tests with real semantic index. Ensure responses respect contextBudget. Reference api-conventions.md for REST patterns and embedding-patterns.md for token budgeting.
 - **Files**:
@@ -1487,7 +1487,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Comprehensive Webhook Validation & Testing Suite
 - **Layer**: 28 — Cross-Connector Integration & Advanced Features
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: High
 - **Description**: Build a comprehensive testing framework for webhook implementations across all connectors. Create tests/webhook-validation/ with automated test suite that: (1) validates webhook payload schemas for each connector (HubSpot, Slack, etc.) against published specs, (2) tests HMAC signature validation (verify webhook origin is authentic), (3) verifies payload processing converts webhooks to entity deltas correctly, (4) tests rate limiting and retry logic (simulate webhook delivery failures), (5) tests workspace isolation (webhook from WS-A doesn't affect WS-B). Implement WebhookValidator class in packages/connector-sdk/src/webhook-validator.ts with: validatePayload(vendor, payload), validateSignature(payload, signature, secret), transformToEntityDelta(payload). Add E2E test suite in tests/e2e/webhook-validation.spec.ts with 15+ Playwright specs covering: webhook delivery, signature validation, entity creation/update/deletion via webhooks, retry scenarios. Create admin dashboard at apps/dashboard/components/webhook-validator.tsx to test webhook payloads interactively. Reference connector-patterns.md and testing.md for patterns.
 - **Files**:
@@ -1503,7 +1503,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Real-Time Sync Performance Monitoring Dashboard
 - **Layer**: 28 — Cross-Connector Integration & Advanced Features
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: Medium
 - **Description**: Build a live monitoring dashboard for real-time sync performance and health. Create apps/dashboard/app/admin/sync-monitoring/page.tsx with: (1) live sync queue status (in-flight jobs, pending queue depth, estimated completion time), (2) entity throughput gauge (entities/sec across all syncs), (3) per-connector live metrics (current sync progress, entities synced in this run, errors), (4) latency distribution chart (API response times, embedding time, indexing time), (5) error rate sparkline with drill-down to recent errors, (6) auto-refresh every 2 seconds via WebSocket or polling. Create WebSocket endpoint POST /api/v1/admin/sync-monitoring/subscribe (requires admin auth) streaming sync progress events. Extend packages/queue/src/sync-job-queue.ts to emit progress events (jobId, status, entitiesSynced, percentComplete). Build SyncMonitoringDashboard component using Socket.IO or Server-Sent Events. Add integration tests with mocked WebSocket connections. Reference code-style.md for logging patterns and embedding-patterns.md for cost awareness.
 - **Files**:
@@ -1519,7 +1519,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Entity Change History & Audit Trail System
 - **Layer**: 28 — Cross-Connector Integration & Advanced Features
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: Medium
 - **Description**: Implement comprehensive audit trails tracking entity changes for compliance and debugging. Create apps/api/migrations/034_add_entity_audit_trail.sql with entity_audit_events table (id, workspace_id, entity_id, change_type: 'created'|'updated'|'deleted', old_values_json, new_values_json, changed_by: 'connector_sync'|'webhook'|'user_import', source_connector_id, timestamp). Create packages/semantic-core/src/entity-audit-service.ts with: (1) trackChange(entity, changeType, source) recording entity changes, (2) getHistory(entityId, timeRange) returning change history, (3) getFieldHistory(entityId, fieldName) showing value timeline for specific fields, (4) detectAnomalies(workspaceId) identifying unusual change patterns (entity deleted and recreated rapidly, field values oscillating, bulk deletions). Expose GET /api/v1/entities/:id/audit-trail returning change history with pagination. Build dashboard page at apps/dashboard/app/entities/:id/audit-trail/page.tsx showing: timeline view of changes, before/after values, source connector, edit button for manual corrections. Add retention policy: keep 90-day history by default, configurable per workspace. Add 25+ unit tests covering all change types and integration tests with real Postgres. Reference code-style.md for error handling patterns.
 - **Files**:
@@ -1571,7 +1571,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Connector Incremental Sync Optimization & Change Data Capture
 - **Layer**: 30 — Advanced Connector Features
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: High
 - **Description**: Enhance incremental sync strategy by implementing Change Data Capture (CDC) patterns for connectors. Create packages/semantic-core/src/connector-cdc.ts with ConnectorCDCManager class supporting three sync strategies: cursor-based (existing, for APIs with lastModified), event-driven (webhook or CDC logs), and snapshot-with-diff (comparing before/after snapshots). Add ChangeDataCaptureConfig to connector manifest allowing connectors to declare which strategy they support. Implement automatic strategy selection based on source API capabilities. Update sync-worker.ts to use CDC optimization reducing duplicate indexing. Add metrics tracking: entities_changed, entities_unchanged, sync_efficiency_ratio. Wire up to analytics dashboard. Full tests with mock connectors implementing each strategy.
 - **Files**:
@@ -1601,7 +1601,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Entity Data Quality Scoring & Validation
 - **Layer**: 31 — Data Quality & Observability
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: High
 - **Description**: Implement data quality scoring for indexed entities to identify and flag low-quality or incomplete data. Create packages/semantic-core/src/data-quality-scorer.ts with DataQualityScorer class computing quality scores based on: (1) field completeness (% non-null attributes), (2) data freshness (days since last sync), (3) schema conformance (required fields present), (4) relationship validity (referenced entities exist), (5) duplicate likelihood (cosine similarity to related entities). Store scores in entity_quality_metrics table (entity_id, workspace_id, completeness_score, freshness_score, conformance_score, overall_quality_score, computed_at). Expose GET /api/v1/data-quality/report endpoint returning per-entity scores with filters. Build dashboard page apps/dashboard/app/data-quality/page.tsx showing quality distribution, issues list (low quality, stale, orphaned entities). Full unit + integration tests.
 - **Files**:
@@ -1636,7 +1636,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: GDPR Data Subject Request Handler
 - **Layer**: 32 — Compliance & Security Hardening
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: High
 - **Description**: Implement a Data Subject Request (DSR) handler to support GDPR "right to access" and "right to erasure" requests. Create packages/semantic-core/src/dsr-handler.ts with DataSubjectRequestHandler class supporting: (1) finding all entities linked to a data subject (email, user ID, or PII identifier), (2) generating a portable export of the subject's data in JSON format, (3) scheduling PII deletion with audit trail. Add dsr_requests table (migration 035) tracking request_id, subject_identifier, request_type (access|erasure), status, created_at. Implement endpoints POST /api/v1/dsr/request, GET /api/v1/dsr/:requestId, DELETE /api/v1/dsr/:requestId/execute (after confirmation delay). Full audit logging of all DSR operations per user request. Unit + integration tests with GDPR-specific test data.
 - **Files**:
@@ -1646,4 +1646,128 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
   - apps/api/src/routes/dsr.ts
   - apps/api/src/__tests__/dsr.test.ts
 - **Depends on**: Fine-Grained PII & Sensitive Field Masking
+- **Added**: 2026-06-07
+
+---
+
+## Layer 33: Advanced Security & Compliance
+
+### Task: Comprehensive Audit Trail & Log Viewer
+- **Layer**: 33 — Advanced Security & Compliance
+- **Status**: COMMITTED
+- **Priority**: High
+- **Description**: Implement a comprehensive audit log system with searchable, filterable log viewer for compliance and debugging. Create apps/api/migrations/036_add_audit_logs.sql with audit_logs table: (workspace_id, actor_id, actor_type: 'user'|'api_key'|'system', action: 'entity_read'|'entity_write'|'config_change'|'permission_change', resource_type, resource_id, changes: JSON, ip_address, user_agent, timestamp). Implement AuditLogService in packages/semantic-core/src/audit-log-service.ts with methods: logAction(action, resource, metadata), queryLogs(workspaceId, filters), exportLogs(workspaceId, format: 'json'|'csv'). Add GET /api/v1/admin/audit-logs endpoint with cursor pagination and filtering by: action type, date range, actor, resource type. Build admin dashboard component at apps/dashboard/components/audit-log-viewer.tsx with: advanced filter UI, data export button, activity timeline visualization, anomaly highlighting (unusual access patterns). Ensure all sensitive operations (config changes, permission grants, DSR executions) are logged with full context. Add 25+ unit tests and integration tests verifying log completeness and tamper-evident storage. Reference code-style.md for structured logging patterns and api-conventions.md for REST design.
+- **Files**:
+  - packages/semantic-core/src/audit-log-service.ts
+  - packages/semantic-core/src/__tests__/audit-log-service.test.ts
+  - packages/semantic-core/src/__tests__/audit-log-service.integration.test.ts
+  - apps/api/migrations/036_add_audit_logs.sql
+  - apps/api/src/routes/audit-logs.ts
+  - apps/dashboard/components/audit-log-viewer.tsx
+  - apps/dashboard/components/audit-log-filter.tsx
+  - apps/api/src/__tests__/audit-logs.test.ts
+- **Depends on**: GDPR Data Subject Request Handler
+- **Added**: 2026-06-07
+
+### Task: API Key Rotation & Secret Management
+- **Layer**: 33 — Advanced Security & Compliance
+- **Status**: COMMITTED
+- **Priority**: High
+- **Description**: Implement secure API key lifecycle management including rotation, expiration, and secret vaulting. Extend apps/api/migrations/007_add_mcp_api_keys.sql to add: key_version (for rotation tracking), expiresAt (optional expiration), rotationSchedule (auto-rotate every N days), previousKeyHashes (keep history for deprecation grace period). Create packages/semantic-core/src/secret-vault.ts with SecretVault interface wrapping AES-256-GCM encryption at rest using Node.js crypto. Implement GET /api/v1/api-keys endpoint listing keys with masking (show first/last 4 chars only). Add POST /api/v1/api-keys/:id/rotate endpoint triggering rotation (generate new key, invalidate old after grace period, log rotation event). Add POST /api/v1/api-keys/:id/revoke for immediate deactivation. Build dashboard panel at apps/dashboard/components/api-key-manager.tsx with: key list, expiration warnings, rotation button, revocation confirmation, copy-to-clipboard for new keys. Implement graceful degradation: old keys still work for 7 days after rotation, with warnings in audit log. Full unit tests with mock crypto and integration tests with real Postgres encryption. Reference code-style.md for error handling and security patterns.
+- **Files**:
+  - packages/semantic-core/src/secret-vault.ts
+  - packages/semantic-core/src/__tests__/secret-vault.test.ts
+  - apps/api/migrations/037_enhance_api_key_management.sql
+  - apps/api/src/routes/api-key-management.ts
+  - apps/dashboard/components/api-key-manager.tsx
+  - apps/api/src/__tests__/api-key-management.test.ts
+- **Depends on**: MCP Server API Key Authentication & Workspace Isolation
+- **Added**: 2026-06-07
+
+### Task: Session Management & Device Tracking
+- **Layer**: 33 — Advanced Security & Compliance
+- **Status**: UNWORKED
+- **Priority**: Medium
+- **Description**: Implement user session tracking and device management for enhanced security monitoring. Create apps/api/migrations/038_add_session_tracking.sql with: user_sessions table (session_id, workspace_id, user_id, device_id, ip_address, user_agent, browserName, osName, createdAt, lastActivityAt, expiresAt), trusted_devices table (device_id, user_id, device_name, fingerprint, trustedAt, lastUsedAt). Implement SessionManager in packages/core/src/session-manager.ts with: createSession(userId, device), refreshSession(sessionId), revokeSession(sessionId), getActiveSessions(userId). Add dashboard page at apps/dashboard/app/settings/security/sessions/page.tsx showing: active sessions with location/device/last-activity, trusted devices list with rename/revoke buttons. Implement: (1) automatic session expiration after 30 days inactivity, (2) concurrent session limits (max 5 per user), (3) geo-anomaly detection (flag new country login), (4) device trust prompt on first use. Full tests with mocked device fingerprinting library. Reference api-conventions.md for auth patterns.
+- **Files**:
+  - packages/core/src/session-manager.ts
+  - packages/core/src/__tests__/session-manager.test.ts
+  - apps/api/migrations/038_add_session_tracking.sql
+  - apps/api/src/routes/sessions.ts
+  - apps/dashboard/app/settings/security/sessions/page.tsx
+  - apps/dashboard/components/session-list.tsx
+  - apps/dashboard/components/device-trust-dialog.tsx
+  - apps/api/src/__tests__/sessions.test.ts
+- **Depends on**: Multi-Tenant Support & Workspace Isolation
+- **Added**: 2026-06-07
+
+---
+
+## Layer 34: Observability & Debugging
+
+### Task: Distributed Request Tracing & Correlation IDs
+- **Layer**: 34 — Observability & Debugging
+- **Status**: IN_PROGRESS
+- **Priority**: High
+- **Description**: Implement distributed request tracing across all services (API, MCP server, workers) using correlation IDs for end-to-end request tracking. Create packages/core/src/request-context.ts with RequestContext class storing: (correlationId, traceId, spanId, userId, workspaceId, startTime). Add middleware to apps/api/src/middleware/request-context.ts that: (1) generates or extracts correlationId from request headers (X-Correlation-ID), (2) injects context into all downstream calls, (3) logs context with every structured log (via logger.info({...context}, message)). Implement HeaderPropagation in apps/mcp-server/src/context-propagation.ts to forward correlation IDs in MCP request metadata. Update packages/queue/ workers to extract and propagate context. Add GET /api/v1/admin/request/:correlationId endpoint returning full trace timeline (all logs, spans, latencies across services). Build debug dashboard page at apps/dashboard/app/admin/debugging/page.tsx with: request trace explorer (paste correlationId, view timeline), slow request finder (search by endpoint/latency threshold), error trace correlator (group logs by error). Full integration tests verifying correlation IDs flow correctly through async operations and queue jobs. Reference code-style.md for logging patterns.
+- **Files**:
+  - packages/core/src/request-context.ts
+  - packages/core/src/__tests__/request-context.test.ts
+  - apps/api/src/middleware/request-context.ts
+  - apps/mcp-server/src/context-propagation.ts
+  - apps/api/src/routes/request-traces.ts
+  - apps/dashboard/app/admin/debugging/page.tsx
+  - apps/dashboard/components/request-trace-explorer.tsx
+  - apps/api/src/__tests__/request-traces.test.ts
+- **Depends on**: Distributed Tracing Enhancements & Performance Profiling
+- **Added**: 2026-06-07
+
+### Task: Sync Error Recovery & Diagnostic Reports
+- **Layer**: 34 — Observability & Debugging
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Enhance sync error handling with detailed diagnostics and automated recovery suggestions. Create packages/semantic-core/src/sync-diagnostics.ts with SyncDiagnosticsService: (1) categorizeError(error) classifying as: auth_failure, rate_limit, network_timeout, schema_mismatch, data_validation, quota_exceeded, (2) generateRecoveryPlan(error, context) suggesting remediation steps (e.g., "re-authorize OAuth", "wait 5 min before retry", "update field mappings"), (3) analyzeConnectorHealth(connectorId, lastNSyncs) detecting patterns (e.g., "failing on Sundays" → schedule conflict). Store diagnostics in sync_diagnostics table (sync_job_id, error_category, recovery_suggestions, is_resolved_at). Expose GET /api/v1/admin/sync-diagnostics/:connectorInstanceId returning: last 10 sync errors with categorization, recovery actions taken, resolution timeline. Build dashboard component at apps/dashboard/components/sync-error-diagnostic.tsx showing: error timeline, category breakdown, suggested actions with one-click execution (trigger retry with parameters). Add Email alerting with recovery steps. Full unit tests with 20+ error scenarios, integration tests with real sync failures. Reference code-style.md error handling patterns.
+- **Files**:
+  - packages/semantic-core/src/sync-diagnostics.ts
+  - packages/semantic-core/src/__tests__/sync-diagnostics.test.ts
+  - apps/api/migrations/039_add_sync_diagnostics.sql
+  - apps/api/src/routes/sync-diagnostics.ts
+  - apps/dashboard/components/sync-error-diagnostic.tsx
+  - apps/dashboard/components/recovery-action-executor.tsx
+  - apps/api/src/__tests__/sync-diagnostics.test.ts
+- **Depends on**: Sync Worker Implementation & Connector Invocation
+- **Added**: 2026-06-07
+
+---
+
+## Layer 35: Data Management & Governance
+
+### Task: Index Snapshot Export & Disaster Recovery
+- **Layer**: 35 — Data Management & Governance
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Implement periodic index snapshots for disaster recovery and point-in-time restore capability. Create packages/semantic-core/src/index-snapshot.ts with IndexSnapshotService: (1) createSnapshot(workspaceId) exporting all entities, relationships, glossary, metrics to compressed archive (gzip + tar), (2) scheduleSnapshots(workspaceId, frequency: 'daily'|'weekly'|'monthly'), (3) listSnapshots(workspaceId) with metadata (size, created_at, entity_count), (4) restoreFromSnapshot(workspaceId, snapshotId) doing point-in-time restore with conflict resolution. Store snapshots to object storage (S3 or local filesystem). Add apps/api/migrations/040_add_snapshot_tracking.sql with index_snapshots table (snapshot_id, workspace_id, created_at, entity_count, snapshot_size_bytes, storage_path, retention_days). Expose GET /api/v1/admin/snapshots (list), POST /api/v1/admin/snapshots (create on-demand), POST /api/v1/admin/snapshots/:id/restore (restore). Build admin dashboard component at apps/dashboard/components/snapshot-manager.tsx with: snapshot list, download button, restore dialog with preview. Implement retention policy: keep last 30 snapshots, auto-delete after retentionDays. Full integration tests with real snapshot create/restore cycles. Reference code-style.md for error handling.
+- **Files**:
+  - packages/semantic-core/src/index-snapshot.ts
+  - packages/semantic-core/src/__tests__/index-snapshot.integration.test.ts
+  - apps/api/migrations/040_add_snapshot_tracking.sql
+  - apps/api/src/routes/snapshots.ts
+  - apps/dashboard/components/snapshot-manager.tsx
+  - apps/api/src/__tests__/snapshots.test.ts
+- **Depends on**: OSI (Open Semantic Interchange) Standard Export
+- **Added**: 2026-06-07
+
+### Task: Data Lineage Tracking & Provenance
+- **Layer**: 35 — Data Management & Governance
+- **Status**: UNWORKED
+- **Priority**: Medium
+- **Description**: Implement comprehensive data lineage tracking to show where each entity came from and how it was transformed. Create packages/semantic-core/src/data-lineage.ts with DataLineageService tracking: (1) source tracking (which connector, which sync job, original API timestamp), (2) transformation history (embeddings generated, deduplication applied, relationships added), (3) enrichment provenance (cross-connector links, field masking applied). Store in entity_lineage table (entity_id, source_connector_id, source_sync_job_id, source_api_timestamp, lineage_json, last_modified_by, last_modified_at). Expose GET /api/v1/entities/:id/lineage returning full provenance chain. Build dashboard visualization at apps/dashboard/components/entity-lineage-viewer.tsx with: entity origin (connector, sync time), transformation steps timeline, enrichments applied. Enable audit/compliance use case (prove where data came from). Full unit + integration tests. Reference code-style.md for JSON serialization patterns.
+- **Files**:
+  - packages/semantic-core/src/data-lineage.ts
+  - packages/semantic-core/src/__tests__/data-lineage.test.ts
+  - apps/api/migrations/041_add_data_lineage.sql
+  - apps/api/src/routes/entity-lineage.ts
+  - apps/dashboard/components/entity-lineage-viewer.tsx
+  - apps/api/src/__tests__/entity-lineage.test.ts
+- **Depends on**: Entity Relationship Indexing, MCP Server API Key Authentication & Workspace Isolation
 - **Added**: 2026-06-07
