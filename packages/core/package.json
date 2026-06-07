@@ -10,7 +10,8 @@
     "./logger": "./dist/logger.js",
     "./errors": "./dist/errors.js",
     "./config": "./dist/config.js",
-    "./email-service": "./dist/email-service.js"
+    "./email-service": "./dist/email-service.js",
+    "./request-context": "./dist/request-context.js"
   },
   "scripts": {
     "build": "tsc --build",
