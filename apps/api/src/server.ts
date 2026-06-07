@@ -46,6 +46,8 @@ import { createRequestTracesRoutes } from './routes/request-traces.js';
 import { createSyncDiagnosticsRoutes } from './routes/sync-diagnostics.js';
 import { createSnapshotRoutes } from './routes/snapshots.js';
 import { createEmailTemplateRoutes } from './routes/email-templates.js';
+import { createPerformanceRoutes } from './routes/performance.js';
+import { createSessionRoutes } from './routes/sessions.js';
 import { openApiSpec } from './openapi.js';
 
 export { createApp };
@@ -160,6 +162,8 @@ function createApp(
   authed.route('/admin/sync-diagnostics', createSyncDiagnosticsRoutes(sql));
   authed.route('/admin/snapshots', createSnapshotRoutes(sql));
   authed.route('/email-templates', createEmailTemplateRoutes(sql));
+  authed.route('/performance', createPerformanceRoutes(sql));
+  authed.route('/sessions', createSessionRoutes(sql));
 
   // Webhook routes: inbound (unauthenticated) + events status (authenticated)
   app.route('/api/v1/webhooks', createWebhookRoutes(sql));
