@@ -1779,7 +1779,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Usage-Based Billing & Metering Infrastructure
 - **Layer**: 36 — Billing & Monetization
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: High
 - **Description**: Implement a usage-based metering system to track and bill customers based on actual platform consumption. Create apps/api/migrations/042_add_billing_metering.sql with: usage_events table (workspace_id, event_type: 'entity_indexed'|'query_executed'|'token_spent'|'api_call', quantity, unit_price_cents, timestamp), billing_periods table (workspace_id, period_start, period_end, total_charges_cents, status: 'open'|'invoiced'|'paid'), and billing_tiers table (tier_name: 'starter'|'growth'|'enterprise', monthly_base_cents, entity_index_price_cents, query_price_cents, included_tokens). Create packages/semantic-core/src/billing-meter.ts with BillingMeter class: (1) recordUsage(workspaceId, eventType, quantity) persisting metered events, (2) calculateCharges(workspaceId, periodStart, periodEnd) summing events by type and applying tier pricing, (3) getWorkspaceTier(workspaceId) returning current plan tier. Implement Stripe integration in packages/core/src/stripe-client.ts for: payment processing, invoice generation, webhook handling (subscription updates). Expose GET /api/v1/billing/usage returning current period costs and forecasted month-end total. Wire usage recording into: indexer (on entity index), retrieval engine (on query), MCP tools (on invocation), and token analytics. Build dashboard billing page at apps/dashboard/app/settings/[workspaceId]/billing/page.tsx showing: current usage metrics (entities, queries, tokens), tiered pricing breakdown, month-to-date charges, upcoming invoice, upgrade button. Add 20+ unit tests for metering logic and integration tests with mocked Stripe API.
 - **Files**:
@@ -1891,4 +1891,85 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
   - packages/connector-sdk/README.test.md
   - packages/connector-sdk/examples/example-connector.test.ts
 - **Depends on**: Connector Test Utilities, Comprehensive Webhook Validation & Testing Suite
+- **Added**: 2026-06-07
+
+---
+
+## Layer 39: LLM Provider Abstraction & Multi-Model Support
+
+### Task: LLM Provider Abstraction Layer & Multi-Embedding Model Support
+- **Layer**: 39 — LLM Provider Abstraction & Multi-Model Support
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Abstract embedding model selection to support multiple LLM providers (OpenAI, Azure OpenAI, Anthropic, local Ollama, Cohere) instead of hardcoding OpenAI text-embedding-3-small. Create packages/semantic-core/src/embedding-provider.ts with EmbeddingProvider interface: getEmbedding(text: string), batchEmbeddings(texts: string[]), getModelDimensions(), getModelId(). Implement concrete providers: OpenAIProvider, AzureOpenAIProvider, OllamaProvider, CohereProvider. Update embedding.ts to use the provider pattern. Add configuration in env vars: EMBEDDING_PROVIDER (openai|azure|ollama|cohere), EMBEDDING_MODEL_ID, and provider-specific credentials. Create database migration 046_add_embedding_metadata.sql with: embedding_metadata table (workspace_id, model_id, dimension, created_at) to track which model version indexed each entity. Update indexer to record model_id with embeddings. Add a re-indexing utility in packages/semantic-core/src/reindex-utils.ts to migrate embeddings between models (batch-convert old embeddings to new provider, store both during transition). Expose GET /api/v1/admin/embedding-config and PUT /api/v1/admin/embedding-config/migrate to change providers. Add 28+ unit tests for each provider, batch handling, and dimension mismatches. Reference embedding-patterns.md for cost control and token limits per model. See code-style.md for error handling and config validation rules.
+- **Files**:
+  - packages/semantic-core/src/embedding-provider.ts
+  - packages/semantic-core/src/providers/openai-provider.ts
+  - packages/semantic-core/src/providers/azure-openai-provider.ts
+  - packages/semantic-core/src/providers/ollama-provider.ts
+  - packages/semantic-core/src/providers/cohere-provider.ts
+  - packages/semantic-core/src/reindex-utils.ts
+  - packages/semantic-core/src/embedding.ts (update)
+  - packages/semantic-core/src/__tests__/embedding-provider.test.ts
+  - packages/semantic-core/src/__tests__/reindex-utils.test.ts
+  - apps/api/migrations/046_add_embedding_metadata.sql
+  - apps/api/src/routes/admin-embedding.ts
+  - apps/api/src/__tests__/admin-embedding.test.ts
+- **Depends on**: Embedding Service
+- **Added**: 2026-06-07
+
+### Task: Vector Index Health Monitoring & Drift Detection
+- **Layer**: 39 — LLM Provider Abstraction & Multi-Model Support
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Implement health checks and drift detection for the vector index to ensure semantic quality over time. Create packages/semantic-core/src/vector-health.ts with VectorHealthService: (1) analyzeVectorDrift(workspaceId, sampleSize: 1000) computing vector statistics (centroid, variance, density) and detecting distribution shifts indicating stale or low-quality embeddings, (2) validateEmbeddingConsistency(entityIds) re-embedding a sample of entities and comparing similarity to stored embeddings (flag drifts > 0.05 as potential quality issues), (3) detectOutliers(workspaceId) finding entities with anomalous vectors via isolation forest or statistical bounds, (4) generateHealthReport(workspaceId) aggregating metrics into: overall_health_score (0–100), quality_issues_count, recommended_actions. Store health check results in vector_health_checks table (workspace_id, check_timestamp, drift_score, outlier_count, consistency_score, report_json). Expose GET /api/v1/admin/vector-health returning current status and historical trends. Build admin dashboard panel at apps/dashboard/components/vector-health-monitor.tsx showing: health trend chart, drift alerts, recommended re-indexing, manual health check trigger. Integrate health checks into sync completion workflow (after large syncs, run health check). Add 24+ tests covering drift detection, consistency validation, outlier detection with synthetic vector data. Reference embedding-patterns.md for quality thresholds and cost implications of re-indexing.
+- **Files**:
+  - packages/semantic-core/src/vector-health.ts
+  - packages/semantic-core/src/__tests__/vector-health.test.ts
+  - apps/api/migrations/047_add_vector_health.sql
+  - apps/api/src/routes/vector-health.ts
+  - apps/api/src/__tests__/vector-health.test.ts
+  - apps/dashboard/components/vector-health-monitor.tsx
+  - packages/semantic-core/src/indexer.ts (update: post-sync health check trigger)
+- **Depends on**: Indexer Implementation, Vector Store Interface
+- **Added**: 2026-06-07
+
+---
+
+## Layer 40: Advanced Agent & Workflow Features
+
+### Task: Agent Workflow Templates & Pre-Configured Context Flows
+- **Layer**: 40 — Advanced Agent & Workflow Features
+- **Status**: UNWORKED
+- **Priority**: Medium
+- **Description**: Build pre-configured workflow templates that allow non-technical users to compose multi-step agent flows with Iris context automatically injected. Create packages/semantic-core/src/workflow-templates.ts with WorkflowTemplateService: (1) listTemplates(workspaceId, category) returning curated templates (e.g., 'Sales QA', 'Finance Reporting', 'Customer Support'), (2) instantiateTemplate(workspaceId, templateId, params) creating a workflow instance with templated steps, (3) enrichWorkflowContext(workflowId) calling retrieval engine to fetch relevant context for each step in advance. Define WorkflowTemplate schema: steps (array of {type: 'mcp-query'|'llm-reason'|'webhook-notify', config}), contextDefinitions (array of entity types/metrics needed), timeout, triggerCondition (manual|scheduled|webhook). Store in workflows table (workspace_id, template_id, status, created_by, created_at, last_executed_at). Build workflow template builder UI at apps/dashboard/app/workflows/templates/page.tsx with: template gallery (searchable/filterable), create custom template wizard (drag-drop steps, configure context injection), test template flow simulator. Expose POST /api/v1/workflows with template schema, GET /api/v1/workflows/:id/run to execute workflow (context is fetched and injected into each MCP query automatically). Add 18+ tests covering template instantiation, context injection, step execution, and error handling. See api-conventions.md for workflow execution API structure.
+- **Files**:
+  - packages/semantic-core/src/workflow-templates.ts
+  - packages/semantic-core/src/__tests__/workflow-templates.test.ts
+  - apps/api/migrations/048_add_workflows.sql
+  - apps/api/src/routes/workflows.ts
+  - apps/api/src/__tests__/workflows.test.ts
+  - apps/dashboard/app/workflows/templates/page.tsx
+  - apps/dashboard/app/workflows/[id]/page.tsx
+  - apps/dashboard/components/workflow-builder.tsx
+  - apps/dashboard/components/workflow-executor.tsx
+- **Depends on**: Retrieval Engine, MCP Server Bootstrap, Proactive Context Surfacing (V2 Intelligence)
+- **Added**: 2026-06-07
+
+### Task: MCP Resources Support & Document/File Streaming
+- **Layer**: 40 — Advanced Agent & Workflow Features
+- **Status**: UNWORKED
+- **Priority**: Medium
+- **Description**: Extend MCP server to expose both tools (current implementation) and resources — allowing Claude and other agents to read indexed documents and files directly via MCP resources. Implement MCP resources for: (1) indexed document sources (e.g., GET file:///workspace/document-id returning file content with metadata), (2) entity detail resources (GET entity:///hubspot:contact:12345 returning full entity JSON), (3) relationship subgraphs (GET graph:///entity-id?depth=2 returning entity + related entities as JSON). Update apps/mcp-server/src/server.ts to add resources alongside tools using MCP ResourceListResponseSchema and ResourceReadResponseSchema. Support streaming for large documents (chunked transfer via resource_content with pagination). Add permission checks (resource access respects role-based context permissions). Implement in retrieval engine: buildEntityResource(entityId, workspaceId, depth) and buildDocumentResource(docId, workspaceId). Add resource discovery: GET /api/v1/mcp/resources endpoint listing all available resources per workspace (enable IDE autocomplete for resource URIs). Build dashboard page at apps/dashboard/app/mcp/resources/page.tsx showing: available resources, sample URIs, rate limiting per resource type. Add 20+ tests covering resource schemas, pagination, permission enforcement, and streaming behavior.
+- **Files**:
+  - apps/mcp-server/src/server.ts (update)
+  - apps/mcp-server/src/resources/entity-resource.ts
+  - apps/mcp-server/src/resources/document-resource.ts
+  - apps/mcp-server/src/resources/graph-resource.ts
+  - packages/semantic-core/src/resource-builder.ts
+  - apps/api/src/routes/mcp-resources.ts
+  - apps/dashboard/app/mcp/resources/page.tsx
+  - apps/mcp-server/src/__tests__/resources.test.ts
+  - apps/api/src/__tests__/mcp-resources.test.ts
+- **Depends on**: MCP Server Bootstrap, Entity Relationship Indexing
 - **Added**: 2026-06-07

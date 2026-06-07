@@ -37,7 +37,8 @@
     "./sync-diagnostics": "./dist/sync-diagnostics.js",
     "./index-snapshot": "./dist/index-snapshot.js",
     "./email-templates": "./dist/email-templates.js",
-    "./performance-profiler": "./dist/performance-profiler.js"
+    "./performance-profiler": "./dist/performance-profiler.js",
+    "./billing-meter": "./dist/billing-meter.js"
   },
   "scripts": {
     "build": "tsc --build",

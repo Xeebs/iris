@@ -8,6 +8,7 @@ Completed tasks are logged here by the daemon after each successful commit.
 - 2026-06-07: feat(semantic-core,api,dashboard): email template system & customization — EmailTemplateService (CRUD + render + variable interpolation), migration 041, REST routes /api/v1/email-templates, EmailTemplateEditor dashboard component with live preview, 21 tests
 - 2026-06-07: feat(semantic-core,api,dashboard): distributed tracing & performance profiling — PerformanceProfiler (p50/p95/p99 per operation, Prometheus export, connector breakdown), migration 042, REST /api/v1/performance, ProfilerDashboard with window selector, 11 tests
 - 2026-06-07: feat(core,api,dashboard): session management & device tracking — SessionManager (create/refresh/revoke sessions, trusted devices, geo-anomaly detection, 5-session limit), migration 038, REST /api/v1/sessions, SessionList dashboard component, 13 tests
+- 2026-06-07: feat(semantic-core,api,dashboard): usage-based billing & metering — BillingMeter (recordUsage, calculateCharges, tier-based pricing, period close), migration 043, REST /api/v1/billing, BillingUsageChart + billing settings page, 11 tests
 
 - 2026-06-07 feat(semantic-core,api,dashboard): proactive context surfacing — suggestion engine with time-of-day patterns, role affinities, co-occurrence analysis + REST API + dashboard widget
 
