@@ -1400,7 +1400,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Alert Rules Engine & Notification Channels
 - **Layer**: 27 — Advanced Operations & Post-MVP Polish
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: Medium
 - **Description**: Build a flexible alert system allowing workspaces to define rules and receive notifications via multiple channels. Create apps/api/migrations/030_add_alerts.sql with tables: alert_rules (id, workspace_id, name, condition: 'sync_failure'|'token_quota'|'performance_degradation'|'cache_miss_rate', threshold, enabled, createdAt), alert_channels (id, workspace_id, type: 'email'|'slack'|'pagerduty'|'webhook', config: {...}, isDefault), alert_events (id, workspace_id, rule_id, channel_id, status: 'triggered'|'delivered'|'failed', sentAt). Implement AlertsService in packages/semantic-core/src/alerts.ts with: (1) evaluateRules(workspaceId) scanning recent metrics against all active rules, (2) sendAlert(alert, channels) dispatching to configured channels (email via SendGrid, Slack via webhooks, PagerDuty via API), (3) manageRules CRUD. Create apps/api/src/routes/alerts.ts with: GET /api/v1/workspace/alerts/rules, POST /api/v1/workspace/alerts/rules, DELETE /api/v1/workspace/alerts/rules/:id. Build dashboard config page at apps/dashboard/app/settings/[workspaceId]/alerts/page.tsx with rule editor (select condition + threshold), channel manager, and test alert button. Add integration tests with mocked Slack/PagerDuty APIs. Reference api-conventions.md and embedding-patterns.md for cost control (alert evaluation should be lightweight).
 - **Files**:

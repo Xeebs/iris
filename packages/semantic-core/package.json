@@ -23,7 +23,8 @@
     "./workflow-templates": "./dist/workflow-templates.js",
     "./index-optimizer": "./dist/index-optimizer.js",
     "./benchmarking": "./dist/benchmarking.js",
-    "./workspace-deletion": "./dist/workspace-deletion.js"
+    "./workspace-deletion": "./dist/workspace-deletion.js",
+    "./alerts": "./dist/alerts.js"
   },
   "scripts": {
     "build": "tsc --build",

@@ -36,6 +36,7 @@ import { createWorkspaceDeletionRoutes } from './routes/workspace-deletion.js';
 import { createOnboardingRoutes } from './routes/onboarding.js';
 import { createAdminPerformanceRoutes } from './routes/admin-performance.js';
 import { createAdminConsoleRoutes } from './routes/admin-console.js';
+import { createAlertsRoutes } from './routes/alerts.js';
 import { openApiSpec } from './openapi.js';
 
 export { createApp };
@@ -136,6 +137,7 @@ function createApp(
   authed.route('/onboarding', createOnboardingRoutes(sql));
   authed.route('/admin/performance', createAdminPerformanceRoutes(sql));
   authed.route('/admin', createAdminConsoleRoutes(sql));
+  authed.route('/workspace/alerts', createAlertsRoutes(sql));
 
   // Webhook routes: inbound (unauthenticated) + events status (authenticated)
   app.route('/api/v1/webhooks', createWebhookRoutes(sql));
