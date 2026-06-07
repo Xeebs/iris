@@ -26,7 +26,9 @@
     "./workspace-deletion": "./dist/workspace-deletion.js",
     "./alerts": "./dist/alerts.js",
     "./query-performance-analyzer": "./dist/query-performance-analyzer.js",
-    "./entity-linker": "./dist/entity-linker.js"
+    "./entity-linker": "./dist/entity-linker.js",
+    "./advanced-query-engine": "./dist/advanced-query-engine.js",
+    "./connector-cdc": "./dist/connector-cdc.js"
   },
   "scripts": {
     "build": "tsc --build",
