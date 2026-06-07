@@ -36,7 +36,8 @@
     "./secret-vault": "./dist/secret-vault.js",
     "./sync-diagnostics": "./dist/sync-diagnostics.js",
     "./index-snapshot": "./dist/index-snapshot.js",
-    "./email-templates": "./dist/email-templates.js"
+    "./email-templates": "./dist/email-templates.js",
+    "./performance-profiler": "./dist/performance-profiler.js"
   },
   "scripts": {
     "build": "tsc --build",

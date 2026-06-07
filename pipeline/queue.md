@@ -1616,7 +1616,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Distributed Tracing Enhancements & Performance Profiling
 - **Layer**: 31 — Data Quality & Observability
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: Medium
 - **Description**: Extend the existing OpenTelemetry integration (already committed via previous feat commit) with enhanced spans for all critical paths: connector sync lifecycle, semantic indexing, vector search latency, cache operations. Add custom attributes to spans (workspace_id, entity_count, token_estimate). Implement PerformanceProfiler service in packages/semantic-core/src/performance-profiler.ts tracking p50/p95/p99 latencies per operation and per connector. Export metrics to Prometheus format. Add /metrics endpoint to apps/api and apps/mcp-server returning Prometheus metrics. Build performance dashboard at apps/dashboard/app/performance/page.tsx with latency charts, slowest operations ranking, per-connector breakdown. Full integration tests verifying spans are created and exported correctly. Reference code-style.md for logging patterns.
 - **Files**:
