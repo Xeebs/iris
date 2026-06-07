@@ -1369,7 +1369,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Team Management & Workspace Provisioning API
 - **Layer**: 27 — Advanced Operations & Post-MVP Polish
-- **Status**: IN_PROGRESS
+- **Status**: COMMITTED
 - **Priority**: High
 - **Description**: Implement comprehensive team and workspace management APIs to enable multi-user collaboration and workspace administration. Create apps/api/migrations/028_add_team_management.sql with tables: workspace_members (workspace_id, user_id, email, role: 'admin'|'member'|'viewer', inviteStatus, joinedAt), team_invitations (id, workspace_id, email, invitedBy, expiresAt, token). Create apps/api/src/routes/team-management.ts with endpoints: POST /api/v1/workspace/members/invite (invite new users, send email via SendGrid), GET /api/v1/workspace/members (list members and invitations), PUT /api/v1/workspace/members/:userId/role (change member role), DELETE /api/v1/workspace/members/:userId (remove member). Implement email notification service in packages/core/src/email-service.ts using SendGrid SDK. Validate invitations via secure tokens (JWT with 7-day expiry). Update auth middleware to enforce workspace membership checks. Add 20+ unit tests for role-based access control, invite token validation, and email sending. Add integration tests with mocked SendGrid. Reference api-conventions.md and code-style.md.
 - **Files**:
