@@ -802,7 +802,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: OSI (Open Semantic Interchange) Standard Export
 - **Layer**: 19 — Additional Connectors & V1 Completion
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: Medium
 - **Description**: Implement OSI standard export functionality to allow Iris index data to be exported in an open, portable format. Create packages/semantic-core/src/osi-exporter.ts with exportToOSI(workspaceId, options) that queries the semantic index and transforms entities into OSI standard JSON-LD format. Include entity types, relationships, glossary terms, and metric definitions. Expose GET /api/v1/export/osi endpoint in apps/api/src/routes/export.ts with optional filters (entity types, date range). Add unit tests with schema validation against OSI spec and integration tests verifying round-trip export/import. See embedding-patterns.md for data structuring rules.
 - **Files**:
@@ -816,7 +816,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Business Glossary Sharing & Collaboration Features
 - **Layer**: 19 — Additional Connectors & V1 Completion
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: Medium
 - **Description**: Enhance glossary management with team collaboration features. Update packages/semantic-core/src/glossary.ts to add: termApprovals (workflows for business term standardization), glossaryVersionHistory (track term definition changes), termUsageTracking (count how often a term appears in indexed entities). Extend apps/api/src/routes/glossary.ts with PUT /api/v1/glossary/:term/approve, GET /api/v1/glossary/:term/history, GET /api/v1/glossary/usage endpoints. Build dashboard component at apps/dashboard/components/glossary-collaborator.tsx showing term suggestions, approval queue, and usage analytics. Add audit logging for all glossary changes. Full unit + integration tests.
 - **Files**:
@@ -883,7 +883,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Advanced Index Optimization & Query Performance
 - **Layer**: 20 — V2 Features & Production Hardening
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: Medium
 - **Description**: Optimize semantic index performance for large datasets (1M+ entities) via: (1) partial index optimization (index only top-k relevant entities per type), (2) read-only vector index caching in memory (LRU, size-bounded), (3) query result pre-computation for common queries, (4) lazy entity hydration (store minimal data initially, fetch attributes on demand). Implement IndexOptimizer service in packages/semantic-core/src/index-optimizer.ts with analyze(workspaceId) scanning query patterns and recommending optimizations. Add admin UI at apps/dashboard/components/index-optimizer-panel.tsx showing index size, hot entities, and optimization suggestions. Extend IndexStatusService to track cache hit rates and optimization benefits. Add integration tests with large synthetic datasets (100K+ entities). Reference embedding-patterns.md for cost control rules.
 - **Files**:
@@ -894,4 +894,151 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
   - apps/dashboard/components/index-optimizer-panel.tsx
   - packages/semantic-core/src/retrieval.ts (update)
 - **Depends on**: Index Status & Coverage Metrics, Semantic Cache
+- **Added**: 2026-06-07
+
+---
+
+## Layer 21: Multi-Tenant & Advanced V2 Features
+
+### Task: Multi-Tenant Support & Workspace Isolation
+- **Layer**: 21 — Multi-Tenant & Advanced V2 Features
+- **Status**: COMMITTED
+- **Priority**: High
+- **Description**: Implement complete multi-tenant isolation across all APIs and data stores. Update database schema with tenant-aware constraints: add workspace_id foreign keys to all tables, ensure row-level security policies prevent cross-tenant data leakage. Extend apps/api/src/middleware/auth.ts to extract workspace_id from Clerk organization context and validate against API key assignments. Update retrieval engine and semantic cache to enforce workspace isolation in all queries. Add MCP tool workspace filtering. Create apps/api/migrations/017_add_tenant_constraints.sql. Build dashboard workspace selector at apps/dashboard/components/workspace-selector.tsx with switching logic. Add comprehensive integration tests verifying cross-workspace isolation (attempt queries from WS-A in WS-B context, verify 403 response). Reference api-conventions.md for auth patterns.
+- **Files**:
+  - apps/api/migrations/017_add_tenant_constraints.sql
+  - apps/api/src/middleware/auth.ts (update)
+  - packages/semantic-core/src/retrieval.ts (update)
+  - packages/cache/src/semantic-cache.ts (update)
+  - apps/api/src/routes/connectors.ts (update)
+  - apps/mcp-server/src/tools/query-context.ts (update)
+  - apps/mcp-server/src/tools/list-entities.ts (update)
+  - apps/mcp-server/src/tools/get-entity.ts (update)
+  - apps/mcp-server/src/tools/get-metric.ts (update)
+  - apps/mcp-server/src/tools/list-glossary.ts (update)
+  - apps/dashboard/components/workspace-selector.tsx
+  - apps/api/src/__tests__/multi-tenant-isolation.integration.test.ts
+- **Depends on**: MCP Server API Key Authentication & Workspace Isolation
+- **Added**: 2026-06-07
+
+### Task: Natural Language Index Configuration
+- **Layer**: 21 — Multi-Tenant & Advanced V2 Features
+- **Status**: COMMITTED
+- **Priority**: Medium
+- **Description**: Enable business users to configure fiscal calendars, date interpretations, and metric calculations in plain English. Create packages/semantic-core/src/nlp-config-parser.ts with parseConfigNL(nlText, schema) that uses gpt-4o-mini to interpret natural language config statements like "our fiscal year starts in February" and "ARR is MRR times 12 annualized on Jan 31". Store parsed configs in workspace_nlp_configs table (workspace_id, config_type, input_text, parsed_json, interpretedAt). Expose POST /api/v1/workspace/config-from-language endpoint in apps/api/src/routes/workspace-config.ts. Build wizard page at apps/dashboard/app/workspace/nlp-setup/page.tsx with textarea input, parsing feedback, and approval flow. Wire up interpreted configs into metric registry and glossary. Full unit tests with varied business terminology samples (accounting terms, sales cycles, inventory models). Reference embedding-patterns.md for prompt token budgeting.
+- **Files**:
+  - packages/semantic-core/src/nlp-config-parser.ts
+  - packages/semantic-core/src/__tests__/nlp-config-parser.test.ts
+  - apps/api/migrations/018_add_workspace_nlp_configs.sql
+  - apps/api/src/routes/workspace-config.ts
+  - apps/dashboard/app/workspace/nlp-setup/page.tsx
+  - apps/dashboard/components/nlp-config-wizard.tsx
+  - apps/api/src/__tests__/workspace-config.test.ts
+- **Depends on**: Metric Registry Service & API, Query Decomposition & Entity Type Detection
+- **Added**: 2026-06-07
+
+### Task: Agent Workflow Templates with Pre-Configured Iris Context
+- **Layer**: 21 — Multi-Tenant & Advanced V2 Features
+- **Status**: COMMITTED
+- **Priority**: Medium
+- **Description**: Build pre-configured workflow templates that agents can use to query Iris context automatically. Create packages/semantic-core/src/workflow-templates.ts with WorkflowTemplate class containing: template name, description, trigger conditions (on calendar, on entity change, manual), MCP tool calls (query-context with specific entity types/keywords), and response format (for Claude, ChatGPT, etc.). Implement apps/api/routes/workflow-templates.ts with CRUD endpoints: GET /api/v1/workflow-templates, POST /api/v1/workflow-templates (create), PUT /api/v1/workflow-templates/:id, DELETE /api/v1/workflow-templates/:id. Build template gallery dashboard at apps/dashboard/app/workflows/page.tsx showcasing templates (e.g., "Daily Sales Summary", "Weekly Finance Review", "Customer Health Check"). Store templates in workflow_templates table (workspace_id, template_name, mcp_calls, triggers). Add E2E test verifying template can be created, viewed, and triggered. Reference api-conventions.md for REST patterns.
+- **Files**:
+  - packages/semantic-core/src/workflow-templates.ts
+  - packages/semantic-core/src/__tests__/workflow-templates.test.ts
+  - apps/api/migrations/019_add_workflow_templates.sql
+  - apps/api/src/routes/workflow-templates.ts
+  - apps/dashboard/app/workflows/page.tsx
+  - apps/dashboard/components/workflow-template-gallery.tsx
+  - apps/dashboard/components/workflow-template-editor.tsx
+  - apps/api/src/__tests__/workflow-templates.test.ts
+- **Depends on**: MCP Server Bootstrap, Proactive Context Surfacing (V2 Intelligence)
+- **Added**: 2026-06-07
+
+### Task: Cross-Company Benchmarking (Anonymized & Opt-In)
+- **Layer**: 21 — Multi-Tenant & Advanced V2 Features
+- **Status**: UNWORKED
+- **Priority**: Low
+- **Description**: Implement optional aggregated benchmarking data to help customers compare their index usage, entity counts, and context queries against anonymized industry peers. Create packages/semantic-core/src/benchmarking.ts with BenchmarkingService that: (1) collects workspace metrics (entity_count, query_count, avg_context_size, token_savings_ratio) via GET /api/v1/workspace/benchmark-snapshot, (2) optionally publishes to central benchmarking service (with workspace_id hashed + anonymized), (3) queries benchmarks for peer group (same company size, industry) and returns percentile ranks (e.g., "you're in top 25% for token savings"). Store opt-in consent in workspace_settings table (benchmarking_enabled boolean). Build dashboard widget at apps/dashboard/components/benchmarking-card.tsx showing current metrics vs peer benchmarks (box plots). Add unit tests with synthetic benchmark data. Reference testing.md for data fixture patterns.
+- **Files**:
+  - packages/semantic-core/src/benchmarking.ts
+  - packages/semantic-core/src/__tests__/benchmarking.test.ts
+  - apps/api/migrations/020_add_workspace_benchmarking.sql
+  - apps/api/src/routes/workspace-benchmarking.ts
+  - apps/dashboard/components/benchmarking-card.tsx
+  - apps/api/src/__tests__/workspace-benchmarking.test.ts
+- **Depends on**: Token Analytics Service & Dashboard, Multi-Tenant Support & Workspace Isolation
+- **Added**: 2026-06-07
+
+---
+
+## Layer 22: API Wiring & Integration
+
+### Task: Workflow Templates API Routes & Server Registration
+- **Layer**: 22 — API Wiring & Integration
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Complete workflow templates integration by: (1) creating apps/api/src/routes/workflow-templates.ts with full CRUD endpoints (GET /api/v1/workflow-templates, POST, PUT /:id, DELETE /:id) following api-conventions.md (paginated responses, standard error envelope, workspace isolation via auth middleware); (2) wiring the routes into apps/api/src/server.ts via createWorkflowTemplateRoutes and register with authed.route('/workflow-templates', ...); (3) exporting WorkflowTemplate types from packages/semantic-core/src/index.ts; (4) adding integration tests verifying CRUD operations, workspace isolation (cross-workspace access returns 403), and error handling. Reference the existing glossary/metrics routes for pattern reuse.
+- **Files**:
+  - apps/api/src/routes/workflow-templates.ts
+  - apps/api/src/server.ts (update)
+  - packages/semantic-core/src/index.ts (update)
+  - apps/api/src/__tests__/workflow-templates.test.ts
+- **Depends on**: Agent Workflow Templates with Pre-Configured Iris Context
+- **Added**: 2026-06-07
+
+### Task: Workspace Configuration Routes & Server Registration
+- **Layer**: 22 — API Wiring & Integration
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Wire the created workspace-config routes into the main API server. Update apps/api/src/server.ts to import createWorkspaceConfigRoutes and register with authed.route('/workspace/config', ...). Verify integration tests confirm that NL config parsing, approval flow, and config persistence work end-to-end. Ensure workspace isolation is enforced (users can only access/modify their own workspace configs). Add missing integration tests to validate GET workspace metrics vs config, PUT to update interpreted settings, and DELETE to reset. Reference api-conventions.md for auth and response envelope patterns.
+- **Files**:
+  - apps/api/src/server.ts (update)
+  - apps/api/src/__tests__/workspace-config.test.ts (update)
+- **Depends on**: Natural Language Index Configuration
+- **Added**: 2026-06-07
+
+### Task: Workflow Templates Dashboard Pages
+- **Layer**: 22 — API Wiring & Integration
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Build complete workflow templates dashboard UI at apps/dashboard/app/workflows/page.tsx with: (1) gallery view showing all templates (GET /api/v1/workflow-templates), (2) template cards with name, description, trigger type, and action count, (3) "Create Template" button opening modal with template editor component (name, description, MCP tool picker, trigger condition selector), (4) edit/delete actions per template, (5) apply/disable templates with toggle. Create components: WorkflowTemplateGallery (card grid layout), WorkflowTemplateEditor (form with validation), TemplatePreview (shows MCP calls and trigger config). Add E2E test verifying full flow: create template -> view in gallery -> edit -> trigger condition change -> delete. Reference dashboard components (shadcn/ui) for styling consistency.
+- **Files**:
+  - apps/dashboard/app/workflows/page.tsx
+  - apps/dashboard/components/workflow-template-gallery.tsx
+  - apps/dashboard/components/workflow-template-editor.tsx
+  - apps/dashboard/components/workflow-template-preview.tsx
+  - apps/dashboard/app/workflows/__tests__/page.test.tsx
+  - tests/e2e/workflow-management.spec.ts
+- **Depends on**: Workflow Templates API Routes & Server Registration
+- **Added**: 2026-06-07
+
+### Task: Benchmarking Service Implementation & API
+- **Layer**: 22 — API Wiring & Integration
+- **Status**: UNWORKED
+- **Priority**: Medium
+- **Description**: Implement complete benchmarking functionality. Create packages/semantic-core/src/benchmarking.ts with BenchmarkingService: (1) collectMetrics(workspaceId) aggregates token_events, entity counts, query patterns from Postgres; (2) getPeerBenchmarks(workspaceId, industry, companySize) queries hashed peer data and returns percentile rankings (25th, 50th, 75th, 90th percentiles); (3) exportMetrics(workspaceId) returns shareable JSON for opt-in aggregation. Create apps/api/migrations/020_add_workspace_benchmarking.sql with workspace_benchmarking table. Create apps/api/src/routes/workspace-benchmarking.ts with GET /api/v1/workspace/benchmark-snapshot, GET /api/v1/workspace/benchmarks/peer-comparison endpoints. Export BenchmarkingService from semantic-core/index.ts. Add comprehensive unit + integration tests with synthetic benchmark fixture data. Wire into server.ts.
+- **Files**:
+  - packages/semantic-core/src/benchmarking.ts
+  - packages/semantic-core/src/__tests__/benchmarking.test.ts
+  - packages/semantic-core/src/__tests__/benchmarking.integration.test.ts
+  - packages/semantic-core/src/index.ts (update)
+  - apps/api/migrations/020_add_workspace_benchmarking.sql
+  - apps/api/src/routes/workspace-benchmarking.ts
+  - apps/api/src/server.ts (update)
+  - apps/api/src/__tests__/workspace-benchmarking.test.ts
+- **Depends on**: Multi-Tenant Support & Workspace Isolation, Token Analytics Service & Dashboard
+- **Added**: 2026-06-07
+
+### Task: Benchmarking Dashboard Widget & Visualization
+- **Layer**: 22 — API Wiring & Integration
+- **Status**: UNWORKED
+- **Priority**: Medium
+- **Description**: Build benchmarking dashboard widget at apps/dashboard/components/benchmarking-card.tsx showing: (1) current workspace metrics (token savings %, entity count, cache hit rate), (2) peer benchmark comparison with box plots or quartile visualization (e.g., "your token savings: 62%, peer median: 55%"), (3) percentile rank badge (e.g., "top 15% for compression"), (4) opt-in toggle for data sharing with explanatory tooltip. Integrate into dashboard overview page (apps/dashboard/app/page.tsx) in a dedicated section. Add E2E test verifying: widget loads metrics via GET /api/v1/workspace/benchmark-snapshot, renders comparison chart, opt-in toggle persists via API. Use Recharts or similar for visualization. Reference dashboard component patterns for consistent styling.
+- **Files**:
+  - apps/dashboard/components/benchmarking-card.tsx
+  - apps/dashboard/app/page.tsx (update)
+  - apps/dashboard/components/benchmark-comparison-chart.tsx
+  - apps/dashboard/__tests__/benchmarking-card.test.tsx
+  - tests/e2e/benchmarking-widget.spec.ts
+- **Depends on**: Benchmarking Service Implementation & API
 - **Added**: 2026-06-07

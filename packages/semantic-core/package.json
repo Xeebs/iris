@@ -18,7 +18,10 @@
     "./context-permissions": "./dist/context-permissions.js",
     "./schema-discoverer": "./dist/schema-discoverer.js",
     "./proactive-suggester": "./dist/proactive-suggester.js",
-    "./osi-exporter": "./dist/osi-exporter.js"
+    "./osi-exporter": "./dist/osi-exporter.js",
+    "./nlp-config-parser": "./dist/nlp-config-parser.js",
+    "./workflow-templates": "./dist/workflow-templates.js",
+    "./index-optimizer": "./dist/index-optimizer.js"
   },
   "scripts": {
     "build": "tsc --build",

@@ -20,6 +20,9 @@ import { createGraphRoutes } from './routes/graph.js';
 import { createPiiConfigRoutes } from './routes/pii-config.js';
 import { createSuggestionsRoutes } from './routes/suggestions.js';
 import { createExportRoutes } from './routes/export.js';
+import { createWorkspaceConfigRoutes } from './routes/workspace-config.js';
+import { createIndexOptimizationRoutes } from './routes/index-optimization.js';
+import { createWorkflowTemplateRoutes } from './routes/workflow-templates.js';
 
 export { createApp };
 
@@ -62,6 +65,9 @@ function createApp(
   authed.route('/pii-config', createPiiConfigRoutes(sql));
   authed.route('/context-suggestions', createSuggestionsRoutes(sql));
   authed.route('/export', createExportRoutes(sql));
+  authed.route('/workspace', createWorkspaceConfigRoutes(sql));
+  authed.route('/index-optimization', createIndexOptimizationRoutes(sql));
+  authed.route('/workflow-templates', createWorkflowTemplateRoutes(sql));
 
   // Webhook route is unauthenticated (events arrive from external services)
   app.route('/api/v1/webhooks', createWebhookRoutes(sql));
