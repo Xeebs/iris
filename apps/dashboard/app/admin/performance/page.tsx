@@ -93,8 +93,9 @@ export default function PerformanceDashboardPage() {
       if (!res.ok) throw new Error('Failed to fetch summary');
       const data = (await res.json()) as { data: { connectors: ConnectorSummary[] } };
       setSummary(data.data.connectors);
-      if (data.data.connectors.length > 0 && !selected) {
-        setSelected(data.data.connectors[0].connector_instance_id);
+      const first = data.data.connectors[0];
+      if (first && !selected) {
+        setSelected(first.connector_instance_id);
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load performance data');

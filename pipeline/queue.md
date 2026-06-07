@@ -1330,7 +1330,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Connector Sync Performance Profiling & Analytics
 - **Layer**: 26 — Production Operations & Advanced Features
-- **Status**: IN_PROGRESS
+- **Status**: COMMITTED
 - **Priority**: Medium
 - **Description**: Add detailed performance instrumentation to connector syncs to identify bottlenecks and optimize behavior. Extend packages/queue/src/sync-job-queue.ts to record: (1) sync duration (total, API time, indexing time, embedding time), (2) entity throughput (entities/sec), (3) API call counts and latency distribution, (4) error rates by type, (5) memory usage peak. Store metrics in sync_performance table (job_id, connector_id, total_duration_ms, api_calls, entities_synced, avg_entity_size_bytes, peak_memory_mb, error_count, timestamp). Expose GET /api/v1/admin/performance/connectors/:id returning historical performance metrics with aggregations (daily avg, trend line). Build dashboard page at apps/dashboard/app/admin/performance/page.tsx with: line chart of throughput over time per connector, heatmap of daily sync duration, percentile distribution tables (p50, p90, p99 sync duration). Add alerts: warn if sync duration increases >50% vs 7-day avg. Include integration tests with synthetic sync job fixtures. Reference code-style.md for logging and structured metadata patterns.
 - **Files**:
@@ -1346,7 +1346,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Admin Console & Workspace Inspection Tools
 - **Layer**: 26 — Production Operations & Advanced Features
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: Medium
 - **Description**: Build a comprehensive admin console dashboard for ops teams to inspect and manage workspace health. Create apps/dashboard/app/admin/page.tsx (main console) with tabs: (1) Workspace Overview (list all workspaces, entity counts, last sync times, MCP query volume), (2) System Health (database connection status, Redis latency, Qdrant health, disk usage), (3) Performance Dashboard (sync throughput, query latency p50/p95/p99, cache hit rate trend), (4) Error Analysis (error log with filtering/search, error frequency heatmap by error type, correlation analysis), (5) Config Inspector (view/edit workspace settings, NLP configs, PII rules, rate limit overrides). Build supporting components: WorkspaceInspector, SystemHealthMonitor, PerformanceDashboard, ErrorLogViewer, ConfigPanel. Wire up to new admin API endpoints: GET /api/v1/admin/workspaces, GET /api/v1/admin/system-health, GET /api/v1/admin/errors (with filters: workspace, date range, error type). Require admin role (Clerk organization admin) for all endpoints. Add E2E test verifying admin can view all workspaces but cannot modify other workspace data. Reference dashboard component patterns and api-conventions.md for auth/response envelope.
 - **Files**:
