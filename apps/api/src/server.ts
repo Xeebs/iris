@@ -6,7 +6,7 @@ import { clerkMiddleware } from '@hono/clerk-auth';
 import { PgvectorStore } from '@iris/semantic-core';
 import { logger } from '@iris/core/logger';
 
-import { requireAuth, errorHandler, defaultRateLimiter, syncRateLimiter } from './middleware/index.js';
+import { requireAuth, errorHandler, defaultRateLimiter, syncRateLimiter, syncQuota, webhookQuota } from './middleware/index.js';
 import { checkHealth } from './health.js';
 import { createConnectorRoutes } from './routes/connectors.js';
 import { createEntityRoutes } from './routes/entities.js';
@@ -88,9 +88,11 @@ function createApp(
 
   const connectorRoutes = createConnectorRoutes(sql);
 
-  // Tighter limit on sync triggers: 10 req/min per user
+  // Tighter limit on sync triggers: sliding window + token-bucket quota with burst
   if (redis) {
     connectorRoutes.use('/:id/sync', syncRateLimiter(redis));
+    connectorRoutes.use('/:id/sync', syncQuota(redis));
+    authed.use('/webhooks/*', webhookQuota(redis));
   }
 
   authed.route('/connectors', connectorRoutes);

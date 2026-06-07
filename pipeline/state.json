@@ -1,12 +1,12 @@
 {
   "current_phase": "COMMITTED",
   "active_task": null,
-  "active_layer": 24,
+  "active_layer": 25,
   "last_cycle": "2026-06-07",
   "last_research": "2026-06-07",
   "last_commit": "2026-06-07",
-  "cycle_count": 84,
+  "cycle_count": 85,
   "rate_limit_hit": false,
   "mode": "BUILD",
-  "notes": "Layer 24 complete. All 3 tasks committed. 5 UNWORKED tasks in Layer 25. Moving to L25."
+  "notes": "Quota manager committed. 4 UNWORKED tasks remain in L25."
 }

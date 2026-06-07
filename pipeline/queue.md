@@ -1207,7 +1207,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Advanced Rate Limiting & Quota Management
 - **Layer**: 25 — Production Stability & Testing
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: High
 - **Description**: Extend rate limiting to support per-endpoint quotas and burst allowances. Create apps/api/src/middleware/quota-manager.ts to track API usage per workspace across different quota dimensions: (1) sync triggers (10/min default, configurable), (2) webhook events (100/min default), (3) MCP server connections (5 concurrent default). Implement quota allocation with burst capacity (e.g., allow 15 requests if quota is 10/min but idle for 5 min). Store quota state in Redis with TTL. Return 429 with X-RateLimit-* headers showing remaining quota and reset time. Add integration tests verifying quota enforcement, burst logic, and concurrent request handling. Reference api-conventions.md for HTTP status codes and rate-limiter patterns.
 - **Files**:
