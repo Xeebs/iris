@@ -1435,7 +1435,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Advanced Query Performance Analytics & Vector Index Optimization
 - **Layer**: 27 — Advanced Operations & Post-MVP Polish
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: Medium
 - **Description**: Add detailed query performance analytics and automatic vector index optimization recommendations. Create packages/semantic-core/src/query-performance-analyzer.ts with: (1) logQueryMetrics(query, executionTime, embeddingTime, vectorSearchTime, graphExpansionTime, compressionTime, resultSize) storing to query_performance table (workspace_id, query_hash, metrics_json, timestamp), (2) analyzeQueryPatterns(workspaceId) identifying slow queries (p95 > 1s), identifying hot entities (queried frequently), recommending index improvements, (3) optimizeVectorIndex(workspaceId) suggesting: partial indexing for large datasets, entity bloom filters, approximate nearest neighbor tuning. Expose GET /api/v1/admin/analytics/queries/slow returning top 10 slow queries with execution breakdowns, GET /api/v1/admin/analytics/queries/patterns returning entity access heatmap. Build dashboard page at apps/dashboard/app/admin/query-analytics/page.tsx with: slow query explorer (sortable table showing query, p50/p95 latency, error rate), entity access heatmap (color-coded entity frequency grid), index optimization recommendations (clickable cards with implementation guide). Add 12+ unit tests with synthetic query trace fixtures. Reference code-style.md for logging patterns and embedding-patterns.md for cost budgeting.
 - **Files**:
