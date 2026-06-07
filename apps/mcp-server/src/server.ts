@@ -8,6 +8,7 @@ import { Redis } from 'ioredis';
 import postgres from 'postgres';
 
 import { registerGracefulShutdown } from './shutdown.js';
+import { initTelemetry, shutdownTelemetry } from './telemetry.js';
 import { registerQueryContext } from './tools/query-context.js';
 import { registerListEntities } from './tools/list-entities.js';
 import { registerGetEntity } from './tools/get-entity.js';
@@ -54,6 +55,8 @@ export function createMcpServer(
 }
 
 async function main(): Promise<void> {
+  initTelemetry();
+
   const pgUrl = process.env['DATABASE_URL'];
   const redisUrl = process.env['REDIS_URL'] ?? 'redis://localhost:6379';
   const openAiKey = process.env['OPENAI_API_KEY'] ?? '';
@@ -135,6 +138,7 @@ async function main(): Promise<void> {
     await vectorStore.close();
     await sql.end();
     redis.disconnect();
+    await shutdownTelemetry();
   });
 }
 

@@ -39,6 +39,17 @@ services:
     volumes:
       - neo4j_data:/data
 
+  jaeger:
+    image: jaegertracing/all-in-one:1.58
+    environment:
+      COLLECTOR_OTLP_ENABLED: 'true'
+    ports:
+      - '16686:16686'   # Jaeger UI
+      - '4317:4317'     # OTLP gRPC
+      - '4318:4318'     # OTLP HTTP (used by OTLPTraceExporter)
+    profiles:
+      - observability
+
 volumes:
   postgres_data:
   qdrant_data:

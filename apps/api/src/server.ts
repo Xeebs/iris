@@ -8,6 +8,7 @@ import { logger } from '@iris/core/logger';
 
 import { requireAuth, errorHandler, defaultRateLimiter, syncRateLimiter, syncQuota, webhookQuota } from './middleware/index.js';
 import { checkHealth } from './health.js';
+import { initTelemetry, shutdownTelemetry } from './telemetry.js';
 import { createConnectorRoutes } from './routes/connectors.js';
 import { createEntityRoutes } from './routes/entities.js';
 import { createQueryRoutes } from './routes/queries.js';
@@ -128,6 +129,8 @@ function createApp(
 }
 
 async function main(): Promise<void> {
+  initTelemetry();
+
   const pgUrl = process.env['DATABASE_URL'];
   const openAiKey = process.env['OPENAI_API_KEY'] ?? '';
   const port = Number(process.env['PORT'] ?? 3001);
@@ -147,6 +150,11 @@ async function main(): Promise<void> {
 
   serve({ fetch: app.fetch, port }, (info) => {
     log.info('Iris API server started', { port: info.port });
+  });
+
+  process.on('SIGTERM', async () => {
+    await shutdownTelemetry();
+    process.exit(0);
   });
 }
 

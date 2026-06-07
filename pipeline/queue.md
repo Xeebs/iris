@@ -1257,7 +1257,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Observability & Distributed Tracing Infrastructure
 - **Layer**: 25 — Production Stability & Testing
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: High
 - **Description**: Add OpenTelemetry tracing across API, MCP server, and worker processes for production observability. Create apps/api/src/telemetry.ts and apps/mcp-server/src/telemetry.ts to: (1) initialize OpenTelemetry SDK with OTLP exporter (Jaeger/Datadog compatible), (2) instrument HTTP servers (Hono middleware), (3) instrument database queries (postgres pool wrapper), (4) instrument Redis operations (ioredis instrumentation), (5) create custom spans for critical operations (connector sync, entity indexing, cache lookups). Include trace context propagation for request tracing across services. Add environment variables for OTEL_EXPORTER_OTLP_ENDPOINT and OTEL_SERVICE_NAME. Update docker-compose.yml to include a local Jaeger service for dev. Create integration tests verifying traces are exported and include expected span attributes. Reference code-style.md for logging patterns and ensure structured metadata includes trace IDs.
 - **Files**:

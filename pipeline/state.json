@@ -1,12 +1,12 @@
 {
   "current_phase": "COMMITTED",
   "active_task": null,
-  "active_layer": 26,
+  "active_layer": 25,
   "last_cycle": "2026-06-07",
   "last_research": "2026-06-07",
   "last_commit": "2026-06-07",
-  "cycle_count": 85,
+  "cycle_count": 86,
   "rate_limit_hit": false,
   "mode": "BUILD",
-  "notes": "Task researcher added 5 new Layer 26 tasks: error recovery DLQ, entity deduplication, data export/backup, performance profiling, admin console."
+  "notes": "Observability committed. 3 UNWORKED tasks remain in L25. Proceeding to cache coherence E2E tests."
 }

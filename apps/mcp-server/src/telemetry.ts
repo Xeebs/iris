@@ -1,0 +1,90 @@
+/**
+ * OpenTelemetry tracing for the Iris MCP server.
+ * Mirrors apps/api/src/telemetry.ts but scoped to 'iris-mcp-server'.
+ */
+
+import { NodeSDK } from '@opentelemetry/sdk-node';
+import { getNodeAutoInstrumentations } from '@opentelemetry/auto-instrumentations-node';
+import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
+import { resourceFromAttributes } from '@opentelemetry/resources';
+import { SEMRESATTRS_SERVICE_NAME, SEMRESATTRS_SERVICE_VERSION } from '@opentelemetry/semantic-conventions';
+import { trace, type Span, type Tracer, type SpanOptions } from '@opentelemetry/api';
+
+import { logger } from '@iris/core/logger';
+
+const log = logger.child({ service: 'mcp-telemetry' });
+
+let sdk: NodeSDK | null = null;
+
+/**
+ * Initialize OpenTelemetry SDK for the MCP server.
+ * No-op if OTEL_EXPORTER_OTLP_ENDPOINT is unset.
+ */
+export function initTelemetry(): void {
+  const endpoint = process.env['OTEL_EXPORTER_OTLP_ENDPOINT'];
+  const serviceName = process.env['OTEL_SERVICE_NAME'] ?? 'iris-mcp-server';
+  const serviceVersion = process.env['npm_package_version'] ?? '1.0.0';
+
+  if (!endpoint) {
+    log.debug('OTEL_EXPORTER_OTLP_ENDPOINT not set — tracing disabled');
+    return;
+  }
+
+  const exporter = new OTLPTraceExporter({ url: `${endpoint}/v1/traces` });
+
+  sdk = new NodeSDK({
+    resource: resourceFromAttributes({
+      [SEMRESATTRS_SERVICE_NAME]: serviceName,
+      [SEMRESATTRS_SERVICE_VERSION]: serviceVersion,
+    }),
+    traceExporter: exporter,
+    instrumentations: [
+      getNodeAutoInstrumentations({
+        '@opentelemetry/instrumentation-fs': { enabled: false },
+      }),
+    ],
+  });
+
+  sdk.start();
+  log.info('OpenTelemetry tracing enabled', { endpoint, serviceName });
+}
+
+/**
+ * Gracefully flush and shut down the telemetry SDK.
+ */
+export async function shutdownTelemetry(): Promise<void> {
+  if (sdk) {
+    try {
+      await sdk.shutdown();
+      log.info('OpenTelemetry SDK shut down');
+    } catch (e) {
+      log.warn('OpenTelemetry shutdown error', { error: e });
+    }
+  }
+}
+
+/** @see apps/api/src/telemetry.ts */
+export function getTracer(name: string): Tracer {
+  return trace.getTracer(name);
+}
+
+/** @see apps/api/src/telemetry.ts */
+export async function startSpan<T>(
+  tracer: Tracer,
+  name: string,
+  options: SpanOptions,
+  fn: (span: Span) => Promise<T>,
+): Promise<T> {
+  const span = tracer.startSpan(name, options);
+  try {
+    const result = await fn(span);
+    span.setStatus({ code: 0 });
+    return result;
+  } catch (err) {
+    span.recordException(err instanceof Error ? err : new Error(String(err)));
+    span.setStatus({ code: 2, message: String(err) });
+    throw err;
+  } finally {
+    span.end();
+  }
+}
