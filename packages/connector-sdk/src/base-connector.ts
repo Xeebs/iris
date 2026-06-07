@@ -89,6 +89,11 @@ export interface ConnectorManifest {
   /** Zod schema for the connector's workspace-level config (e.g., portalId, region) */
   configSchema: ZodTypeAny;
   rateLimits: { requestsPerSecond: number };
+  /**
+   * CDC strategies supported by this connector, in preference order.
+   * Defaults to ['snapshot_diff'] if omitted (safest, no connector changes needed).
+   */
+  cdcStrategies?: ('cursor' | 'event_driven' | 'snapshot_diff')[];
 }
 
 // ─── Abstract Base ────────────────────────────────────────────────────────────

@@ -8,6 +8,7 @@ import { SyncJobDlqService } from '../services/dlq-service.js';
 import { registry } from '@iris/connector-sdk';
 import { indexEntities } from '@iris/semantic-core';
 import { emitSyncEvent } from '@iris/semantic-core/sync-events';
+import { ConnectorCDCManager } from '@iris/semantic-core/connector-cdc';
 import type { VectorStore } from '@iris/semantic-core';
 import { ConnectorService } from '../services/connector-service.js';
 import type postgres from 'postgres';
@@ -43,6 +44,8 @@ export function createSyncWorker(
   const syncQueue = new SyncJobQueue(redisUrl);
   const dlqService = new SyncJobDlqService(sql, syncQueue);
   const connectorService = new ConnectorService(sql);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const cdcManager = new ConnectorCDCManager(sql as any);
   const connection = parseRedisUrl(redisUrl);
 
   const worker = new Worker<SyncJobData>(
@@ -77,19 +80,55 @@ export function createSyncWorker(
           throw connectResult.error;
         }
 
-        // 5. Stream entities from the connector sync generator
-        const syncGenerator = connector.sync(
-          instance.lastSyncedAt ? { lastSyncedAt: instance.lastSyncedAt } : {},
-        );
+        // 5. Select CDC strategy for this connector
+        const manifest = registration.manifest;
+        const supportedStrategies = manifest.cdcStrategies ?? ['snapshot_diff'];
+        const cdcStrategy = cdcManager.selectStrategy(supportedStrategies);
+        const cdcConfig = { strategy: cdcStrategy };
 
-        // 6. Index all yielded entities
-        const indexResult = await indexEntities(syncGenerator, vectorStore, {
+        // 6. Determine sync options from stored CDC state
+        const cdcState = (await cdcManager.getState(connectorInstanceId)).unwrapOr(null);
+        const syncOptions: import('@iris/connector-sdk').SyncOptions = instance.lastSyncedAt
+          ? {
+              lastSyncedAt: instance.lastSyncedAt,
+              ...(cdcState?.lastCursor ? { cursor: cdcState.lastCursor } : {}),
+            }
+          : {};
+
+        // 7. Stream entities from the connector sync generator
+        const syncGenerator = connector.sync(syncOptions);
+
+        // 8. Collect entities and compute CDC deltas (reduces re-indexing unchanged data)
+        const allEntities: import('@iris/connector-sdk').SemanticEntity[] = [];
+        for await (const entity of syncGenerator) {
+          allEntities.push(entity);
+        }
+
+        const deltasResult = await cdcManager.computeDeltas(connectorInstanceId, allEntities, cdcConfig);
+        const deltas = deltasResult.unwrapOr(allEntities.map((e) => ({ entity: e, changeType: 'updated' as const })));
+        const changedEntities = deltas
+          .filter((d) => d.changeType !== 'unchanged')
+          .map((d) => d.entity);
+
+        // 9. Index changed entities only
+        async function* changedEntityGenerator() {
+          for (const entity of changedEntities) yield entity;
+        }
+        const indexResult = await indexEntities(changedEntityGenerator(), vectorStore, {
           openAiApiKey,
         });
+
+        // 10. Record CDC metrics
+        const runResult = cdcManager.buildRunResult(deltas);
+        runResult.strategy = cdcStrategy;
+        await cdcManager.updateState(connectorInstanceId, workspaceId, runResult, cdcConfig);
 
         log.info('Sync indexing complete', {
           connectorInstanceId,
           workspaceId,
+          cdcStrategy,
+          totalEntities: allEntities.length,
+          changedEntities: changedEntities.length,
           created: indexResult.created,
           updated: indexResult.updated,
           deduplicated: indexResult.deduplicated,
@@ -97,7 +136,7 @@ export function createSyncWorker(
           durationMs: indexResult.durationMs,
         });
 
-        // 7. Update lastSyncedAt and reset status to active
+        // 11. Update lastSyncedAt and reset status to active
         await connectorService.updateStatus(connectorInstanceId, 'active', new Date());
 
         emitSyncEvent({
