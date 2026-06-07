@@ -1103,7 +1103,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Analytics Drill-Down & Per-Connector Token Usage
 - **Layer**: 23 — E2E Integration & Testing
-- **Status**: UNWORKED
+- **Status**: IN_PROGRESS
 - **Priority**: Medium
 - **Description**: Extend analytics dashboard with drill-down views showing per-connector token consumption breakdown. Create apps/dashboard/app/analytics/[workspaceId]/breakdown/page.tsx with: (1) entity type breakdown (tokens by contact vs company vs deal, etc), (2) per-connector breakdown (HubSpot vs Notion vs Slack token usage), (3) time-series granularity (hourly, daily, weekly, monthly). Implement API endpoint GET /api/v1/analytics/breakdown?granularity=daily&groupBy=connector returning time-series data. Create supporting components: TokenBreakdownChart (stacked bar chart via Recharts), FilterControls (time range, grouping options). Wire token_events table aggregation queries with proper indexing. Add integration tests verifying aggregations are correct. Reference token-analytics.ts and api-conventions.md patterns.
 - **Files**:
@@ -1152,7 +1152,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Dashboard Navigation & Breadcrumbs Layout Component
 - **Layer**: 24 — Production Readiness & Navigation
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: High
 - **Description**: Build a reusable dashboard layout component and navigation system. Create apps/dashboard/components/dashboard-layout.tsx with: (1) fixed sidebar navigation showing all main sections (Overview, Connectors, Queries, Analytics, Graph, Workflows, Settings), (2) active route highlighting, (3) workspace selector dropdown, (4) breadcrumb trail at top of content area. Create apps/dashboard/components/breadcrumbs.tsx to auto-generate breadcrumbs from route segments (e.g., /connectors/[id]/health → Connectors > [name] > Health). Update the root layout.tsx to use DashboardLayout wrapper. Add responsive mobile sidebar toggle. Build with shadcn/ui components (NavigationMenu, DropdownMenu, Breadcrumb). Add test verifying navigation links match filesystem routes and breadcrumbs update on route change. Target: all dashboard pages inherit consistent nav/breadcrumb layout.
 - **Files**:
