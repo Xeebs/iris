@@ -32,7 +32,8 @@
     "./data-quality-scorer": "./dist/data-quality-scorer.js",
     "./dsr-handler": "./dist/dsr-handler.js",
     "./entity-audit-service": "./dist/entity-audit-service.js",
-    "./audit-log-service": "./dist/audit-log-service.js"
+    "./audit-log-service": "./dist/audit-log-service.js",
+    "./secret-vault": "./dist/secret-vault.js"
   },
   "scripts": {
     "build": "tsc --build",
