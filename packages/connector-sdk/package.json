@@ -10,7 +10,8 @@
     "./base-connector": "./dist/base-connector.js",
     "./registry": "./dist/registry.js",
     "./test-utils": "./dist/test-utils.js",
-    "./user-connector-loader": "./dist/user-connector-loader.js"
+    "./user-connector-loader": "./dist/user-connector-loader.js",
+    "./webhook-validator": "./dist/webhook-validator.js"
   },
   "scripts": {
     "build": "tsc --build",
