@@ -1243,7 +1243,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Custom Connector Framework & User-Extensible SDK
 - **Layer**: 25 — Production Stability & Testing
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: Medium
 - **Description**: Enable business users and developers to build custom connectors without modifying core code. Create packages/connector-sdk/src/user-connector-loader.ts with loadUserConnector(path) that dynamically imports a connector from a user-provided directory. Define a simplified ConnectorManifest schema that users can extend (e.g., CustomConnector = { name, description, auth, entityTypes, sync() }). Add validation to ensure custom connectors implement required methods and follow entity transformation rules. Create apps/api/src/routes/custom-connectors.ts with: POST /api/v1/custom-connectors/upload (multipart form with zip file), POST /api/v1/custom-connectors/validate (validate before installation), GET /api/v1/custom-connectors (list installed custom connectors). Store uploaded connector code in a safe sandbox directory with isolation guarantees. Add comprehensive tests: (1) valid connector upload/validation, (2) missing method detection, (3) entity schema validation, (4) connector instantiation and sync execution. Reference connector-patterns.md for entity requirements.
 - **Files**:

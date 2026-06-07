@@ -9,7 +9,8 @@
     ".": "./dist/index.js",
     "./base-connector": "./dist/base-connector.js",
     "./registry": "./dist/registry.js",
-    "./test-utils": "./dist/test-utils.js"
+    "./test-utils": "./dist/test-utils.js",
+    "./user-connector-loader": "./dist/user-connector-loader.js"
   },
   "scripts": {
     "build": "tsc --build",

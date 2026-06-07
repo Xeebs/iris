@@ -30,6 +30,7 @@ import { createAdminDlqRoutes } from './routes/admin-dlq.js';
 import { createAdminDedupRoutes } from './routes/admin-dedup.js';
 import { createWorkspaceExportRoutes } from './routes/workspace-export.js';
 import { createAdminBackupRoutes } from './routes/admin-backup.js';
+import { createCustomConnectorRoutes } from './routes/custom-connectors.js';
 import { openApiSpec } from './openapi.js';
 
 export { createApp };
@@ -124,6 +125,7 @@ function createApp(
   authed.route('/admin/dedup', createAdminDedupRoutes(sql, vectorStore));
   authed.route('/workspace/export', createWorkspaceExportRoutes(sql));
   authed.route('/admin/backup', createAdminBackupRoutes(sql));
+  authed.route('/custom-connectors', createCustomConnectorRoutes(sql));
 
   // Webhook routes: inbound (unauthenticated) + events status (authenticated)
   app.route('/api/v1/webhooks', createWebhookRoutes(sql));
