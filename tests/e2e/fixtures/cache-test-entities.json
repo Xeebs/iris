@@ -1,0 +1,47 @@
+{
+  "entities": [
+    {
+      "id": "test:contact:cache-001",
+      "type": "contact",
+      "label": "Alice Cacheworthy",
+      "attributes": {
+        "email": "alice@example.com",
+        "company": "Acme Corp",
+        "stage": "qualified"
+      },
+      "relationships": [
+        { "type": "belongs_to", "targetId": "test:company:cache-acme" }
+      ],
+      "sourceId": "test:contact:cache-001",
+      "workspaceId": "ws-cache-test"
+    },
+    {
+      "id": "test:company:cache-acme",
+      "type": "company",
+      "label": "Acme Corp",
+      "attributes": {
+        "industry": "technology",
+        "employees": 500,
+        "revenue": "10M"
+      },
+      "relationships": [],
+      "sourceId": "test:company:cache-acme",
+      "workspaceId": "ws-cache-test"
+    },
+    {
+      "id": "test:deal:cache-d01",
+      "type": "deal",
+      "label": "Acme Enterprise Deal",
+      "attributes": {
+        "amount": 50000,
+        "stage": "proposal",
+        "closeDate": "2026-09-30"
+      },
+      "relationships": [
+        { "type": "involves", "targetId": "test:company:cache-acme" }
+      ],
+      "sourceId": "test:deal:cache-d01",
+      "workspaceId": "ws-cache-test"
+    }
+  ]
+}

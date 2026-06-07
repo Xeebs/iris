@@ -1219,7 +1219,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Semantic Cache Coherence & Invalidation E2E Test Suite
 - **Layer**: 25 — Production Stability & Testing
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: High
 - **Description**: Build comprehensive E2E tests in tests/e2e/ verifying cache coherence when indexed entities change. Tests should: (1) index a set of entities and verify query result is cached, (2) sync a connector and update one entity, verify cache is invalidated for affected queries, (3) test relationship expansion caching (expand entity A -> entity B -> entity C, then update B, verify only B/C cache invalidated, A cache untouched), (4) test multi-connector sync with cross-connector relationships, verify cascading invalidation, (5) verify semantic response cache hits for semantically equivalent queries (cosine similarity > 0.92). Add 10+ Playwright test cases with timing assertions (cached: <100ms, miss: >1s). Reference semantic-cache.ts and cache-patterns in code-style.md.
 - **Files**:
@@ -1269,4 +1269,96 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
   - apps/api/src/__tests__/telemetry.integration.test.ts
   - apps/mcp-server/src/__tests__/telemetry.test.ts
 - **Depends on**: Health & Readiness Endpoints + Graceful Shutdown
+- **Added**: 2026-06-07
+
+---
+
+## Layer 26: Production Operations & Advanced Features
+
+### Task: Sync Job Error Recovery & Dead Letter Queue
+- **Layer**: 26 — Production Operations & Advanced Features
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Implement robust error recovery for failed connector syncs with a dead letter queue (DLQ) system. Extend packages/queue/src/sync-job-queue.ts to: (1) capture detailed error context when a sync fails (error message, stack trace, entity batch that failed), (2) after 3 retries with exponential backoff (1s, 10s, 60s), move the job to a DLQ table in Postgres (deadletter_jobs with job_id, connector_instance_id, error, failedBatch, createdAt), (3) expose GET /api/v1/admin/dlq endpoint to list failed jobs with error details, (4) implement POST /api/v1/admin/dlq/:jobId/retry to manually replay a failed job, optionally with a subset of the batch. Build dashboard admin panel at apps/dashboard/app/admin/dlq/page.tsx showing DLQ entries with filters (connector, date range, error type), error messages, and retry actions. Add integration tests verifying: job retry exhaustion triggers DLQ write, manual replay works, error context is preserved. Reference code-style.md for error handling patterns and api-conventions.md for REST conventions.
+- **Files**:
+  - packages/queue/src/sync-job-queue.ts (update)
+  - apps/api/migrations/024_add_deadletter_queue.sql
+  - apps/api/src/routes/admin-dlq.ts
+  - apps/dashboard/app/admin/dlq/page.tsx
+  - apps/dashboard/components/dlq-inspector.tsx
+  - packages/queue/src/__tests__/sync-job-queue.test.ts (update)
+  - apps/api/src/__tests__/admin-dlq.test.ts
+- **Depends on**: BullMQ Job Queue Infrastructure, Sync Worker Implementation & Connector Invocation
+- **Added**: 2026-06-07
+
+### Task: Advanced Entity Deduplication & Fuzzy Matching
+- **Layer**: 26 — Production Operations & Advanced Features
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Implement sophisticated cross-connector entity matching to unify duplicate data from multiple sources (e.g., same contact appears in HubSpot and Salesforce under slightly different names/emails). Create packages/semantic-core/src/entity-deduplication.ts with EntityDuplicateMatcher class: (1) build a similarity matrix for entities using multiple signals (name Levenshtein distance, email domain match, phone number match, semantic embedding cosine similarity), (2) apply fuzzy matching rules (e.g., if name_similarity > 0.8 AND email_domain_match, link entities), (3) create canonical_entity_links table mapping duplicate entity IDs to a canonical entity ID, (4) update retrieval engine to return canonical entities and suppress duplicates. Expose POST /api/v1/admin/dedup/analyze to scan for duplicates and return recommendations, and POST /api/v1/admin/dedup/merge/:canonicalId/:duplicateId to merge two entities. Add admin dashboard page at apps/dashboard/app/admin/dedup/page.tsx with duplicate pair inspector and merge workflows. Include unit tests with synthetic duplicate datasets (100 entity pairs with varied similarity profiles) and integration tests. Reference embedding-patterns.md for similarity threshold tuning.
+- **Files**:
+  - packages/semantic-core/src/entity-deduplication.ts
+  - packages/semantic-core/src/__tests__/entity-deduplication.test.ts
+  - packages/semantic-core/src/__tests__/entity-deduplication.integration.test.ts
+  - apps/api/migrations/025_add_entity_deduplication.sql
+  - apps/api/src/routes/admin-dedup.ts
+  - apps/api/src/retrieval.ts (update)
+  - apps/dashboard/app/admin/dedup/page.tsx
+  - apps/dashboard/components/duplicate-inspector.tsx
+  - apps/api/src/__tests__/admin-dedup.test.ts
+- **Depends on**: Entity Relationship Indexing, Semantic Cache
+- **Added**: 2026-06-07
+
+### Task: Workspace Data Export & Backup Service
+- **Layer**: 26 — Production Operations & Advanced Features
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Implement comprehensive data export and backup capabilities for workspace portability and disaster recovery. Create packages/semantic-core/src/data-exporter.ts with DataExporter class: (1) exportWorkspace(workspaceId, options) returning all entities, glossary, metrics, relationships, and configs as a structured JSON backup, (2) exportEntities(workspaceId, filters) returning entities filtered by type/date range/connector, (3) exportSchema(workspaceId) returning canonical schema definitions, (4) implement async export with progress tracking (store export jobs in exports_jobs table). Expose POST /api/v1/workspace/export/full (full backup), POST /api/v1/workspace/export/entities (filtered export), with streaming response for large exports. Add import capability: POST /api/v1/admin/workspace/import to restore a backup (requires admin permission and explicit workspace selection). Build admin UI at apps/dashboard/app/admin/backup/page.tsx with: export trigger, progress indicator, download link, scheduled daily exports toggle. Add unit tests with synthetic workspace fixtures and integration tests verifying round-trip export/import preserves all data. See api-conventions.md for response envelope patterns.
+- **Files**:
+  - packages/semantic-core/src/data-exporter.ts
+  - packages/semantic-core/src/__tests__/data-exporter.test.ts
+  - packages/semantic-core/src/__tests__/data-exporter.integration.test.ts
+  - apps/api/migrations/026_add_export_jobs.sql
+  - apps/api/src/routes/admin-backup.ts
+  - apps/api/src/routes/workspace-export.ts
+  - apps/dashboard/app/admin/backup/page.tsx
+  - apps/dashboard/components/backup-manager.tsx
+  - apps/api/src/__tests__/admin-backup.test.ts
+  - apps/api/src/__tests__/workspace-export.test.ts
+- **Depends on**: Multi-Tenant Support & Workspace Isolation, Glossary Service & API, Metric Registry Service & API
+- **Added**: 2026-06-07
+
+### Task: Connector Sync Performance Profiling & Analytics
+- **Layer**: 26 — Production Operations & Advanced Features
+- **Status**: UNWORKED
+- **Priority**: Medium
+- **Description**: Add detailed performance instrumentation to connector syncs to identify bottlenecks and optimize behavior. Extend packages/queue/src/sync-job-queue.ts to record: (1) sync duration (total, API time, indexing time, embedding time), (2) entity throughput (entities/sec), (3) API call counts and latency distribution, (4) error rates by type, (5) memory usage peak. Store metrics in sync_performance table (job_id, connector_id, total_duration_ms, api_calls, entities_synced, avg_entity_size_bytes, peak_memory_mb, error_count, timestamp). Expose GET /api/v1/admin/performance/connectors/:id returning historical performance metrics with aggregations (daily avg, trend line). Build dashboard page at apps/dashboard/app/admin/performance/page.tsx with: line chart of throughput over time per connector, heatmap of daily sync duration, percentile distribution tables (p50, p90, p99 sync duration). Add alerts: warn if sync duration increases >50% vs 7-day avg. Include integration tests with synthetic sync job fixtures. Reference code-style.md for logging and structured metadata patterns.
+- **Files**:
+  - apps/api/migrations/027_add_sync_performance.sql
+  - packages/queue/src/sync-job-queue.ts (update)
+  - apps/api/src/routes/admin-performance.ts
+  - apps/dashboard/app/admin/performance/page.tsx
+  - apps/dashboard/components/performance-charts.tsx
+  - packages/queue/src/__tests__/sync-job-queue.test.ts (update)
+  - apps/api/src/__tests__/admin-performance.test.ts
+- **Depends on**: BullMQ Job Queue Infrastructure, Token Analytics Service & Dashboard
+- **Added**: 2026-06-07
+
+### Task: Admin Console & Workspace Inspection Tools
+- **Layer**: 26 — Production Operations & Advanced Features
+- **Status**: UNWORKED
+- **Priority**: Medium
+- **Description**: Build a comprehensive admin console dashboard for ops teams to inspect and manage workspace health. Create apps/dashboard/app/admin/page.tsx (main console) with tabs: (1) Workspace Overview (list all workspaces, entity counts, last sync times, MCP query volume), (2) System Health (database connection status, Redis latency, Qdrant health, disk usage), (3) Performance Dashboard (sync throughput, query latency p50/p95/p99, cache hit rate trend), (4) Error Analysis (error log with filtering/search, error frequency heatmap by error type, correlation analysis), (5) Config Inspector (view/edit workspace settings, NLP configs, PII rules, rate limit overrides). Build supporting components: WorkspaceInspector, SystemHealthMonitor, PerformanceDashboard, ErrorLogViewer, ConfigPanel. Wire up to new admin API endpoints: GET /api/v1/admin/workspaces, GET /api/v1/admin/system-health, GET /api/v1/admin/errors (with filters: workspace, date range, error type). Require admin role (Clerk organization admin) for all endpoints. Add E2E test verifying admin can view all workspaces but cannot modify other workspace data. Reference dashboard component patterns and api-conventions.md for auth/response envelope.
+- **Files**:
+  - apps/dashboard/app/admin/page.tsx
+  - apps/dashboard/components/admin-workspace-overview.tsx
+  - apps/dashboard/components/system-health-monitor.tsx
+  - apps/dashboard/components/performance-dashboard.tsx
+  - apps/dashboard/components/error-log-viewer.tsx
+  - apps/dashboard/components/config-inspector.tsx
+  - apps/api/src/routes/admin-console.ts
+  - apps/api/src/middleware/admin-auth.ts
+  - apps/api/src/__tests__/admin-console.test.ts
+  - tests/e2e/admin-console.spec.ts
+- **Depends on**: Health & Readiness Endpoints + Graceful Shutdown, Token Analytics Service & Dashboard
 - **Added**: 2026-06-07

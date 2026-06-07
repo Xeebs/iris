@@ -1,12 +1,12 @@
 {
   "current_phase": "COMMITTED",
   "active_task": null,
-  "active_layer": 25,
+  "active_layer": 26,
   "last_cycle": "2026-06-07",
   "last_research": "2026-06-07",
   "last_commit": "2026-06-07",
   "cycle_count": 85,
   "rate_limit_hit": false,
   "mode": "BUILD",
-  "notes": "Quota manager committed. 4 UNWORKED tasks remain in L25."
+  "notes": "Task researcher added 5 new Layer 26 tasks: error recovery DLQ, entity deduplication, data export/backup, performance profiling, admin console."
 }
