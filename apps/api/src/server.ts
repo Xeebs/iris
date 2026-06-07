@@ -31,6 +31,7 @@ import { createAdminDedupRoutes } from './routes/admin-dedup.js';
 import { createWorkspaceExportRoutes } from './routes/workspace-export.js';
 import { createAdminBackupRoutes } from './routes/admin-backup.js';
 import { createCustomConnectorRoutes } from './routes/custom-connectors.js';
+import { createTeamManagementRoutes } from './routes/team-management.js';
 import { openApiSpec } from './openapi.js';
 
 export { createApp };
@@ -126,6 +127,7 @@ function createApp(
   authed.route('/workspace/export', createWorkspaceExportRoutes(sql));
   authed.route('/admin/backup', createAdminBackupRoutes(sql));
   authed.route('/custom-connectors', createCustomConnectorRoutes(sql));
+  authed.route('/workspace/members', createTeamManagementRoutes(sql));
 
   // Webhook routes: inbound (unauthenticated) + events status (authenticated)
   app.route('/api/v1/webhooks', createWebhookRoutes(sql));

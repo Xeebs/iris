@@ -9,7 +9,8 @@
     ".": "./dist/index.js",
     "./logger": "./dist/logger.js",
     "./errors": "./dist/errors.js",
-    "./config": "./dist/config.js"
+    "./config": "./dist/config.js",
+    "./email-service": "./dist/email-service.js"
   },
   "scripts": {
     "build": "tsc --build",

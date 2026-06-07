@@ -1362,3 +1362,90 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
   - tests/e2e/admin-console.spec.ts
 - **Depends on**: Health & Readiness Endpoints + Graceful Shutdown, Token Analytics Service & Dashboard
 - **Added**: 2026-06-07
+
+---
+
+## Layer 27: Advanced Operations & Post-MVP Polish
+
+### Task: Team Management & Workspace Provisioning API
+- **Layer**: 27 — Advanced Operations & Post-MVP Polish
+- **Status**: IN_PROGRESS
+- **Priority**: High
+- **Description**: Implement comprehensive team and workspace management APIs to enable multi-user collaboration and workspace administration. Create apps/api/migrations/028_add_team_management.sql with tables: workspace_members (workspace_id, user_id, email, role: 'admin'|'member'|'viewer', inviteStatus, joinedAt), team_invitations (id, workspace_id, email, invitedBy, expiresAt, token). Create apps/api/src/routes/team-management.ts with endpoints: POST /api/v1/workspace/members/invite (invite new users, send email via SendGrid), GET /api/v1/workspace/members (list members and invitations), PUT /api/v1/workspace/members/:userId/role (change member role), DELETE /api/v1/workspace/members/:userId (remove member). Implement email notification service in packages/core/src/email-service.ts using SendGrid SDK. Validate invitations via secure tokens (JWT with 7-day expiry). Update auth middleware to enforce workspace membership checks. Add 20+ unit tests for role-based access control, invite token validation, and email sending. Add integration tests with mocked SendGrid. Reference api-conventions.md and code-style.md.
+- **Files**:
+  - apps/api/migrations/028_add_team_management.sql
+  - apps/api/src/routes/team-management.ts
+  - packages/core/src/email-service.ts
+  - apps/api/src/middleware/workspace-membership.ts
+  - apps/api/src/__tests__/team-management.test.ts
+  - packages/core/src/__tests__/email-service.test.ts
+- **Depends on**: Multi-Tenant Support & Workspace Isolation
+- **Added**: 2026-06-07
+
+### Task: Workspace Deletion & Data Retention Policies
+- **Layer**: 27 — Advanced Operations & Post-MVP Polish
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Implement safe workspace deletion with configurable data retention and compliance options. Create apps/api/migrations/029_add_deletion_policies.sql with workspace_deletion_policies table (workspace_id, retentionDays, backupBeforeDeletion, legalHold). Implement WorkspaceDeletionService in packages/semantic-core/src/workspace-deletion.ts with: (1) requestDeletion(workspaceId, reason) marking workspace for 30-day soft deletion (grace period for accidental deletes), (2) exportBeforeDeletion(workspaceId) triggering automatic backup export, (3) cancelDeletion(workspaceId) reverting the soft delete, (4) permanentlyDelete(workspaceId) hard-deleting all workspace data (cascade delete from all tables via SQL triggers). Create POST /api/v1/workspace/deletion/request endpoint (requires admin role + 2FA verification), PUT /api/v1/workspace/deletion/cancel (within grace period), and GET /api/v1/workspace/deletion/status. Build dashboard warning UI at apps/dashboard/app/settings/[workspaceId]/deletion/page.tsx with 30-day countdown, backup status, and cancel button. Add comprehensive audit logging for all deletion operations. Write 15+ tests covering edge cases: deletion during active syncs, cross-workspace data isolation during deletion, cascade delete verification. Reference code-style.md error handling.
+- **Files**:
+  - apps/api/migrations/029_add_deletion_policies.sql
+  - packages/semantic-core/src/workspace-deletion.ts
+  - packages/semantic-core/src/__tests__/workspace-deletion.test.ts
+  - packages/semantic-core/src/__tests__/workspace-deletion.integration.test.ts
+  - apps/api/src/routes/workspace-deletion.ts
+  - apps/dashboard/app/settings/[workspaceId]/deletion/page.tsx
+  - apps/api/src/__tests__/workspace-deletion.test.ts
+- **Depends on**: Multi-Tenant Support & Workspace Isolation, Workspace Data Export & Backup Service
+- **Added**: 2026-06-07
+
+### Task: Alert Rules Engine & Notification Channels
+- **Layer**: 27 — Advanced Operations & Post-MVP Polish
+- **Status**: UNWORKED
+- **Priority**: Medium
+- **Description**: Build a flexible alert system allowing workspaces to define rules and receive notifications via multiple channels. Create apps/api/migrations/030_add_alerts.sql with tables: alert_rules (id, workspace_id, name, condition: 'sync_failure'|'token_quota'|'performance_degradation'|'cache_miss_rate', threshold, enabled, createdAt), alert_channels (id, workspace_id, type: 'email'|'slack'|'pagerduty'|'webhook', config: {...}, isDefault), alert_events (id, workspace_id, rule_id, channel_id, status: 'triggered'|'delivered'|'failed', sentAt). Implement AlertsService in packages/semantic-core/src/alerts.ts with: (1) evaluateRules(workspaceId) scanning recent metrics against all active rules, (2) sendAlert(alert, channels) dispatching to configured channels (email via SendGrid, Slack via webhooks, PagerDuty via API), (3) manageRules CRUD. Create apps/api/src/routes/alerts.ts with: GET /api/v1/workspace/alerts/rules, POST /api/v1/workspace/alerts/rules, DELETE /api/v1/workspace/alerts/rules/:id. Build dashboard config page at apps/dashboard/app/settings/[workspaceId]/alerts/page.tsx with rule editor (select condition + threshold), channel manager, and test alert button. Add integration tests with mocked Slack/PagerDuty APIs. Reference api-conventions.md and embedding-patterns.md for cost control (alert evaluation should be lightweight).
+- **Files**:
+  - apps/api/migrations/030_add_alerts.sql
+  - packages/semantic-core/src/alerts.ts
+  - packages/semantic-core/src/__tests__/alerts.test.ts
+  - apps/api/src/routes/alerts.ts
+  - apps/dashboard/app/settings/[workspaceId]/alerts/page.tsx
+  - apps/dashboard/components/alert-rule-editor.tsx
+  - apps/dashboard/components/alert-channel-manager.tsx
+  - apps/api/src/__tests__/alerts.test.ts
+- **Depends on**: Token Analytics Service & Dashboard, Observability & Distributed Tracing Infrastructure
+- **Added**: 2026-06-07
+
+### Task: Workspace Onboarding Flow & First-Sync Guided Experience
+- **Layer**: 27 — Advanced Operations & Post-MVP Polish
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Build a comprehensive guided onboarding flow for new workspaces to accelerate time-to-value. Create apps/dashboard/app/onboarding/page.tsx with a multi-step wizard: (1) Workspace Setup (name, industry, company size, use case), (2) Connector Selection (pick 1-3 primary connectors from recommended list based on industry/use case), (3) Guided Connector Setup (walk through OAuth/API key per selected connector with explanatory text and example screenshots), (4) Schema Confirmation (auto-discover schemas and let user confirm/customize entity type mappings), (5) Glossary Kickstart (auto-populate glossary with industry templates: finance → ARR, MRR, CAC; sales → pipeline_stage, win_rate), (6) First Sync (trigger a sync, show progress with estimated entity counts), (7) Success (show index overview, suggest MCP integration docs). Use shadcn/ui Stepper component. Store completion state in workspace_onboarding table (workspace_id, completedSteps[], status: 'in_progress'|'completed'). Add branching logic: skip connectors if already configured, offer sample data if real connectors unavailable. Create E2E test covering full flow. Reference connector-patterns.md for connector setup and embedding-patterns.md for glossary templates. Target: onboarding completion < 10 minutes.
+- **Files**:
+  - apps/dashboard/app/onboarding/page.tsx
+  - apps/dashboard/components/onboarding-wizard.tsx
+  - apps/dashboard/components/onboarding-connector-selector.tsx
+  - apps/dashboard/components/onboarding-glossary-kickstart.tsx
+  - apps/dashboard/components/onboarding-progress.tsx
+  - apps/api/migrations/031_add_workspace_onboarding.sql
+  - apps/api/src/routes/onboarding.ts
+  - tests/e2e/onboarding-flow.spec.ts
+  - apps/api/src/__tests__/onboarding.test.ts
+- **Depends on**: Connector Setup UI Flow, Glossary Service & API
+- **Added**: 2026-06-07
+
+### Task: Advanced Query Performance Analytics & Vector Index Optimization
+- **Layer**: 27 — Advanced Operations & Post-MVP Polish
+- **Status**: UNWORKED
+- **Priority**: Medium
+- **Description**: Add detailed query performance analytics and automatic vector index optimization recommendations. Create packages/semantic-core/src/query-performance-analyzer.ts with: (1) logQueryMetrics(query, executionTime, embeddingTime, vectorSearchTime, graphExpansionTime, compressionTime, resultSize) storing to query_performance table (workspace_id, query_hash, metrics_json, timestamp), (2) analyzeQueryPatterns(workspaceId) identifying slow queries (p95 > 1s), identifying hot entities (queried frequently), recommending index improvements, (3) optimizeVectorIndex(workspaceId) suggesting: partial indexing for large datasets, entity bloom filters, approximate nearest neighbor tuning. Expose GET /api/v1/admin/analytics/queries/slow returning top 10 slow queries with execution breakdowns, GET /api/v1/admin/analytics/queries/patterns returning entity access heatmap. Build dashboard page at apps/dashboard/app/admin/query-analytics/page.tsx with: slow query explorer (sortable table showing query, p50/p95 latency, error rate), entity access heatmap (color-coded entity frequency grid), index optimization recommendations (clickable cards with implementation guide). Add 12+ unit tests with synthetic query trace fixtures. Reference code-style.md for logging patterns and embedding-patterns.md for cost budgeting.
+- **Files**:
+  - packages/semantic-core/src/query-performance-analyzer.ts
+  - packages/semantic-core/src/__tests__/query-performance-analyzer.test.ts
+  - apps/api/migrations/032_add_query_performance.sql
+  - apps/api/src/routes/admin-query-analytics.ts
+  - apps/dashboard/app/admin/query-analytics/page.tsx
+  - apps/dashboard/components/slow-query-explorer.tsx
+  - apps/dashboard/components/entity-access-heatmap.tsx
+  - apps/api/src/__tests__/admin-query-analytics.test.ts
+- **Depends on**: Advanced Index Optimization & Query Performance
+- **Added**: 2026-06-07
