@@ -7,6 +7,7 @@ import { logger } from '@iris/core/logger';
 import { Redis } from 'ioredis';
 import postgres from 'postgres';
 
+import { registerGracefulShutdown } from './shutdown.js';
 import { registerQueryContext } from './tools/query-context.js';
 import { registerListEntities } from './tools/list-entities.js';
 import { registerGetEntity } from './tools/get-entity.js';
@@ -128,13 +129,12 @@ async function main(): Promise<void> {
 
   log.info('Iris MCP Server running on stdio', { authenticated: !!apiKey });
 
-  process.on('SIGINT', async () => {
+  registerGracefulShutdown(async () => {
     if (sessionId) await recordSessionEnd(sql, sessionId);
     await server.close();
     await vectorStore.close();
     await sql.end();
     redis.disconnect();
-    process.exit(0);
   });
 }
 

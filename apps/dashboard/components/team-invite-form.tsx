@@ -5,15 +5,10 @@ import { useState } from 'react';
 type Role = 'admin' | 'member';
 
 type Props = {
-  workspaceId: string;
-  onSuccess?: () => void;
+  onInvite: (email: string, role: string) => Promise<void>;
 };
 
-const API_URL = typeof process !== 'undefined'
-  ? (process.env['NEXT_PUBLIC_API_URL'] ?? 'http://localhost:3001/api/v1')
-  : '/api/v1';
-
-export function TeamInviteForm({ workspaceId, onSuccess }: Props) {
+export function TeamInviteForm({ onInvite }: Props) {
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<Role>('member');
   const [loading, setLoading] = useState(false);
@@ -28,15 +23,9 @@ export function TeamInviteForm({ workspaceId, onSuccess }: Props) {
     setError(null);
     setSuccess(false);
     try {
-      const res = await fetch(`${API_URL}/workspace/members`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ workspaceId, email: email.trim(), role }),
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      await onInvite(email.trim(), role);
       setEmail('');
       setSuccess(true);
-      onSuccess?.();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Invite failed');
     } finally {

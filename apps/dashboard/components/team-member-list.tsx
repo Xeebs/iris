@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 
 export interface TeamMember {
   id: string;
@@ -10,7 +10,8 @@ export interface TeamMember {
 }
 
 type Props = {
-  workspaceId: string;
+  members: TeamMember[];
+  onRevoke: (id: string) => Promise<void>;
 };
 
 const ROLE_STYLES: Record<string, string> = {
@@ -19,35 +20,15 @@ const ROLE_STYLES: Record<string, string> = {
   member: 'bg-gray-100 text-gray-600',
 };
 
-const API_URL = typeof process !== 'undefined'
-  ? (process.env['NEXT_PUBLIC_API_URL'] ?? 'http://localhost:3001/api/v1')
-  : '/api/v1';
-
-export function TeamMemberList({ workspaceId }: Props) {
-  const [members, setMembers] = useState<TeamMember[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+export function TeamMemberList({ members, onRevoke }: Props) {
   const [revoking, setRevoking] = useState<string | null>(null);
-
-  useEffect(() => {
-    fetch(`${API_URL}/workspace/members?workspaceId=${workspaceId}`)
-      .then((r) => r.json())
-      .then((b: { data: TeamMember[] }) => setMembers(b.data))
-      .catch(() => setError('Failed to load members'))
-      .finally(() => setLoading(false));
-  }, [workspaceId]);
+  const [error, setError] = useState<string | null>(null);
 
   async function handleRevoke(id: string) {
     setRevoking(id);
     setError(null);
     try {
-      const res = await fetch(`${API_URL}/workspace/members/${id}`, {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ workspaceId }),
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      setMembers((prev) => prev.filter((m) => m.id !== id));
+      await onRevoke(id);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Revoke failed');
     } finally {
@@ -55,10 +36,9 @@ export function TeamMemberList({ workspaceId }: Props) {
     }
   }
 
-  if (loading) return <p className="text-sm text-gray-400">Loading members…</p>;
-
   return (
     <div>
+      <h3 className="text-sm font-semibold text-gray-700 mb-3">Team Members</h3>
       {error && (
         <div className="mb-3 p-2 bg-red-50 border border-red-200 text-red-600 text-xs rounded">{error}</div>
       )}
@@ -81,12 +61,12 @@ export function TeamMemberList({ workspaceId }: Props) {
                 disabled={revoking === m.id}
                 className="text-xs text-red-500 hover:text-red-700 disabled:opacity-40"
               >
-                Revoke
+                {revoking === m.id ? 'Revoking…' : 'Revoke'}
               </button>
             )}
           </div>
         ))}
-        {members.length === 0 && !loading && (
+        {members.length === 0 && (
           <p className="py-4 text-sm text-gray-400 text-center">No team members yet.</p>
         )}
       </div>

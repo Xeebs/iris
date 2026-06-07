@@ -7,6 +7,7 @@ import { PgvectorStore } from '@iris/semantic-core';
 import { logger } from '@iris/core/logger';
 
 import { requireAuth, errorHandler, defaultRateLimiter, syncRateLimiter } from './middleware/index.js';
+import { checkHealth } from './health.js';
 import { createConnectorRoutes } from './routes/connectors.js';
 import { createEntityRoutes } from './routes/entities.js';
 import { createQueryRoutes } from './routes/queries.js';
@@ -36,6 +37,14 @@ function createApp(
   redis?: InstanceType<typeof Redis>,
 ): Hono {
   const app = new Hono();
+
+  // Health/readiness probes — unauthenticated, no Clerk middleware
+  app.get('/health', async (c) => {
+    const result = await checkHealth(sql, redis);
+    return c.json(result, result.status === 'ok' ? 200 : 503);
+  });
+
+  app.get('/ready', (c) => c.json({ status: 'ready', timestamp: new Date().toISOString() }, 200));
 
   app.use('*', clerkMiddleware());
 

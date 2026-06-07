@@ -1130,3 +1130,73 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
   - apps/api/src/__tests__/connectors.test.ts (update)
 - **Depends on**: Connector Health Monitoring & Dashboard Integration
 - **Added**: 2026-06-07
+
+---
+
+## Layer 24: Production Readiness & Navigation
+
+### Task: Health & Readiness Endpoints + Graceful Shutdown
+- **Layer**: 24 — Production Readiness & Navigation
+- **Status**: COMMITTED
+- **Priority**: High
+- **Description**: Implement production-ready health checks and graceful shutdown across API and MCP servers. For apps/api/src/server.ts: add GET /health (returns 200 if services OK, 503 if DB/Redis down) and GET /ready endpoints with dependency status checks. For apps/mcp-server/src/server.ts: implement graceful shutdown handlers for SIGTERM/SIGINT that close DB/Redis connections cleanly, flush pending audit logs, and return 0. Add 30-second shutdown timeout. Update infra scripts to use these endpoints for Kubernetes liveness/readiness probes. Create integration tests verifying health checks detect DB/Redis failures and graceful shutdown completes within timeout. Reference code-style.md for error handling patterns.
+- **Files**:
+  - apps/api/src/health.ts
+  - apps/api/src/server.ts (update)
+  - apps/mcp-server/src/shutdown.ts
+  - apps/mcp-server/src/server.ts (update)
+  - apps/api/src/__tests__/health.integration.test.ts
+  - apps/mcp-server/src/__tests__/shutdown.integration.test.ts
+- **Depends on**: nothing
+- **Added**: 2026-06-07
+
+### Task: Dashboard Navigation & Breadcrumbs Layout Component
+- **Layer**: 24 — Production Readiness & Navigation
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Build a reusable dashboard layout component and navigation system. Create apps/dashboard/components/dashboard-layout.tsx with: (1) fixed sidebar navigation showing all main sections (Overview, Connectors, Queries, Analytics, Graph, Workflows, Settings), (2) active route highlighting, (3) workspace selector dropdown, (4) breadcrumb trail at top of content area. Create apps/dashboard/components/breadcrumbs.tsx to auto-generate breadcrumbs from route segments (e.g., /connectors/[id]/health → Connectors > [name] > Health). Update the root layout.tsx to use DashboardLayout wrapper. Add responsive mobile sidebar toggle. Build with shadcn/ui components (NavigationMenu, DropdownMenu, Breadcrumb). Add test verifying navigation links match filesystem routes and breadcrumbs update on route change. Target: all dashboard pages inherit consistent nav/breadcrumb layout.
+- **Files**:
+  - apps/dashboard/components/dashboard-layout.tsx
+  - apps/dashboard/components/breadcrumbs.tsx
+  - apps/dashboard/app/layout.tsx (update)
+  - apps/dashboard/components/__tests__/dashboard-layout.test.tsx
+- **Depends on**: nothing
+- **Added**: 2026-06-07
+
+### Task: OpenAPI/Swagger API Documentation
+- **Layer**: 24 — Production Readiness & Navigation
+- **Status**: UNWORKED
+- **Priority**: Medium
+- **Description**: Generate and serve OpenAPI 3.0 documentation for the REST API. Add @hono/swagger middleware to apps/api/src/server.ts to auto-generate OpenAPI schema from route handlers and zod schemas. Create GET /docs endpoint serving Swagger UI. Manually document all 15+ routes with descriptions, parameters, request/response examples. Ensure all zod schemas have descriptions (.describe('...')). Build a separate GET /openapi.json endpoint for spec download. Add security scheme documentation (Clerk JWT auth). Create a simple docs page at apps/dashboard/docs/api.tsx linking to /docs. Add integration test verifying OpenAPI schema is valid and all routes are documented. Reference api-conventions.md for request/response envelope format.
+- **Files**:
+  - apps/api/src/openapi.ts
+  - apps/api/src/server.ts (update)
+  - apps/api/src/__tests__/openapi.test.ts
+  - apps/dashboard/app/docs/page.tsx
+- **Depends on**: API Server Bootstrap
+- **Added**: 2026-06-07
+
+### Task: MCP Tool Streaming & Pagination Support
+- **Layer**: 24 — Production Readiness & Navigation
+- **Status**: UNWORKED
+- **Priority**: Medium
+- **Description**: Enhance MCP tools to support streaming large result sets via pagination. Update apps/mcp-server/src/tools/list-entities.ts and list-glossary.ts to: (1) accept optional `cursor` parameter for pagination, (2) return `{ content: [...], nextCursor?: string }` instead of flat arrays, (3) enforce max 100 results per page. Implement cursor-based pagination using entity IDs and timestamps (compatible with existing audit log pagination pattern). Add tests verifying pagination works across multiple pages and cursor validation. Update documentation in tool descriptions. This enables MCP clients to efficiently retrieve large datasets (10K+ entities) without hitting token budgets. Reference semantic-core pagination patterns (audit.ts) for cursor encoding format.
+- **Files**:
+  - apps/mcp-server/src/tools/list-entities.ts (update)
+  - apps/mcp-server/src/tools/list-glossary.ts (update)
+  - apps/mcp-server/src/__tests__/server.integration.test.ts (update)
+- **Depends on**: MCP Server Bootstrap
+- **Added**: 2026-06-07
+
+### Task: Dashboard Component Test Suite & Coverage
+- **Layer**: 24 — Production Readiness & Navigation
+- **Status**: UNWORKED
+- **Priority**: Medium
+- **Description**: Increase dashboard test coverage to 50%+ by adding unit tests for high-value components. Write test files in apps/dashboard/components/__tests__/ for: (1) ConnectorCard (renders health status, sync time, actions), (2) BenchmarkingCard (displays peer comparison box plot, opt-in toggle), (3) WorkflowTemplateGallery (lists templates, open/edit/delete actions), (4) PiiConfigPanel (PII field detection, masking strategy selection). Use vitest + React Testing Library. Mock API responses with MSW. Each component should have 8+ test cases covering happy path, error states, empty states, and edge cases. Target: 20+ new tests. Ensure all tests pass and validate rendered output against Recharts/shadcn/ui patterns. Reference testing.md for test organization and snapshot usage rules.
+- **Files**:
+  - apps/dashboard/components/__tests__/connector-card.test.tsx
+  - apps/dashboard/components/__tests__/benchmarking-card.test.tsx
+  - apps/dashboard/components/__tests__/workflow-template-gallery.test.tsx
+  - apps/dashboard/components/__tests__/pii-config-panel.test.tsx
+- **Depends on**: Dashboard Scaffold
+- **Added**: 2026-06-07

@@ -1,29 +1,26 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 
-interface ApiKey {
+export interface ApiKey {
   id: string;
   name: string;
   keyPrefix: string;
   scopes: string[];
   createdAt: string;
   lastUsedAt: string | null;
+  key?: string;
 }
 
 type Props = {
-  workspaceId: string;
+  apiKeys: ApiKey[];
+  onCreate: (name: string, scopes: string[]) => Promise<{ key: string }>;
+  onRevoke: (keyId: string) => Promise<void>;
 };
 
 const AVAILABLE_SCOPES = ['query:read', 'entities:read', 'glossary:read', 'metrics:read', 'admin'];
 
-const API_URL = typeof process !== 'undefined'
-  ? (process.env['NEXT_PUBLIC_API_URL'] ?? 'http://localhost:3001/api/v1')
-  : '/api/v1';
-
-export function ApiKeyManager({ workspaceId }: Props) {
-  const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
-  const [loading, setLoading] = useState(true);
+export function ApiKeyManager({ apiKeys, onCreate, onRevoke }: Props) {
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState('');
   const [selectedScopes, setSelectedScopes] = useState<string[]>(['query:read', 'entities:read']);
@@ -31,14 +28,6 @@ export function ApiKeyManager({ workspaceId }: Props) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [revoking, setRevoking] = useState<string | null>(null);
-
-  useEffect(() => {
-    fetch(`${API_URL}/mcp-api-keys?workspaceId=${workspaceId}`)
-      .then((r) => r.json())
-      .then((b: { data: ApiKey[] }) => setApiKeys(b.data))
-      .catch(() => setError('Failed to load API keys'))
-      .finally(() => setLoading(false));
-  }, [workspaceId]);
 
   function toggleScope(scope: string) {
     setSelectedScopes((prev) =>
@@ -52,15 +41,8 @@ export function ApiKeyManager({ workspaceId }: Props) {
     setSaving(true);
     setError(null);
     try {
-      const res = await fetch(`${API_URL}/mcp-api-keys`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ workspaceId, name: newName.trim(), scopes: selectedScopes }),
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const body = await res.json() as { data: ApiKey & { key: string } };
-      setApiKeys((prev) => [...prev, body.data]);
-      setCreatedKey(body.data.key);
+      const result = await onCreate(newName.trim(), selectedScopes);
+      setCreatedKey(result.key);
       setNewName('');
       setSelectedScopes(['query:read', 'entities:read']);
       setCreating(false);
@@ -74,21 +56,13 @@ export function ApiKeyManager({ workspaceId }: Props) {
   async function handleRevoke(id: string) {
     setRevoking(id);
     try {
-      const res = await fetch(`${API_URL}/mcp-api-keys/${id}`, {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ workspaceId }),
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      setApiKeys((prev) => prev.filter((k) => k.id !== id));
+      await onRevoke(id);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Revoke failed');
     } finally {
       setRevoking(null);
     }
   }
-
-  if (loading) return <p className="text-sm text-gray-400">Loading API keys…</p>;
 
   return (
     <div className="space-y-4">
@@ -99,7 +73,7 @@ export function ApiKeyManager({ workspaceId }: Props) {
       {createdKey && (
         <div className="p-3 bg-green-50 border border-green-200 rounded">
           <p className="text-xs font-medium text-green-800 mb-1">
-            API key created — copy it now, it won't be shown again:
+            API key created — copy it now, it won&apos;t be shown again:
           </p>
           <code className="block text-xs font-mono bg-white border rounded px-2 py-1 text-green-900 break-all">
             {createdKey}
@@ -133,7 +107,7 @@ export function ApiKeyManager({ workspaceId }: Props) {
               disabled={revoking === k.id}
               className="text-xs text-red-500 hover:text-red-700 disabled:opacity-40"
             >
-              Revoke
+              {revoking === k.id ? 'Revoking…' : 'Revoke'}
             </button>
           </div>
         ))}
