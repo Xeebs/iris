@@ -7,7 +7,8 @@
   "types": "./dist/sync-job-queue.d.ts",
   "exports": {
     ".": "./dist/sync-job-queue.js",
-    "./sync-schedule-service": "./dist/sync-schedule-service.js"
+    "./sync-schedule-service": "./dist/sync-schedule-service.js",
+    "./connector-rate-limiter": "./dist/connector-rate-limiter.js"
   },
   "scripts": {
     "build": "tsc --build",

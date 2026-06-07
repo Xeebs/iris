@@ -1585,7 +1585,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Connector Rate Limiting & Backoff Strategy Manager
 - **Layer**: 30 — Advanced Connector Features
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: High
 - **Description**: Implement adaptive rate-limiting and backoff strategy for connectors to avoid API throttling. Create packages/queue/src/connector-rate-limiter.ts with RateLimiterManager supporting: (1) per-connector rate limit tracking (requests/sec, concurrent requests), (2) exponential backoff with jitter on 429 errors, (3) adaptive limits that tighten/loosen based on response headers (X-RateLimit-Remaining, Retry-After), (4) circuit breaker pattern (fail-fast if connector is degraded). Persist rate limit state to Redis with TTL. Update sync-worker.ts to consult rate limiter before invoking connector.sync(). Add unit tests with mocked Redis and integration tests with real Redis. Reference connector-patterns.md for rate limit handling rules.
 - **Files**:
