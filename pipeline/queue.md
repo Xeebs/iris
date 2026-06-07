@@ -736,7 +736,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Knowledge Graph Visualization Dashboard
 - **Layer**: 18 — Additional Connectors
-- **Status**: UNWORKED
+- **Status**: IN_PROGRESS
 - **Priority**: Medium
 - **Description**: Build a knowledge graph visualization page in the dashboard at apps/dashboard/app/graph/page.tsx. Use react-force-graph or similar library to render entity nodes and relationship edges. Allow filtering by entity type and relationship type. Support clicking an entity to show details (attributes, relationships, source connector). Support expanding relationships to depth-N. Fetch graph data from a new GET /api/v1/graph/query endpoint that returns nodes/edges. Include search by entity label and fulltext attributes. Target: functional graph visualization with filter and detail panels.
 - **Files**:
@@ -828,3 +828,70 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
   - apps/api/src/__tests__/glossary.test.ts (update)
 - **Depends on**: Glossary Service & API
 - **Added**: 2026-06-06
+
+---
+
+## Layer 20: V2 Features & Production Hardening
+
+### Task: Fine-Grained PII & Sensitive Field Masking
+- **Layer**: 20 — V2 Features & Production Hardening
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Implement comprehensive PII detection and field-level masking to protect sensitive data in the context layer. Extend connector schemas to support pii: true flag on fields (email, phone, SSN, credit card, etc.). Create packages/semantic-core/src/pii-masker.ts with detectPII(entity, schema) returning masked entity and maskingStrategy(fieldName, fieldType) supporting: redaction (***), hashing (one-way), tokenization (reversible). Integrate into indexer pipeline before embedding and storage. Add dashboard UI at apps/dashboard/components/pii-config-panel.tsx to define custom PII patterns per workspace. Update MCP tools (query-context, get-entity, list-entities) to apply PII masking per API key's role permissions. Full unit + integration tests with GDPR/HIPAA masking examples. See code-style.md for error handling patterns.
+- **Files**:
+  - packages/semantic-core/src/pii-masker.ts
+  - packages/semantic-core/src/__tests__/pii-masker.test.ts
+  - packages/semantic-core/src/__tests__/pii-masker.integration.test.ts
+  - apps/api/migrations/014_add_pii_config.sql
+  - apps/api/src/routes/pii-config.ts
+  - apps/dashboard/components/pii-config-panel.tsx
+  - apps/mcp-server/src/tools/query-context.ts (update)
+  - apps/mcp-server/src/tools/get-entity.ts (update)
+  - apps/mcp-server/src/tools/list-entities.ts (update)
+- **Depends on**: Role-Based Context Segmentation
+- **Added**: 2026-06-07
+
+### Task: Schema Auto-Discovery with Human-in-the-Loop Confirmation
+- **Layer**: 20 — V2 Features & Production Hardening
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Build a guided schema discovery workflow for connectors that lack native schema support (CSV, JSON files, custom APIs). Create packages/semantic-core/src/schema-discoverer.ts with discoverSchema(connector, sampleData) using heuristics (field names, value patterns, type inference) to infer entity types and attributes. Implement human-in-the-loop confirmation UI at apps/dashboard/app/connectors/setup/[id]/schema-review/page.tsx where users can: accept/reject inferred fields, rename fields, mark PII fields, define entity type relationships. Wire up POST /api/v1/connectors/:id/schema-confirmation endpoint to persist user decisions. Store schema overrides in connector_instances table. Add unit tests with varied data formats (CSV, JSON, Parquet). See connector-patterns.md for entity transformation validation.
+- **Files**:
+  - packages/semantic-core/src/schema-discoverer.ts
+  - packages/semantic-core/src/__tests__/schema-discoverer.test.ts
+  - apps/api/migrations/015_add_schema_overrides.sql
+  - apps/api/src/routes/connectors.ts (update)
+  - apps/dashboard/app/connectors/setup/[id]/schema-review/page.tsx
+  - apps/dashboard/components/schema-field-mapper.tsx
+- **Depends on**: Connector Instance Management API, Connector Setup UI Flow
+- **Added**: 2026-06-07
+
+### Task: Proactive Context Surfacing (V2 Intelligence)
+- **Layer**: 20 — V2 Features & Production Hardening
+- **Status**: UNWORKED
+- **Priority**: Medium
+- **Description**: Implement proactive context delivery that surfaces relevant information to AI agents before they request it. Create packages/semantic-core/src/proactive-suggester.ts with suggestContext(workspaceId, userId, recentActivity) analyzing user's recent MCP queries to predict what context they'll need next. Build a suggestion engine using: (1) entity co-occurrence patterns from semantic index, (2) user role and typical workflows, (3) time-of-day patterns (sales queries at different times than finance). Expose GET /api/v1/context-suggestions endpoint returning top-3 suggested entities/metrics. Build dashboard widget at apps/dashboard/components/context-suggestions-widget.tsx showing suggestions on main dashboard. Wire up to MCP server to optionally include suggestions in response metadata. Full tests with activity pattern fixtures.
+- **Files**:
+  - packages/semantic-core/src/proactive-suggester.ts
+  - packages/semantic-core/src/__tests__/proactive-suggester.test.ts
+  - apps/api/migrations/016_add_context_suggestions.sql
+  - apps/api/src/routes/suggestions.ts
+  - apps/dashboard/components/context-suggestions-widget.tsx
+  - apps/mcp-server/src/suggestions.ts
+- **Depends on**: Query Decomposition & Entity Type Detection, Token Analytics Service & Dashboard
+- **Added**: 2026-06-07
+
+### Task: Advanced Index Optimization & Query Performance
+- **Layer**: 20 — V2 Features & Production Hardening
+- **Status**: UNWORKED
+- **Priority**: Medium
+- **Description**: Optimize semantic index performance for large datasets (1M+ entities) via: (1) partial index optimization (index only top-k relevant entities per type), (2) read-only vector index caching in memory (LRU, size-bounded), (3) query result pre-computation for common queries, (4) lazy entity hydration (store minimal data initially, fetch attributes on demand). Implement IndexOptimizer service in packages/semantic-core/src/index-optimizer.ts with analyze(workspaceId) scanning query patterns and recommending optimizations. Add admin UI at apps/dashboard/components/index-optimizer-panel.tsx showing index size, hot entities, and optimization suggestions. Extend IndexStatusService to track cache hit rates and optimization benefits. Add integration tests with large synthetic datasets (100K+ entities). Reference embedding-patterns.md for cost control rules.
+- **Files**:
+  - packages/semantic-core/src/index-optimizer.ts
+  - packages/semantic-core/src/__tests__/index-optimizer.integration.test.ts
+  - packages/cache/src/index-cache.ts
+  - apps/api/src/routes/index-optimization.ts
+  - apps/dashboard/components/index-optimizer-panel.tsx
+  - packages/semantic-core/src/retrieval.ts (update)
+- **Depends on**: Index Status & Coverage Metrics, Semantic Cache
+- **Added**: 2026-06-07

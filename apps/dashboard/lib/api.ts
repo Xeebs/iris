@@ -160,3 +160,54 @@ export async function getTokenAnalytics(
   const params = new URLSearchParams({ workspaceId, days: String(days) });
   return apiFetch<ApiResponse<TokenAnalyticsSummary>>(`/analytics/tokens?${params.toString()}`);
 }
+
+// ─── Graph API ────────────────────────────────────────────────────────────────
+
+export interface GraphNode {
+  id: string;
+  type: string;
+  label: string;
+  sourceId: string;
+}
+
+export interface GraphEdge {
+  id: string;
+  source: string;
+  target: string;
+  type: string;
+  confidenceScore: number;
+}
+
+export interface GraphQueryResult {
+  nodes: GraphNode[];
+  edges: GraphEdge[];
+}
+
+export interface GraphQueryOptions {
+  entityTypes?: string;
+  relationshipTypes?: string;
+  search?: string;
+  depth?: number;
+  entityId?: string;
+  limit?: number;
+}
+
+/**
+ * Fetch the knowledge graph subgraph for a workspace.
+ *
+ * @param workspaceId - Workspace to query
+ * @param options     - Optional filters: entityTypes, search, depth, entityId, limit
+ */
+export async function queryGraph(
+  workspaceId: string,
+  options: GraphQueryOptions = {},
+): Promise<ApiResponse<GraphQueryResult>> {
+  const params = new URLSearchParams({ workspaceId });
+  if (options.entityTypes) params.set('entityTypes', options.entityTypes);
+  if (options.relationshipTypes) params.set('relationshipTypes', options.relationshipTypes);
+  if (options.search) params.set('search', options.search);
+  if (options.depth !== undefined) params.set('depth', String(options.depth));
+  if (options.entityId) params.set('entityId', options.entityId);
+  if (options.limit !== undefined) params.set('limit', String(options.limit));
+  return apiFetch<ApiResponse<GraphQueryResult>>(`/graph/query?${params.toString()}`);
+}
