@@ -38,3 +38,14 @@ export type { OsiExportOptions, OsiNode, OsiDocument } from './osi-exporter.js';
 export { entityToOsiNode, glossaryTermToOsiNode, metricToOsiNode, exportToOSI } from './osi-exporter.js';
 export type { DuplicateSignals, DuplicatePair, CanonicalLink, DeduplicationReport } from './entity-deduplication.js';
 export { nameSimilarity, emailDomainMatch, computeCompositeScore, EntityDuplicateMatcher } from './entity-deduplication.js';
+export type {
+  ExportOptions,
+  ExportedEntity,
+  WorkspaceExport,
+  GlossaryExport,
+  MetricExport,
+  RelationshipExport,
+  SchemaExport,
+  ExportJob,
+} from './data-exporter.js';
+export { DataExporter } from './data-exporter.js';

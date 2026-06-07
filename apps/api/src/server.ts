@@ -28,6 +28,8 @@ import { createWorkflowTemplateRoutes } from './routes/workflow-templates.js';
 import { createWorkspaceBenchmarkingRoutes } from './routes/workspace-benchmarking.js';
 import { createAdminDlqRoutes } from './routes/admin-dlq.js';
 import { createAdminDedupRoutes } from './routes/admin-dedup.js';
+import { createWorkspaceExportRoutes } from './routes/workspace-export.js';
+import { createAdminBackupRoutes } from './routes/admin-backup.js';
 import { openApiSpec } from './openapi.js';
 
 export { createApp };
@@ -120,6 +122,8 @@ function createApp(
     authed.route('/admin/dlq', createAdminDlqRoutes(sql, redisUrl));
   }
   authed.route('/admin/dedup', createAdminDedupRoutes(sql, vectorStore));
+  authed.route('/workspace/export', createWorkspaceExportRoutes(sql));
+  authed.route('/admin/backup', createAdminBackupRoutes(sql));
 
   // Webhook routes: inbound (unauthenticated) + events status (authenticated)
   app.route('/api/v1/webhooks', createWebhookRoutes(sql));
