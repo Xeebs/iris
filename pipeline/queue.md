@@ -956,7 +956,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Cross-Company Benchmarking (Anonymized & Opt-In)
 - **Layer**: 21 — Multi-Tenant & Advanced V2 Features
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: Low
 - **Description**: Implement optional aggregated benchmarking data to help customers compare their index usage, entity counts, and context queries against anonymized industry peers. Create packages/semantic-core/src/benchmarking.ts with BenchmarkingService that: (1) collects workspace metrics (entity_count, query_count, avg_context_size, token_savings_ratio) via GET /api/v1/workspace/benchmark-snapshot, (2) optionally publishes to central benchmarking service (with workspace_id hashed + anonymized), (3) queries benchmarks for peer group (same company size, industry) and returns percentile ranks (e.g., "you're in top 25% for token savings"). Store opt-in consent in workspace_settings table (benchmarking_enabled boolean). Build dashboard widget at apps/dashboard/components/benchmarking-card.tsx showing current metrics vs peer benchmarks (box plots). Add unit tests with synthetic benchmark data. Reference testing.md for data fixture patterns.
 - **Files**:
@@ -1041,4 +1041,92 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
   - apps/dashboard/__tests__/benchmarking-card.test.tsx
   - tests/e2e/benchmarking-widget.spec.ts
 - **Depends on**: Benchmarking Service Implementation & API
+- **Added**: 2026-06-07
+
+---
+
+## Layer 23: E2E Integration & Testing
+
+### Task: Multi-Tenant Isolation E2E Test Suite
+- **Layer**: 23 — E2E Integration & Testing
+- **Status**: COMMITTED
+- **Priority**: High
+- **Description**: Write comprehensive end-to-end tests in tests/e2e/ to verify strict workspace isolation across all APIs and data flows. Tests should: (1) create two separate workspaces with their own connectors and indexed entities, (2) authenticate as one workspace and attempt to access resources from the other (should get 403), (3) verify MCP server reject cross-workspace queries, (4) verify REST API connectors/:id endpoint returns 403 when queried from wrong workspace, (5) verify entity search filters by workspace_id. Add 8–10 Playwright test cases covering API + MCP layer. Reference api-conventions.md for auth patterns and testing.md for test organization.
+- **Files**:
+  - tests/e2e/multi-tenant-isolation.spec.ts
+  - tests/e2e/utils/test-setup.ts (update with multi-workspace helpers)
+- **Depends on**: Multi-Tenant Support & Workspace Isolation
+- **Added**: 2026-06-07
+
+### Task: Webhook Delivery & Retry Queue Implementation
+- **Layer**: 23 — E2E Integration & Testing
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Implement a webhook delivery system with automatic retries for failed webhook events. Create packages/queue/src/webhook-queue.ts with WebhookQueue class managing delivery attempts (BullMQ job queue). Methods: enqueueWebhook(event), processDelivery(job) with exponential backoff (max 5 retries, base 2s delay). Track delivery status in webhooks_events table (id, workspace_id, event_type, payload, status, attempt_count, nextRetryAt, completedAt). Expose GET /api/v1/webhooks/events endpoint with filtering/pagination. Build dashboard component at apps/dashboard/components/webhook-delivery-status.tsx showing delivery queues and retry logs. Full integration tests with real BullMQ queue. Reference api-conventions.md for REST patterns.
+- **Files**:
+  - packages/queue/src/webhook-queue.ts
+  - packages/queue/src/__tests__/webhook-queue.integration.test.ts
+  - apps/api/migrations/021_add_webhook_events.sql
+  - apps/api/src/routes/webhooks.ts (update)
+  - apps/dashboard/components/webhook-delivery-status.tsx
+  - apps/api/src/__tests__/webhooks.test.ts (update)
+- **Depends on**: Webhook-Driven Real-Time Sync
+- **Added**: 2026-06-07
+
+### Task: PII Masking Enforcement E2E Tests
+- **Layer**: 23 — E2E Integration & Testing
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Write end-to-end tests to verify PII masking is correctly applied in MCP and REST API responses. Tests should: (1) index entities with PII fields (email, SSN, phone), (2) configure masking rules (redaction, hashing, tokenization), (3) query context via MCP and verify PII fields are masked in response, (4) verify unmasked fields still appear, (5) test role-based PII filtering (some roles see email, others don't), (6) verify audit logs record which fields were masked and by whom. Add 6–8 Playwright test cases covering integration with query-context tool and REST API. Reference pii-masker.ts and role-based-context-segmentation.md for masking patterns.
+- **Files**:
+  - tests/e2e/pii-masking.spec.ts
+  - tests/e2e/fixtures/pii-test-entities.json
+- **Depends on**: Fine-Grained PII & Sensitive Field Masking, Role-Based Context Segmentation
+- **Added**: 2026-06-07
+
+### Task: Workspace Settings Page & Team Management UI
+- **Layer**: 23 — E2E Integration & Testing
+- **Status**: UNWORKED
+- **Priority**: Medium
+- **Description**: Build a complete workspace settings page at apps/dashboard/app/settings/[workspaceId]/page.tsx with tabs for: (1) Basic info (workspace name, owner, created date, edit form), (2) Team members (list current users/API keys, invite new members via email, revoke access), (3) API Keys (list MCP API keys, create new, view scopes, revoke), (4) Billing (show plan, usage metrics, upgrade button), (5) Data & Privacy (export data, delete workspace, PII config quick link). Create supporting components: WorkspaceInfo, TeamMemberList, TeamInviteForm, ApiKeyManager, BillingCard. Wire to GET/PUT /api/v1/workspace/settings endpoints and team management endpoints (not yet created — scope for next layer if needed). Add Playwright E2E test verifying full settings flow. Reference dashboard component patterns for UI consistency.
+- **Files**:
+  - apps/dashboard/app/settings/[workspaceId]/page.tsx
+  - apps/dashboard/components/workspace-info.tsx
+  - apps/dashboard/components/team-member-list.tsx
+  - apps/dashboard/components/team-invite-form.tsx
+  - apps/dashboard/components/api-key-manager.tsx
+  - apps/dashboard/components/billing-card.tsx
+  - apps/dashboard/app/settings/[workspaceId]/__tests__/page.test.tsx
+  - tests/e2e/settings-management.spec.ts
+- **Depends on**: Multi-Tenant Support & Workspace Isolation
+- **Added**: 2026-06-07
+
+### Task: Analytics Drill-Down & Per-Connector Token Usage
+- **Layer**: 23 — E2E Integration & Testing
+- **Status**: UNWORKED
+- **Priority**: Medium
+- **Description**: Extend analytics dashboard with drill-down views showing per-connector token consumption breakdown. Create apps/dashboard/app/analytics/[workspaceId]/breakdown/page.tsx with: (1) entity type breakdown (tokens by contact vs company vs deal, etc), (2) per-connector breakdown (HubSpot vs Notion vs Slack token usage), (3) time-series granularity (hourly, daily, weekly, monthly). Implement API endpoint GET /api/v1/analytics/breakdown?granularity=daily&groupBy=connector returning time-series data. Create supporting components: TokenBreakdownChart (stacked bar chart via Recharts), FilterControls (time range, grouping options). Wire token_events table aggregation queries with proper indexing. Add integration tests verifying aggregations are correct. Reference token-analytics.ts and api-conventions.md patterns.
+- **Files**:
+  - apps/dashboard/app/analytics/[workspaceId]/breakdown/page.tsx
+  - apps/dashboard/components/token-breakdown-chart.tsx
+  - apps/dashboard/components/analytics-filter-controls.tsx
+  - apps/api/src/routes/analytics.ts (update)
+  - apps/api/src/__tests__/analytics.test.ts (update)
+- **Depends on**: Token Analytics Service & Dashboard
+- **Added**: 2026-06-07
+
+### Task: Connector Health Drill-Down & Error Log Viewer
+- **Layer**: 23 — E2E Integration & Testing
+- **Status**: UNWORKED
+- **Priority**: Medium
+- **Description**: Build a connector health detail page at apps/dashboard/app/connectors/[id]/health/page.tsx showing detailed diagnostic information: (1) current health status (green/yellow/red), (2) last sync attempt timestamp and duration, (3) error logs (if unhealthy) with stack traces, (4) retry queue status (pending, failed, completed), (5) historical sync success rate (last 30 days), (6) manual retry button. Implement backend: POST /api/v1/connectors/:id/health/retry endpoint to retry failed sync jobs. Create connector_sync_logs table (instance_id, sync_id, event_type, message, severity, timestamp) to track detailed sync lifecycle. Build supporting components: HealthStatusBadge, ErrorLogViewer, SyncHistoryChart, RetryButton. Add integration tests with mocked sync failures and retries. Reference connector-health-service.ts for health check patterns.
+- **Files**:
+  - apps/dashboard/app/connectors/[id]/health/page.tsx
+  - apps/dashboard/components/health-status-badge.tsx
+  - apps/dashboard/components/error-log-viewer.tsx
+  - apps/dashboard/components/sync-history-chart.tsx
+  - apps/api/migrations/022_add_connector_sync_logs.sql
+  - apps/api/src/routes/connectors.ts (update)
+  - apps/api/src/__tests__/connectors.test.ts (update)
+- **Depends on**: Connector Health Monitoring & Dashboard Integration
 - **Added**: 2026-06-07
