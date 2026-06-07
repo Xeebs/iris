@@ -14,7 +14,7 @@ vi.mock('@iris/core/logger', () => ({
 }));
 
 import type postgres from 'postgres';
-import { createWebhookRoutes } from '../routes/webhooks.js';
+import { createWebhookRoutes, createWebhookEventsRoutes } from '../routes/webhooks.js';
 
 type SqlClient = ReturnType<typeof postgres>;
 
@@ -271,5 +271,108 @@ describe('POST /api/v1/webhooks/:instanceId/:secret', () => {
 
       expect(res.status).toBe(422);
     });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Webhook event delivery status routes
+// ---------------------------------------------------------------------------
+
+type SqlClient = ReturnType<typeof postgres>;
+
+function makeEventsSql(rows: Record<string, unknown>[]): SqlClient {
+  const fn = vi.fn().mockResolvedValue(rows);
+  return fn as unknown as SqlClient;
+}
+
+function makeEventsApp(sql: SqlClient): Hono {
+  const app = new Hono();
+  app.route('/api/v1/webhooks', createWebhookEventsRoutes(sql));
+  return app;
+}
+
+const SAMPLE_EVENTS = [
+  {
+    id: 'evt-001',
+    workspace_id: 'ws-test',
+    webhook_id: 'wh-1',
+    event_type: 'connector.sync.completed',
+    target_url: 'https://example.com/hook',
+    status: 'delivered',
+    attempt_count: 1,
+    http_status: 200,
+    error_message: null,
+    next_retry_at: null,
+    completed_at: new Date('2026-06-07T10:00:00Z'),
+    created_at: new Date('2026-06-07T09:59:55Z'),
+    updated_at: new Date('2026-06-07T10:00:00Z'),
+  },
+  {
+    id: 'evt-002',
+    workspace_id: 'ws-test',
+    webhook_id: 'wh-2',
+    event_type: 'connector.sync.failed',
+    target_url: 'https://example.com/hook',
+    status: 'failed',
+    attempt_count: 3,
+    http_status: 500,
+    error_message: 'Internal server error',
+    next_retry_at: new Date('2026-06-07T10:05:00Z'),
+    completed_at: null,
+    created_at: new Date('2026-06-07T09:58:00Z'),
+    updated_at: new Date('2026-06-07T10:00:00Z'),
+  },
+];
+
+describe('GET /api/v1/webhooks/events', () => {
+  it('returns paginated webhook events for a workspace', async () => {
+    const app = makeEventsApp(makeEventsSql(SAMPLE_EVENTS));
+
+    const res = await app.request('/api/v1/webhooks/events?workspaceId=ws-test');
+    expect(res.status).toBe(200);
+
+    const body = await res.json() as { data: unknown[]; meta: { hasMore: boolean } };
+    expect(body.data).toHaveLength(2);
+    expect(body.meta.hasMore).toBe(false);
+
+    const first = body.data[0] as Record<string, unknown>;
+    expect(first['id']).toBe('evt-001');
+    expect(first['status']).toBe('delivered');
+    expect(first['eventType']).toBe('connector.sync.completed');
+  });
+
+  it('returns 400 when workspaceId is missing', async () => {
+    const app = makeEventsApp(makeEventsSql([]));
+    const res = await app.request('/api/v1/webhooks/events');
+    expect(res.status).toBe(400);
+  });
+
+  it('returns 400 for invalid status filter value', async () => {
+    const app = makeEventsApp(makeEventsSql([]));
+    const res = await app.request('/api/v1/webhooks/events?workspaceId=ws-test&status=invalid');
+    expect(res.status).toBe(400);
+  });
+
+  it('sets hasMore=true and nextCursor when more events exist', async () => {
+    const manyRows = Array.from({ length: 51 }, (_, i) => ({
+      ...SAMPLE_EVENTS[0],
+      id: `evt-${String(i).padStart(3, '0')}`,
+    }));
+    const app = makeEventsApp(makeEventsSql(manyRows));
+
+    const res = await app.request('/api/v1/webhooks/events?workspaceId=ws-test&limit=50');
+    expect(res.status).toBe(200);
+
+    const body = await res.json() as { data: unknown[]; meta: { hasMore: boolean; nextCursor?: string } };
+    expect(body.data).toHaveLength(50);
+    expect(body.meta.hasMore).toBe(true);
+    expect(body.meta.nextCursor).toBeDefined();
+  });
+
+  it('returns 500 on database error', async () => {
+    const sql = vi.fn().mockRejectedValue(new Error('DB error')) as unknown as SqlClient;
+    const app = makeEventsApp(sql);
+    const res = await app.request('/api/v1/webhooks/events?workspaceId=ws-test');
+    expect(res.status).toBe(500);
   });
 });

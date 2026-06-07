@@ -1086,7 +1086,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Workspace Settings Page & Team Management UI
 - **Layer**: 23 — E2E Integration & Testing
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: Medium
 - **Description**: Build a complete workspace settings page at apps/dashboard/app/settings/[workspaceId]/page.tsx with tabs for: (1) Basic info (workspace name, owner, created date, edit form), (2) Team members (list current users/API keys, invite new members via email, revoke access), (3) API Keys (list MCP API keys, create new, view scopes, revoke), (4) Billing (show plan, usage metrics, upgrade button), (5) Data & Privacy (export data, delete workspace, PII config quick link). Create supporting components: WorkspaceInfo, TeamMemberList, TeamInviteForm, ApiKeyManager, BillingCard. Wire to GET/PUT /api/v1/workspace/settings endpoints and team management endpoints (not yet created — scope for next layer if needed). Add Playwright E2E test verifying full settings flow. Reference dashboard component patterns for UI consistency.
 - **Files**:
