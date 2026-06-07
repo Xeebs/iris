@@ -1230,7 +1230,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Dashboard Component Test Suite Completion
 - **Layer**: 25 — Production Stability & Testing
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: Medium
 - **Description**: Complete the Dashboard Component Test Suite from Layer 24 by adding comprehensive unit tests for remaining high-value components. Write test files in apps/dashboard/components/__tests__/ for: (1) ErrorLogViewer (renders error messages, pagination, filtering), (2) TokenBreakdownChart (renders Recharts stacked bar chart, time-series aggregation), (3) ApiKeyManager (list, create, revoke with confirmations), (4) HealthStatusBadge (color coding, tooltip, refresh indicator). Use vitest + React Testing Library + MSW for API mocking. Target 8+ test cases per component covering: happy paths, error states, empty states, loading states, user interactions (clicks, form input), and edge cases (long text, special characters, very large datasets). Ensure snapshot tests are minimal and reviewed. Achieve 50%+ coverage for dashboard/components. All tests should pass.
 - **Files**:
@@ -1277,7 +1277,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Sync Job Error Recovery & Dead Letter Queue
 - **Layer**: 26 — Production Operations & Advanced Features
-- **Status**: UNWORKED
+- **Status**: IN_PROGRESS
 - **Priority**: High
 - **Description**: Implement robust error recovery for failed connector syncs with a dead letter queue (DLQ) system. Extend packages/queue/src/sync-job-queue.ts to: (1) capture detailed error context when a sync fails (error message, stack trace, entity batch that failed), (2) after 3 retries with exponential backoff (1s, 10s, 60s), move the job to a DLQ table in Postgres (deadletter_jobs with job_id, connector_instance_id, error, failedBatch, createdAt), (3) expose GET /api/v1/admin/dlq endpoint to list failed jobs with error details, (4) implement POST /api/v1/admin/dlq/:jobId/retry to manually replay a failed job, optionally with a subset of the batch. Build dashboard admin panel at apps/dashboard/app/admin/dlq/page.tsx showing DLQ entries with filters (connector, date range, error type), error messages, and retry actions. Add integration tests verifying: job retry exhaustion triggers DLQ write, manual replay works, error context is preserved. Reference code-style.md for error handling patterns and api-conventions.md for REST conventions.
 - **Files**:
