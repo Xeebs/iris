@@ -1165,7 +1165,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: OpenAPI/Swagger API Documentation
 - **Layer**: 24 — Production Readiness & Navigation
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: Medium
 - **Description**: Generate and serve OpenAPI 3.0 documentation for the REST API. Add @hono/swagger middleware to apps/api/src/server.ts to auto-generate OpenAPI schema from route handlers and zod schemas. Create GET /docs endpoint serving Swagger UI. Manually document all 15+ routes with descriptions, parameters, request/response examples. Ensure all zod schemas have descriptions (.describe('...')). Build a separate GET /openapi.json endpoint for spec download. Add security scheme documentation (Clerk JWT auth). Create a simple docs page at apps/dashboard/docs/api.tsx linking to /docs. Add integration test verifying OpenAPI schema is valid and all routes are documented. Reference api-conventions.md for request/response envelope format.
 - **Files**:
