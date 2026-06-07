@@ -1178,7 +1178,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: MCP Tool Streaming & Pagination Support
 - **Layer**: 24 — Production Readiness & Navigation
-- **Status**: UNWORKED
+- **Status**: IN_PROGRESS
 - **Priority**: Medium
 - **Description**: Enhance MCP tools to support streaming large result sets via pagination. Update apps/mcp-server/src/tools/list-entities.ts and list-glossary.ts to: (1) accept optional `cursor` parameter for pagination, (2) return `{ content: [...], nextCursor?: string }` instead of flat arrays, (3) enforce max 100 results per page. Implement cursor-based pagination using entity IDs and timestamps (compatible with existing audit log pagination pattern). Add tests verifying pagination works across multiple pages and cursor validation. Update documentation in tool descriptions. This enables MCP clients to efficiently retrieve large datasets (10K+ entities) without hitting token budgets. Reference semantic-core pagination patterns (audit.ts) for cursor encoding format.
 - **Files**:
