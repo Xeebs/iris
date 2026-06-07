@@ -18,6 +18,7 @@ export default defineConfig({
       '@iris/semantic-core/context-permissions': path.resolve(__dirname, '../../packages/semantic-core/src/context-permissions.ts'),
       '@iris/semantic-core/schema-discoverer': path.resolve(__dirname, '../../packages/semantic-core/src/schema-discoverer.ts'),
       '@iris/semantic-core/proactive-suggester': path.resolve(__dirname, '../../packages/semantic-core/src/proactive-suggester.ts'),
+      '@iris/semantic-core/osi-exporter': path.resolve(__dirname, '../../packages/semantic-core/src/osi-exporter.ts'),
       '@iris/semantic-core': path.resolve(__dirname, '../../packages/semantic-core/src/index.ts'),
       '@iris/compression': path.resolve(__dirname, '../../packages/compression/src/index.ts'),
       '@iris/queue': path.resolve(__dirname, '../../packages/queue/src/sync-job-queue.ts'),

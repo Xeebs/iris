@@ -17,7 +17,8 @@
     "./connector-health-service": "./dist/connector-health-service.js",
     "./context-permissions": "./dist/context-permissions.js",
     "./schema-discoverer": "./dist/schema-discoverer.js",
-    "./proactive-suggester": "./dist/proactive-suggester.js"
+    "./proactive-suggester": "./dist/proactive-suggester.js",
+    "./osi-exporter": "./dist/osi-exporter.js"
   },
   "scripts": {
     "build": "tsc --build",

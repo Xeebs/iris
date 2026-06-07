@@ -12,6 +12,7 @@ import { registerListEntities } from './tools/list-entities.js';
 import { registerGetEntity } from './tools/get-entity.js';
 import { registerGetMetric } from './tools/get-metric.js';
 import { registerListGlossary } from './tools/list-glossary.js';
+import { registerSuggestContext } from './suggestions.js';
 import { validateMcpApiKey, recordSessionStart, recordSessionEnd } from './auth.js';
 
 const log = logger.child({ service: 'mcp-server' });
@@ -46,6 +47,7 @@ export function createMcpServer(
   registerGetEntity(server, vectorStore, authenticatedWorkspaceId, contextPermissions, piiConfig);
   registerGetMetric(server, metricRegistry, authenticatedWorkspaceId);
   registerListGlossary(server, glossaryService, authenticatedWorkspaceId);
+  registerSuggestContext(server, authenticatedWorkspaceId);
 
   return server;
 }
