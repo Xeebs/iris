@@ -29,7 +29,8 @@
     "./entity-linker": "./dist/entity-linker.js",
     "./advanced-query-engine": "./dist/advanced-query-engine.js",
     "./connector-cdc": "./dist/connector-cdc.js",
-    "./data-quality-scorer": "./dist/data-quality-scorer.js"
+    "./data-quality-scorer": "./dist/data-quality-scorer.js",
+    "./dsr-handler": "./dist/dsr-handler.js"
   },
   "scripts": {
     "build": "tsc --build",
