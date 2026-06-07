@@ -1,15 +1,52 @@
 import Link from 'next/link';
 import { ConnectorCard } from '@/components/connector-card';
-import { listConnectors } from '@/lib/api';
+import { listConnectors, getTokenAnalytics } from '@/lib/api';
+import type { TokenAnalyticsSummary } from '@/lib/api';
+
+const WORKSPACE_ID = process.env['IRIS_WORKSPACE_ID'] ?? 'default';
+
+function TokenStat({
+  label,
+  value,
+  sub,
+}: {
+  label: string;
+  value: string;
+  sub?: string;
+}): React.JSX.Element {
+  return (
+    <div className="flex flex-col">
+      <span className="text-xs font-medium uppercase tracking-wide text-gray-500">{label}</span>
+      <span className="mt-0.5 text-xl font-bold tabular-nums text-gray-900">{value}</span>
+      {sub && <span className="text-xs text-gray-400">{sub}</span>}
+    </div>
+  );
+}
 
 export default async function DashboardPage(): Promise<React.JSX.Element> {
   let connectors: Awaited<ReturnType<typeof listConnectors>>['data'] = [];
-  try {
-    const res = await listConnectors();
-    connectors = res.data;
-  } catch {
-    // API may not be running in dev — show empty state
-  }
+  let tokenTotals: TokenAnalyticsSummary['totals'] = {
+    tokensSpent: 0,
+    tokensSaved: 0,
+    cacheHitRate: 0,
+    compressionRatio: 1,
+  };
+  let tokenQueryCount = 0;
+
+  await Promise.allSettled([
+    listConnectors().then((r) => { connectors = r.data; }),
+    getTokenAnalytics(WORKSPACE_ID, 30).then((r) => {
+      tokenTotals = r.data.totals;
+      tokenQueryCount = r.data.days.reduce((sum, d) => sum + d.queryCount, 0);
+    }),
+  ]);
+
+  const savedPct =
+    tokenTotals.tokensSpent + tokenTotals.tokensSaved > 0
+      ? Math.round(
+          (tokenTotals.tokensSaved / (tokenTotals.tokensSpent + tokenTotals.tokensSaved)) * 100,
+        )
+      : 0;
 
   return (
     <main className="mx-auto max-w-6xl px-6 py-10">
@@ -25,11 +62,49 @@ export default async function DashboardPage(): Promise<React.JSX.Element> {
           <Link href="/queries" className="text-gray-600 hover:text-gray-900">
             Queries
           </Link>
+          <Link href="/analytics" className="text-gray-600 hover:text-gray-900">
+            Analytics
+          </Link>
           <Link href="/settings" className="text-gray-600 hover:text-gray-900">
             Settings
           </Link>
         </nav>
       </header>
+
+      {/* Token consumption summary */}
+      <section className="mb-8 rounded-lg border border-gray-200 bg-white px-6 py-5 shadow-sm">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-base font-semibold text-gray-900">Token Usage (30 days)</h2>
+          <Link
+            href="/analytics"
+            className="text-xs font-medium text-indigo-600 hover:text-indigo-800"
+          >
+            View full analytics →
+          </Link>
+        </div>
+        <div className="grid grid-cols-2 gap-6 sm:grid-cols-4">
+          <TokenStat
+            label="Tokens Spent"
+            value={tokenTotals.tokensSpent.toLocaleString()}
+            sub={`${tokenQueryCount.toLocaleString()} queries`}
+          />
+          <TokenStat
+            label="Tokens Saved"
+            value={tokenTotals.tokensSaved.toLocaleString()}
+            sub={`${savedPct}% reduction`}
+          />
+          <TokenStat
+            label="Cache Hit Rate"
+            value={`${(tokenTotals.cacheHitRate * 100).toFixed(1)}%`}
+            sub="Semantic cache"
+          />
+          <TokenStat
+            label="Compression"
+            value={`${tokenTotals.compressionRatio.toFixed(2)}×`}
+            sub="Context ratio"
+          />
+        </div>
+      </section>
 
       <section>
         <h2 className="mb-4 text-xl font-semibold">Connected Sources</h2>

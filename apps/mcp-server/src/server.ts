@@ -1,8 +1,8 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { SemanticCache } from '@iris/cache/semantic-cache';
-import { PgvectorStore, GlossaryService, MetricRegistry, ContextPermissionService } from '@iris/semantic-core';
-import type { VectorStore, ContextPermissions } from '@iris/semantic-core';
+import { PgvectorStore, GlossaryService, MetricRegistry, ContextPermissionService, PiiConfigService } from '@iris/semantic-core';
+import type { VectorStore, ContextPermissions, WorkspacePiiConfig } from '@iris/semantic-core';
 import { logger } from '@iris/core/logger';
 import { Redis } from 'ioredis';
 import postgres from 'postgres';
@@ -27,6 +27,7 @@ const log = logger.child({ service: 'mcp-server' });
  * @param metricRegistry - MetricRegistry for get-metric tool
  * @param authenticatedWorkspaceId - Workspace from validated API key; null = dev/unauthenticated mode
  * @param contextPermissions - Role-based access permissions; null = unrestricted
+ * @param piiConfig          - Workspace PII masking config; null = no masking applied
  */
 export function createMcpServer(
   vectorStore: VectorStore,
@@ -36,12 +37,13 @@ export function createMcpServer(
   metricRegistry: MetricRegistry,
   authenticatedWorkspaceId: string | null = null,
   contextPermissions: ContextPermissions | null = null,
+  piiConfig: WorkspacePiiConfig | null = null,
 ): McpServer {
   const server = new McpServer({ name: 'iris', version: '0.0.1' });
 
-  registerQueryContext(server, vectorStore, semanticCache, openAiKey, authenticatedWorkspaceId, contextPermissions);
-  registerListEntities(server, vectorStore, authenticatedWorkspaceId, contextPermissions);
-  registerGetEntity(server, vectorStore, authenticatedWorkspaceId, contextPermissions);
+  registerQueryContext(server, vectorStore, semanticCache, openAiKey, authenticatedWorkspaceId, contextPermissions, piiConfig);
+  registerListEntities(server, vectorStore, authenticatedWorkspaceId, contextPermissions, piiConfig);
+  registerGetEntity(server, vectorStore, authenticatedWorkspaceId, contextPermissions, piiConfig);
   registerGetMetric(server, metricRegistry, authenticatedWorkspaceId);
   registerListGlossary(server, glossaryService, authenticatedWorkspaceId);
 
@@ -64,6 +66,7 @@ async function main(): Promise<void> {
   let authenticatedWorkspaceId: string | null = null;
   let keyId: string | null = null;
   let contextPermissions: ContextPermissions | null = null;
+  let piiConfig: WorkspacePiiConfig | null = null;
 
   if (apiKey) {
     const authResult = await validateMcpApiKey(apiKey, sql);
@@ -86,6 +89,13 @@ async function main(): Promise<void> {
         log.warn('Failed to load role permissions — proceeding without restrictions', { error: permResult.error.message });
       }
     }
+
+    const piiService = new PiiConfigService(sql);
+    const piiResult = await piiService.getConfig(authenticatedWorkspaceId);
+    if (piiResult.isOk() && piiResult.value) {
+      piiConfig = piiResult.value;
+      log.info('PII masking config loaded', { workspaceId: authenticatedWorkspaceId, autoDetect: piiConfig.enableAutoDetection });
+    }
   } else {
     log.warn('No IRIS_API_KEY set — running in unauthenticated dev mode (all workspaces accessible)');
   }
@@ -106,6 +116,7 @@ async function main(): Promise<void> {
     metricRegistry,
     authenticatedWorkspaceId,
     contextPermissions,
+    piiConfig,
   );
 
   const sessionId = await recordSessionStart(sql, keyId, authenticatedWorkspaceId ?? 'unauthenticated');

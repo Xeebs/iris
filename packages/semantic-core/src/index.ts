@@ -20,3 +20,5 @@ export type { DomainAnalysis } from './query-decomposer.js';
 export { detectEntityTypes, getDomainKeywords, clearDetectionCache } from './query-decomposer.js';
 export type { ContextRole, EntityTypePermission, ContextPermissions } from './context-permissions.js';
 export { ContextPermissionService, filterContextByRole } from './context-permissions.js';
+export type { PiiStrategy, PiiDetectionType, PiiFieldConfig, WorkspacePiiConfig, MaskedEntity } from './pii-masker.js';
+export { detectPiiType, maskValue, maskEntity, maskEntities, PiiConfigService } from './pii-masker.js';

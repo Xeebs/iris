@@ -6,6 +6,8 @@ import type { VectorStore } from '@iris/semantic-core';
 import { retrieveContext } from '@iris/semantic-core';
 import type { ContextPermissions } from '@iris/semantic-core';
 import { filterContextByRole } from '@iris/semantic-core';
+import type { WorkspacePiiConfig } from '@iris/semantic-core';
+import { maskEntities } from '@iris/semantic-core';
 import { logger } from '@iris/core/logger';
 import { assertWorkspace } from '../workspace-guard.js';
 
@@ -42,6 +44,7 @@ const inputSchema = {
  * @param openAiKey                - OpenAI API key for query embedding
  * @param authenticatedWorkspaceId - Workspace from validated API key, or null in dev mode
  * @param contextPermissions       - Role-based access permissions, or null for unrestricted
+ * @param piiConfig                - Workspace PII masking config, or null to skip masking
  */
 export function registerQueryContext(
   server: McpServer,
@@ -50,6 +53,7 @@ export function registerQueryContext(
   openAiKey: string,
   authenticatedWorkspaceId: string | null = null,
   contextPermissions: ContextPermissions | null = null,
+  piiConfig: WorkspacePiiConfig | null = null,
 ): void {
   // @ts-ignore TS2589 — MCP SDK registerTool generics exceed TypeScript's depth limit for this 5-field schema
   server.registerTool(
@@ -89,9 +93,11 @@ export function registerQueryContext(
         }
         const result = await retrieveContext(params.query, vectorStore, retrievalOpts);
 
-        const entities = contextPermissions
+        const roleFiltered = contextPermissions
           ? filterContextByRole(result.entities, contextPermissions)
           : result.entities;
+
+        const entities = piiConfig ? maskEntities(roleFiltered, piiConfig) : roleFiltered;
 
         const compressed = compress(entities, {
           contextBudget: params.contextBudget ?? 2000,
@@ -108,6 +114,7 @@ export function registerQueryContext(
           tokenCount: compressed.tokenCount,
           truncated: compressed.truncated,
           roleFiltered: !!contextPermissions,
+          piiMasked: !!piiConfig,
           durationMs: Date.now() - start,
         });
 

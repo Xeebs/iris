@@ -4,6 +4,8 @@ import { serializeEntity } from '@iris/compression';
 import type { VectorStore } from '@iris/semantic-core';
 import type { ContextPermissions } from '@iris/semantic-core';
 import { filterContextByRole } from '@iris/semantic-core';
+import type { WorkspacePiiConfig } from '@iris/semantic-core';
+import { maskEntity } from '@iris/semantic-core';
 import { logger } from '@iris/core/logger';
 import { assertWorkspace } from '../workspace-guard.js';
 
@@ -21,12 +23,14 @@ const inputSchema = {
  * @param vectorStore              - Initialized vector store
  * @param authenticatedWorkspaceId - Workspace from validated API key, or null in dev mode
  * @param contextPermissions       - Role-based access permissions, or null for unrestricted
+ * @param piiConfig                - Workspace PII masking config, or null to skip masking
  */
 export function registerGetEntity(
   server: McpServer,
   vectorStore: VectorStore,
   authenticatedWorkspaceId: string | null = null,
   contextPermissions: ContextPermissions | null = null,
+  piiConfig: WorkspacePiiConfig | null = null,
 ): void {
   server.registerTool(
     'get-entity',
@@ -53,6 +57,8 @@ export function registerGetEntity(
           };
         }
 
+        let finalEntity = entity;
+
         if (contextPermissions) {
           const [filtered] = filterContextByRole([entity], contextPermissions);
           if (!filtered) {
@@ -65,12 +71,20 @@ export function registerGetEntity(
               ],
             };
           }
-          log.info('get-entity complete', { workspaceId: params.workspaceId, id: params.id, roleFiltered: true });
-          return { content: [{ type: 'text' as const, text: serializeEntity(filtered) }] };
+          finalEntity = filtered;
         }
 
-        log.info('get-entity complete', { workspaceId: params.workspaceId, id: params.id });
-        return { content: [{ type: 'text' as const, text: serializeEntity(entity) }] };
+        if (piiConfig) {
+          finalEntity = maskEntity(finalEntity, piiConfig);
+        }
+
+        log.info('get-entity complete', {
+          workspaceId: params.workspaceId,
+          id: params.id,
+          roleFiltered: !!contextPermissions,
+          piiMasked: !!piiConfig,
+        });
+        return { content: [{ type: 'text' as const, text: serializeEntity(finalEntity) }] };
       } catch (err) {
         log.error('get-entity failed', { error: err, id: params.id });
         const message = err instanceof Error ? err.message : String(err);

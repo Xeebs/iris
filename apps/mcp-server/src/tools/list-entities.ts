@@ -4,6 +4,8 @@ import { compress } from '@iris/compression';
 import type { VectorStore } from '@iris/semantic-core';
 import type { ContextPermissions } from '@iris/semantic-core';
 import { filterContextByRole } from '@iris/semantic-core';
+import type { WorkspacePiiConfig } from '@iris/semantic-core';
+import { maskEntities } from '@iris/semantic-core';
 import { logger } from '@iris/core/logger';
 import { assertWorkspace } from '../workspace-guard.js';
 
@@ -34,12 +36,14 @@ const inputSchema = {
  * @param vectorStore              - Initialized vector store
  * @param authenticatedWorkspaceId - Workspace from validated API key, or null in dev mode
  * @param contextPermissions       - Role-based access permissions, or null for unrestricted
+ * @param piiConfig                - Workspace PII masking config, or null to skip masking
  */
 export function registerListEntities(
   server: McpServer,
   vectorStore: VectorStore,
   authenticatedWorkspaceId: string | null = null,
   contextPermissions: ContextPermissions | null = null,
+  piiConfig: WorkspacePiiConfig | null = null,
 ): void {
   server.registerTool(
     'list-entities',
@@ -82,11 +86,13 @@ export function registerListEntities(
           };
         }
 
-        const filtered = contextPermissions
+        const roleFiltered = contextPermissions
           ? filterContextByRole(entities, contextPermissions)
           : entities;
 
-        const compressed = compress(filtered, { contextBudget: params.contextBudget ?? 2000 });
+        const masked = piiConfig ? maskEntities(roleFiltered, piiConfig) : roleFiltered;
+
+        const compressed = compress(masked, { contextBudget: params.contextBudget ?? 2000 });
 
         const text = compressed.truncated
           ? compressed.content + `\n\n[truncated: ${compressed.savedTokens} tokens saved]`
@@ -98,6 +104,7 @@ export function registerListEntities(
           entityCount: compressed.entityCount,
           tokenCount: compressed.tokenCount,
           roleFiltered: !!contextPermissions,
+          piiMasked: !!piiConfig,
         });
 
         return { content: [{ type: 'text' as const, text }] };
