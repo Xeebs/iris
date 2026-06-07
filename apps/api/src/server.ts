@@ -33,6 +33,7 @@ import { createAdminBackupRoutes } from './routes/admin-backup.js';
 import { createCustomConnectorRoutes } from './routes/custom-connectors.js';
 import { createTeamManagementRoutes } from './routes/team-management.js';
 import { createWorkspaceDeletionRoutes } from './routes/workspace-deletion.js';
+import { createOnboardingRoutes } from './routes/onboarding.js';
 import { openApiSpec } from './openapi.js';
 
 export { createApp };
@@ -130,6 +131,7 @@ function createApp(
   authed.route('/custom-connectors', createCustomConnectorRoutes(sql));
   authed.route('/workspace/members', createTeamManagementRoutes(sql));
   authed.route('/workspace/deletion', createWorkspaceDeletionRoutes(sql));
+  authed.route('/onboarding', createOnboardingRoutes(sql));
 
   // Webhook routes: inbound (unauthenticated) + events status (authenticated)
   app.route('/api/v1/webhooks', createWebhookRoutes(sql));

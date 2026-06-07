@@ -1384,7 +1384,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Workspace Deletion & Data Retention Policies
 - **Layer**: 27 — Advanced Operations & Post-MVP Polish
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: High
 - **Description**: Implement safe workspace deletion with configurable data retention and compliance options. Create apps/api/migrations/029_add_deletion_policies.sql with workspace_deletion_policies table (workspace_id, retentionDays, backupBeforeDeletion, legalHold). Implement WorkspaceDeletionService in packages/semantic-core/src/workspace-deletion.ts with: (1) requestDeletion(workspaceId, reason) marking workspace for 30-day soft deletion (grace period for accidental deletes), (2) exportBeforeDeletion(workspaceId) triggering automatic backup export, (3) cancelDeletion(workspaceId) reverting the soft delete, (4) permanentlyDelete(workspaceId) hard-deleting all workspace data (cascade delete from all tables via SQL triggers). Create POST /api/v1/workspace/deletion/request endpoint (requires admin role + 2FA verification), PUT /api/v1/workspace/deletion/cancel (within grace period), and GET /api/v1/workspace/deletion/status. Build dashboard warning UI at apps/dashboard/app/settings/[workspaceId]/deletion/page.tsx with 30-day countdown, backup status, and cancel button. Add comprehensive audit logging for all deletion operations. Write 15+ tests covering edge cases: deletion during active syncs, cross-workspace data isolation during deletion, cascade delete verification. Reference code-style.md error handling.
 - **Files**:
@@ -1417,7 +1417,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Workspace Onboarding Flow & First-Sync Guided Experience
 - **Layer**: 27 — Advanced Operations & Post-MVP Polish
-- **Status**: UNWORKED
+- **Status**: IN_PROGRESS
 - **Priority**: High
 - **Description**: Build a comprehensive guided onboarding flow for new workspaces to accelerate time-to-value. Create apps/dashboard/app/onboarding/page.tsx with a multi-step wizard: (1) Workspace Setup (name, industry, company size, use case), (2) Connector Selection (pick 1-3 primary connectors from recommended list based on industry/use case), (3) Guided Connector Setup (walk through OAuth/API key per selected connector with explanatory text and example screenshots), (4) Schema Confirmation (auto-discover schemas and let user confirm/customize entity type mappings), (5) Glossary Kickstart (auto-populate glossary with industry templates: finance → ARR, MRR, CAC; sales → pipeline_stage, win_rate), (6) First Sync (trigger a sync, show progress with estimated entity counts), (7) Success (show index overview, suggest MCP integration docs). Use shadcn/ui Stepper component. Store completion state in workspace_onboarding table (workspace_id, completedSteps[], status: 'in_progress'|'completed'). Add branching logic: skip connectors if already configured, offer sample data if real connectors unavailable. Create E2E test covering full flow. Reference connector-patterns.md for connector setup and embedding-patterns.md for glossary templates. Target: onboarding completion < 10 minutes.
 - **Files**:
