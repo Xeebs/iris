@@ -34,7 +34,8 @@
     "./entity-audit-service": "./dist/entity-audit-service.js",
     "./audit-log-service": "./dist/audit-log-service.js",
     "./secret-vault": "./dist/secret-vault.js",
-    "./sync-diagnostics": "./dist/sync-diagnostics.js"
+    "./sync-diagnostics": "./dist/sync-diagnostics.js",
+    "./index-snapshot": "./dist/index-snapshot.js"
   },
   "scripts": {
     "build": "tsc --build",

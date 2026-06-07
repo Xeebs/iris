@@ -43,6 +43,7 @@ import { createAdminSyncMonitoringRoutes } from './routes/admin-sync-monitoring.
 import { createEntityAuditRoutes } from './routes/entity-audit.js';
 import { createAuditLogRoutes } from './routes/audit-logs.js';
 import { createRequestTracesRoutes } from './routes/request-traces.js';
+import { createSyncDiagnosticsRoutes } from './routes/sync-diagnostics.js';
 import { openApiSpec } from './openapi.js';
 
 export { createApp };
@@ -154,6 +155,7 @@ function createApp(
   authed.route('/entity-audit', createEntityAuditRoutes(sql));
   authed.route('/admin/audit-logs', createAuditLogRoutes(sql));
   authed.route('/admin/request-traces', createRequestTracesRoutes(sql));
+  authed.route('/admin/sync-diagnostics', createSyncDiagnosticsRoutes(sql));
 
   // Webhook routes: inbound (unauthenticated) + events status (authenticated)
   app.route('/api/v1/webhooks', createWebhookRoutes(sql));

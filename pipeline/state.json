@@ -1,7 +1,7 @@
 {
   "current_phase": "IMPLEMENT",
-  "active_task": "sync-error-recovery-diagnostic-reports",
-  "active_layer": 34,
+  "active_task": "index-snapshot-export-disaster-recovery",
+  "active_layer": 35,
   "last_cycle": "2026-06-07",
   "last_research": "2026-06-07",
   "last_commit": "2026-06-07",
