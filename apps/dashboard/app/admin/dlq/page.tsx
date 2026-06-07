@@ -27,7 +27,12 @@ async function fetchDlqEntries(
     meta: { hasMore: boolean; nextCursor?: string };
   };
 
-  return { entries: body.data, hasMore: body.meta.hasMore, nextCursor: body.meta.nextCursor };
+  const result: { entries: DlqEntry[]; hasMore: boolean; nextCursor?: string } = {
+    entries: body.data,
+    hasMore: body.meta.hasMore,
+  };
+  if (body.meta.nextCursor) result.nextCursor = body.meta.nextCursor;
+  return result;
 }
 
 async function retryDlqJob(dlqId: string): Promise<void> {

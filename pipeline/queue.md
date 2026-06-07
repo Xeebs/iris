@@ -1277,7 +1277,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Sync Job Error Recovery & Dead Letter Queue
 - **Layer**: 26 — Production Operations & Advanced Features
-- **Status**: IN_PROGRESS
+- **Status**: COMMITTED
 - **Priority**: High
 - **Description**: Implement robust error recovery for failed connector syncs with a dead letter queue (DLQ) system. Extend packages/queue/src/sync-job-queue.ts to: (1) capture detailed error context when a sync fails (error message, stack trace, entity batch that failed), (2) after 3 retries with exponential backoff (1s, 10s, 60s), move the job to a DLQ table in Postgres (deadletter_jobs with job_id, connector_instance_id, error, failedBatch, createdAt), (3) expose GET /api/v1/admin/dlq endpoint to list failed jobs with error details, (4) implement POST /api/v1/admin/dlq/:jobId/retry to manually replay a failed job, optionally with a subset of the batch. Build dashboard admin panel at apps/dashboard/app/admin/dlq/page.tsx showing DLQ entries with filters (connector, date range, error type), error messages, and retry actions. Add integration tests verifying: job retry exhaustion triggers DLQ write, manual replay works, error context is preserved. Reference code-style.md for error handling patterns and api-conventions.md for REST conventions.
 - **Files**:
