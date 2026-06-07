@@ -1178,7 +1178,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: MCP Tool Streaming & Pagination Support
 - **Layer**: 24 — Production Readiness & Navigation
-- **Status**: IN_PROGRESS
+- **Status**: COMMITTED
 - **Priority**: Medium
 - **Description**: Enhance MCP tools to support streaming large result sets via pagination. Update apps/mcp-server/src/tools/list-entities.ts and list-glossary.ts to: (1) accept optional `cursor` parameter for pagination, (2) return `{ content: [...], nextCursor?: string }` instead of flat arrays, (3) enforce max 100 results per page. Implement cursor-based pagination using entity IDs and timestamps (compatible with existing audit log pagination pattern). Add tests verifying pagination works across multiple pages and cursor validation. Update documentation in tool descriptions. This enables MCP clients to efficiently retrieve large datasets (10K+ entities) without hitting token budgets. Reference semantic-core pagination patterns (audit.ts) for cursor encoding format.
 - **Files**:
@@ -1199,4 +1199,74 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
   - apps/dashboard/components/__tests__/workflow-template-gallery.test.tsx
   - apps/dashboard/components/__tests__/pii-config-panel.test.tsx
 - **Depends on**: Dashboard Scaffold
+- **Added**: 2026-06-07
+
+---
+
+## Layer 25: Production Stability & Testing
+
+### Task: Advanced Rate Limiting & Quota Management
+- **Layer**: 25 — Production Stability & Testing
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Extend rate limiting to support per-endpoint quotas and burst allowances. Create apps/api/src/middleware/quota-manager.ts to track API usage per workspace across different quota dimensions: (1) sync triggers (10/min default, configurable), (2) webhook events (100/min default), (3) MCP server connections (5 concurrent default). Implement quota allocation with burst capacity (e.g., allow 15 requests if quota is 10/min but idle for 5 min). Store quota state in Redis with TTL. Return 429 with X-RateLimit-* headers showing remaining quota and reset time. Add integration tests verifying quota enforcement, burst logic, and concurrent request handling. Reference api-conventions.md for HTTP status codes and rate-limiter patterns.
+- **Files**:
+  - apps/api/src/middleware/quota-manager.ts
+  - apps/api/src/__tests__/quota-manager.integration.test.ts
+  - apps/api/src/server.ts (update)
+- **Depends on**: REST API Rate Limiting & Request Throttling
+- **Added**: 2026-06-07
+
+### Task: Semantic Cache Coherence & Invalidation E2E Test Suite
+- **Layer**: 25 — Production Stability & Testing
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Build comprehensive E2E tests in tests/e2e/ verifying cache coherence when indexed entities change. Tests should: (1) index a set of entities and verify query result is cached, (2) sync a connector and update one entity, verify cache is invalidated for affected queries, (3) test relationship expansion caching (expand entity A -> entity B -> entity C, then update B, verify only B/C cache invalidated, A cache untouched), (4) test multi-connector sync with cross-connector relationships, verify cascading invalidation, (5) verify semantic response cache hits for semantically equivalent queries (cosine similarity > 0.92). Add 10+ Playwright test cases with timing assertions (cached: <100ms, miss: >1s). Reference semantic-cache.ts and cache-patterns in code-style.md.
+- **Files**:
+  - tests/e2e/cache-coherence.spec.ts
+  - tests/e2e/fixtures/cache-test-entities.json
+- **Depends on**: Semantic Cache, Entity Relationship Indexing
+- **Added**: 2026-06-07
+
+### Task: Dashboard Component Test Suite Completion
+- **Layer**: 25 — Production Stability & Testing
+- **Status**: UNWORKED
+- **Priority**: Medium
+- **Description**: Complete the Dashboard Component Test Suite from Layer 24 by adding comprehensive unit tests for remaining high-value components. Write test files in apps/dashboard/components/__tests__/ for: (1) ErrorLogViewer (renders error messages, pagination, filtering), (2) TokenBreakdownChart (renders Recharts stacked bar chart, time-series aggregation), (3) ApiKeyManager (list, create, revoke with confirmations), (4) HealthStatusBadge (color coding, tooltip, refresh indicator). Use vitest + React Testing Library + MSW for API mocking. Target 8+ test cases per component covering: happy paths, error states, empty states, loading states, user interactions (clicks, form input), and edge cases (long text, special characters, very large datasets). Ensure snapshot tests are minimal and reviewed. Achieve 50%+ coverage for dashboard/components. All tests should pass.
+- **Files**:
+  - apps/dashboard/components/__tests__/error-log-viewer.test.tsx
+  - apps/dashboard/components/__tests__/token-breakdown-chart.test.tsx
+  - apps/dashboard/components/__tests__/api-key-manager.test.tsx
+  - apps/dashboard/components/__tests__/health-status-badge.test.tsx
+- **Depends on**: Dashboard Scaffold
+- **Added**: 2026-06-07
+
+### Task: Custom Connector Framework & User-Extensible SDK
+- **Layer**: 25 — Production Stability & Testing
+- **Status**: UNWORKED
+- **Priority**: Medium
+- **Description**: Enable business users and developers to build custom connectors without modifying core code. Create packages/connector-sdk/src/user-connector-loader.ts with loadUserConnector(path) that dynamically imports a connector from a user-provided directory. Define a simplified ConnectorManifest schema that users can extend (e.g., CustomConnector = { name, description, auth, entityTypes, sync() }). Add validation to ensure custom connectors implement required methods and follow entity transformation rules. Create apps/api/src/routes/custom-connectors.ts with: POST /api/v1/custom-connectors/upload (multipart form with zip file), POST /api/v1/custom-connectors/validate (validate before installation), GET /api/v1/custom-connectors (list installed custom connectors). Store uploaded connector code in a safe sandbox directory with isolation guarantees. Add comprehensive tests: (1) valid connector upload/validation, (2) missing method detection, (3) entity schema validation, (4) connector instantiation and sync execution. Reference connector-patterns.md for entity requirements.
+- **Files**:
+  - packages/connector-sdk/src/user-connector-loader.ts
+  - packages/connector-sdk/src/__tests__/user-connector-loader.test.ts
+  - apps/api/src/routes/custom-connectors.ts
+  - apps/api/migrations/023_add_custom_connectors.sql
+  - apps/api/src/__tests__/custom-connectors.test.ts
+- **Depends on**: Connector Registry, Connector Instance Management API
+- **Added**: 2026-06-07
+
+### Task: Observability & Distributed Tracing Infrastructure
+- **Layer**: 25 — Production Stability & Testing
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Add OpenTelemetry tracing across API, MCP server, and worker processes for production observability. Create apps/api/src/telemetry.ts and apps/mcp-server/src/telemetry.ts to: (1) initialize OpenTelemetry SDK with OTLP exporter (Jaeger/Datadog compatible), (2) instrument HTTP servers (Hono middleware), (3) instrument database queries (postgres pool wrapper), (4) instrument Redis operations (ioredis instrumentation), (5) create custom spans for critical operations (connector sync, entity indexing, cache lookups). Include trace context propagation for request tracing across services. Add environment variables for OTEL_EXPORTER_OTLP_ENDPOINT and OTEL_SERVICE_NAME. Update docker-compose.yml to include a local Jaeger service for dev. Create integration tests verifying traces are exported and include expected span attributes. Reference code-style.md for logging patterns and ensure structured metadata includes trace IDs.
+- **Files**:
+  - apps/api/src/telemetry.ts
+  - apps/mcp-server/src/telemetry.ts
+  - apps/api/src/server.ts (update)
+  - apps/mcp-server/src/server.ts (update)
+  - infra/docker/docker-compose.yml (add Jaeger service)
+  - apps/api/src/__tests__/telemetry.integration.test.ts
+  - apps/mcp-server/src/__tests__/telemetry.test.ts
+- **Depends on**: Health & Readiness Endpoints + Graceful Shutdown
 - **Added**: 2026-06-07
