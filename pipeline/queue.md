@@ -1103,7 +1103,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Analytics Drill-Down & Per-Connector Token Usage
 - **Layer**: 23 — E2E Integration & Testing
-- **Status**: IN_PROGRESS
+- **Status**: COMMITTED
 - **Priority**: Medium
 - **Description**: Extend analytics dashboard with drill-down views showing per-connector token consumption breakdown. Create apps/dashboard/app/analytics/[workspaceId]/breakdown/page.tsx with: (1) entity type breakdown (tokens by contact vs company vs deal, etc), (2) per-connector breakdown (HubSpot vs Notion vs Slack token usage), (3) time-series granularity (hourly, daily, weekly, monthly). Implement API endpoint GET /api/v1/analytics/breakdown?granularity=daily&groupBy=connector returning time-series data. Create supporting components: TokenBreakdownChart (stacked bar chart via Recharts), FilterControls (time range, grouping options). Wire token_events table aggregation queries with proper indexing. Add integration tests verifying aggregations are correct. Reference token-analytics.ts and api-conventions.md patterns.
 - **Files**:
