@@ -1745,7 +1745,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Index Snapshot Export & Disaster Recovery
 - **Layer**: 35 — Data Management & Governance
-- **Status**: IN_PROGRESS
+- **Status**: COMMITTED
 - **Priority**: High
 - **Description**: Implement periodic index snapshots for disaster recovery and point-in-time restore capability. Create packages/semantic-core/src/index-snapshot.ts with IndexSnapshotService: (1) createSnapshot(workspaceId) exporting all entities, relationships, glossary, metrics to compressed archive (gzip + tar), (2) scheduleSnapshots(workspaceId, frequency: 'daily'|'weekly'|'monthly'), (3) listSnapshots(workspaceId) with metadata (size, created_at, entity_count), (4) restoreFromSnapshot(workspaceId, snapshotId) doing point-in-time restore with conflict resolution. Store snapshots to object storage (S3 or local filesystem). Add apps/api/migrations/040_add_snapshot_tracking.sql with index_snapshots table (snapshot_id, workspace_id, created_at, entity_count, snapshot_size_bytes, storage_path, retention_days). Expose GET /api/v1/admin/snapshots (list), POST /api/v1/admin/snapshots (create on-demand), POST /api/v1/admin/snapshots/:id/restore (restore). Build admin dashboard component at apps/dashboard/components/snapshot-manager.tsx with: snapshot list, download button, restore dialog with preview. Implement retention policy: keep last 30 snapshots, auto-delete after retentionDays. Full integration tests with real snapshot create/restore cycles. Reference code-style.md for error handling.
 - **Files**:
