@@ -62,27 +62,12 @@ describe('checkHealth', () => {
 });
 
 describe('GET /health endpoint', () => {
-
   it('returns 200 when services are healthy', async () => {
-    const { createApp } = await import('../server.js');
-    const mockSql = makeSql(true);
-    const mockRedis = makeRedis(true);
-
-    vi.mock('../health.js', () => ({
-      checkHealth: vi.fn().mockResolvedValue({
-        status: 'ok',
-        checks: { db: true, redis: true },
-        timestamp: '2026-06-07T00:00:00.000Z',
-      }),
-    }));
-
     const app = new Hono();
-    const { checkHealth: mocked } = await import('../health.js');
     app.get('/health', async (c) => {
-      const result = await (mocked as typeof checkHealth)(mockSql, mockRedis);
+      const result = await checkHealth(makeSql(true), makeRedis(true));
       return c.json(result, result.status === 'ok' ? 200 : 503);
     });
-    app.get('/ready', (c) => c.json({ status: 'ready' }, 200));
 
     const res = await app.request('/health');
     expect(res.status).toBe(200);
