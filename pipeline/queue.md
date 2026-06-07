@@ -1449,3 +1449,201 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
   - apps/api/src/__tests__/admin-query-analytics.test.ts
 - **Depends on**: Advanced Index Optimization & Query Performance
 - **Added**: 2026-06-07
+
+---
+
+## Layer 28: Cross-Connector Integration & Advanced Features
+
+### Task: Cross-Connector Entity Linking & Data Enrichment
+- **Layer**: 28 — Cross-Connector Integration & Advanced Features
+- **Status**: COMMITTED
+- **Priority**: High
+- **Description**: Implement intelligent entity linking across connectors to unify duplicated data from multiple sources. Create packages/semantic-core/src/entity-linker.ts with EntityLinker service: (1) analyzeEntityConnections(workspaceId, entityType) scanning for potential duplicates across connectors using fuzzy matching (name similarity, email domain, phone prefix), (2) proposeLinks(entity1, entity2, confidence) returning confidence scores (0–1), (3) createLink(entity1, entity2, metadata) persisting canonical links in entity_cross_connector_links table. Expose POST /api/v1/admin/entity-linking/analyze (trigger analysis job) and POST /api/v1/admin/entity-linking/links endpoints. Update retrieval engine to follow links and enrich entities with data from linked records (e.g., HubSpot contact enriched with Slack user profile data). Build dashboard UI at apps/dashboard/components/entity-link-explorer.tsx showing graph of linked entities with confidence scores and merge suggestions. Include 20+ unit tests with synthetic cross-connector datasets and integration tests with real Postgres. Reference entity-deduplication.ts and embedding-patterns.md for similarity thresholds.
+- **Files**:
+  - packages/semantic-core/src/entity-linker.ts
+  - packages/semantic-core/src/__tests__/entity-linker.test.ts
+  - packages/semantic-core/src/__tests__/entity-linker.integration.test.ts
+  - apps/api/migrations/033_add_entity_cross_connector_links.sql
+  - apps/api/src/routes/entity-linking.ts
+  - apps/dashboard/components/entity-link-explorer.tsx
+  - apps/api/src/__tests__/entity-linking.test.ts
+- **Depends on**: Advanced Entity Deduplication & Fuzzy Matching, Entity Relationship Indexing
+- **Added**: 2026-06-07
+
+### Task: Advanced MCP Query Features & Aggregations
+- **Layer**: 28 — Cross-Connector Integration & Advanced Features
+- **Status**: IN_PROGRESS
+- **Priority**: High
+- **Description**: Extend MCP query tool to support advanced filtering, aggregations, and multi-step queries. Create packages/semantic-core/src/advanced-query-engine.ts with: (1) parseAdvancedQuery(queryString) supporting filter syntax (e.g., "contacts where industry='SaaS' and ARR>100k"), (2) executeAggregation(query, groupBy, aggregate) returning counts, sums, averages (e.g., "sum revenue by region"), (3) chainQueries(queries) executing multi-step queries (first query finds accounts, second finds associated contacts). Add new MCP tool advanced-query-context accepting filter expressions and aggregation specs, returning aggregated results with confidence bounds. Update apps/mcp-server/src/server.ts to register the new tool. Add unit tests with 30+ filter/aggregation test cases, integration tests with real semantic index. Ensure responses respect contextBudget. Reference api-conventions.md for REST patterns and embedding-patterns.md for token budgeting.
+- **Files**:
+  - packages/semantic-core/src/advanced-query-engine.ts
+  - packages/semantic-core/src/__tests__/advanced-query-engine.test.ts
+  - packages/semantic-core/src/__tests__/advanced-query-engine.integration.test.ts
+  - apps/mcp-server/src/tools/advanced-query-context.ts
+  - apps/mcp-server/src/server.ts (update)
+  - apps/mcp-server/src/__tests__/server.integration.test.ts (update)
+- **Depends on**: MCP Server Bootstrap, Query Decomposition & Entity Type Detection
+- **Added**: 2026-06-07
+
+### Task: Comprehensive Webhook Validation & Testing Suite
+- **Layer**: 28 — Cross-Connector Integration & Advanced Features
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Build a comprehensive testing framework for webhook implementations across all connectors. Create tests/webhook-validation/ with automated test suite that: (1) validates webhook payload schemas for each connector (HubSpot, Slack, etc.) against published specs, (2) tests HMAC signature validation (verify webhook origin is authentic), (3) verifies payload processing converts webhooks to entity deltas correctly, (4) tests rate limiting and retry logic (simulate webhook delivery failures), (5) tests workspace isolation (webhook from WS-A doesn't affect WS-B). Implement WebhookValidator class in packages/connector-sdk/src/webhook-validator.ts with: validatePayload(vendor, payload), validateSignature(payload, signature, secret), transformToEntityDelta(payload). Add E2E test suite in tests/e2e/webhook-validation.spec.ts with 15+ Playwright specs covering: webhook delivery, signature validation, entity creation/update/deletion via webhooks, retry scenarios. Create admin dashboard at apps/dashboard/components/webhook-validator.tsx to test webhook payloads interactively. Reference connector-patterns.md and testing.md for patterns.
+- **Files**:
+  - packages/connector-sdk/src/webhook-validator.ts
+  - packages/connector-sdk/src/__tests__/webhook-validator.test.ts
+  - tests/webhook-validation/hubspot-webhook.test.ts
+  - tests/webhook-validation/slack-webhook.test.ts
+  - tests/webhook-validation/common-patterns.test.ts
+  - tests/e2e/webhook-validation.spec.ts
+  - apps/dashboard/components/webhook-validator.tsx
+- **Depends on**: Webhook-Driven Real-Time Sync, Connector Instance Management API
+- **Added**: 2026-06-07
+
+### Task: Real-Time Sync Performance Monitoring Dashboard
+- **Layer**: 28 — Cross-Connector Integration & Advanced Features
+- **Status**: UNWORKED
+- **Priority**: Medium
+- **Description**: Build a live monitoring dashboard for real-time sync performance and health. Create apps/dashboard/app/admin/sync-monitoring/page.tsx with: (1) live sync queue status (in-flight jobs, pending queue depth, estimated completion time), (2) entity throughput gauge (entities/sec across all syncs), (3) per-connector live metrics (current sync progress, entities synced in this run, errors), (4) latency distribution chart (API response times, embedding time, indexing time), (5) error rate sparkline with drill-down to recent errors, (6) auto-refresh every 2 seconds via WebSocket or polling. Create WebSocket endpoint POST /api/v1/admin/sync-monitoring/subscribe (requires admin auth) streaming sync progress events. Extend packages/queue/src/sync-job-queue.ts to emit progress events (jobId, status, entitiesSynced, percentComplete). Build SyncMonitoringDashboard component using Socket.IO or Server-Sent Events. Add integration tests with mocked WebSocket connections. Reference code-style.md for logging patterns and embedding-patterns.md for cost awareness.
+- **Files**:
+  - apps/dashboard/app/admin/sync-monitoring/page.tsx
+  - apps/dashboard/components/sync-monitoring-dashboard.tsx
+  - apps/dashboard/components/sync-queue-status.tsx
+  - apps/dashboard/components/entity-throughput-gauge.tsx
+  - apps/api/src/routes/admin-sync-monitoring.ts
+  - packages/queue/src/sync-job-queue.ts (update progress events)
+  - apps/api/src/__tests__/admin-sync-monitoring.test.ts
+- **Depends on**: BullMQ Job Queue Infrastructure, Connector Sync Performance Profiling & Analytics
+- **Added**: 2026-06-07
+
+### Task: Entity Change History & Audit Trail System
+- **Layer**: 28 — Cross-Connector Integration & Advanced Features
+- **Status**: UNWORKED
+- **Priority**: Medium
+- **Description**: Implement comprehensive audit trails tracking entity changes for compliance and debugging. Create apps/api/migrations/034_add_entity_audit_trail.sql with entity_audit_events table (id, workspace_id, entity_id, change_type: 'created'|'updated'|'deleted', old_values_json, new_values_json, changed_by: 'connector_sync'|'webhook'|'user_import', source_connector_id, timestamp). Create packages/semantic-core/src/entity-audit-service.ts with: (1) trackChange(entity, changeType, source) recording entity changes, (2) getHistory(entityId, timeRange) returning change history, (3) getFieldHistory(entityId, fieldName) showing value timeline for specific fields, (4) detectAnomalies(workspaceId) identifying unusual change patterns (entity deleted and recreated rapidly, field values oscillating, bulk deletions). Expose GET /api/v1/entities/:id/audit-trail returning change history with pagination. Build dashboard page at apps/dashboard/app/entities/:id/audit-trail/page.tsx showing: timeline view of changes, before/after values, source connector, edit button for manual corrections. Add retention policy: keep 90-day history by default, configurable per workspace. Add 25+ unit tests covering all change types and integration tests with real Postgres. Reference code-style.md for error handling patterns.
+- **Files**:
+  - apps/api/migrations/034_add_entity_audit_trail.sql
+  - packages/semantic-core/src/entity-audit-service.ts
+  - packages/semantic-core/src/__tests__/entity-audit-service.test.ts
+  - packages/semantic-core/src/__tests__/entity-audit-service.integration.test.ts
+  - apps/api/src/routes/entity-audit.ts
+  - apps/dashboard/app/entities/[id]/audit-trail/page.tsx
+  - apps/dashboard/components/entity-audit-timeline.tsx
+  - apps/api/src/__tests__/entity-audit.test.ts
+- **Depends on**: Connector Sync Performance Profiling & Analytics, Observability & Distributed Tracing Infrastructure
+- **Added**: 2026-06-07
+
+---
+
+## Layer 29: Email Integration & Outbound Messaging
+
+### Task: SendGrid Email Integration Completion
+- **Layer**: 29 — Email Integration & Outbound Messaging
+- **Status**: COMMITTED
+- **Priority**: High
+- **Description**: Complete the SendGrid email integration in packages/core/src/email-service.ts. Currently stubbed to log "stub — configure SendGrid" for email alerts. Implement full sendViaSendGrid(payload) method with proper API key handling, request retry logic (exponential backoff on 429/5xx), and comprehensive error handling returning Result<EmailSendResult, SendGridError>. Add integration tests with MSW mocking SendGrid v3 API responses. Wire up to alert notification dispatch in packages/semantic-core/src/alerts.ts so email channels actually deliver alert notifications. Reference code-style.md for error handling patterns.
+- **Files**:
+  - packages/core/src/email-service.ts (update)
+  - packages/core/src/__tests__/email-service.integration.test.ts
+  - packages/semantic-core/src/alerts.ts (update)
+- **Depends on**: Alert Rules Engine (from completed tasks)
+- **Added**: 2026-06-07
+
+### Task: Email Template System & Customization
+- **Layer**: 29 — Email Integration & Outbound Messaging
+- **Status**: UNWORKED
+- **Priority**: Medium
+- **Description**: Build a template system for email alerts to allow workspace admins to customize alert message formatting. Create packages/semantic-core/src/email-templates.ts with EmailTemplate interface (id, subject, htmlBody, textBody, variables). Implement email_templates and email_template_versions tables (migration 030) with upsert/get/list endpoints. Add /api/v1/email-templates CRUD routes. Build dashboard component at apps/dashboard/components/email-template-editor.tsx with live preview and variable interpolation. Integrate into alert dispatch pipeline so alerts use workspace's custom template if set, fallback to default. Full unit + integration tests with Handlebars-style template variable syntax.
+- **Files**:
+  - packages/semantic-core/src/email-templates.ts
+  - packages/semantic-core/src/__tests__/email-templates.test.ts
+  - apps/api/migrations/030_add_email_templates.sql
+  - apps/api/src/routes/email-templates.ts
+  - apps/dashboard/components/email-template-editor.tsx
+  - packages/semantic-core/src/alerts.ts (update)
+- **Depends on**: SendGrid Email Integration Completion
+- **Added**: 2026-06-07
+
+---
+
+## Layer 30: Advanced Connector Features
+
+### Task: Connector Incremental Sync Optimization & Change Data Capture
+- **Layer**: 30 — Advanced Connector Features
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Enhance incremental sync strategy by implementing Change Data Capture (CDC) patterns for connectors. Create packages/semantic-core/src/connector-cdc.ts with ConnectorCDCManager class supporting three sync strategies: cursor-based (existing, for APIs with lastModified), event-driven (webhook or CDC logs), and snapshot-with-diff (comparing before/after snapshots). Add ChangeDataCaptureConfig to connector manifest allowing connectors to declare which strategy they support. Implement automatic strategy selection based on source API capabilities. Update sync-worker.ts to use CDC optimization reducing duplicate indexing. Add metrics tracking: entities_changed, entities_unchanged, sync_efficiency_ratio. Wire up to analytics dashboard. Full tests with mock connectors implementing each strategy.
+- **Files**:
+  - packages/semantic-core/src/connector-cdc.ts
+  - packages/semantic-core/src/__tests__/connector-cdc.test.ts
+  - apps/api/migrations/031_add_cdc_metrics.sql
+  - apps/api/src/workers/sync-worker.ts (update)
+  - packages/connector-sdk/src/base-connector.ts (update types)
+- **Depends on**: Sync Worker Implementation & Connector Invocation
+- **Added**: 2026-06-07
+
+### Task: Connector Rate Limiting & Backoff Strategy Manager
+- **Layer**: 30 — Advanced Connector Features
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Implement adaptive rate-limiting and backoff strategy for connectors to avoid API throttling. Create packages/queue/src/connector-rate-limiter.ts with RateLimiterManager supporting: (1) per-connector rate limit tracking (requests/sec, concurrent requests), (2) exponential backoff with jitter on 429 errors, (3) adaptive limits that tighten/loosen based on response headers (X-RateLimit-Remaining, Retry-After), (4) circuit breaker pattern (fail-fast if connector is degraded). Persist rate limit state to Redis with TTL. Update sync-worker.ts to consult rate limiter before invoking connector.sync(). Add unit tests with mocked Redis and integration tests with real Redis. Reference connector-patterns.md for rate limit handling rules.
+- **Files**:
+  - packages/queue/src/connector-rate-limiter.ts
+  - packages/queue/src/__tests__/connector-rate-limiter.test.ts
+  - apps/api/src/workers/sync-worker.ts (update)
+- **Depends on**: BullMQ Job Queue Infrastructure
+- **Added**: 2026-06-07
+
+---
+
+## Layer 31: Data Quality & Observability
+
+### Task: Entity Data Quality Scoring & Validation
+- **Layer**: 31 — Data Quality & Observability
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Implement data quality scoring for indexed entities to identify and flag low-quality or incomplete data. Create packages/semantic-core/src/data-quality-scorer.ts with DataQualityScorer class computing quality scores based on: (1) field completeness (% non-null attributes), (2) data freshness (days since last sync), (3) schema conformance (required fields present), (4) relationship validity (referenced entities exist), (5) duplicate likelihood (cosine similarity to related entities). Store scores in entity_quality_metrics table (entity_id, workspace_id, completeness_score, freshness_score, conformance_score, overall_quality_score, computed_at). Expose GET /api/v1/data-quality/report endpoint returning per-entity scores with filters. Build dashboard page apps/dashboard/app/data-quality/page.tsx showing quality distribution, issues list (low quality, stale, orphaned entities). Full unit + integration tests.
+- **Files**:
+  - packages/semantic-core/src/data-quality-scorer.ts
+  - packages/semantic-core/src/__tests__/data-quality-scorer.test.ts
+  - apps/api/migrations/032_add_entity_quality_metrics.sql
+  - apps/api/src/routes/data-quality.ts
+  - apps/dashboard/app/data-quality/page.tsx
+  - apps/dashboard/components/quality-distribution-chart.tsx
+- **Depends on**: Index Status & Coverage Metrics
+- **Added**: 2026-06-07
+
+### Task: Distributed Tracing Enhancements & Performance Profiling
+- **Layer**: 31 — Data Quality & Observability
+- **Status**: UNWORKED
+- **Priority**: Medium
+- **Description**: Extend the existing OpenTelemetry integration (already committed via previous feat commit) with enhanced spans for all critical paths: connector sync lifecycle, semantic indexing, vector search latency, cache operations. Add custom attributes to spans (workspace_id, entity_count, token_estimate). Implement PerformanceProfiler service in packages/semantic-core/src/performance-profiler.ts tracking p50/p95/p99 latencies per operation and per connector. Export metrics to Prometheus format. Add /metrics endpoint to apps/api and apps/mcp-server returning Prometheus metrics. Build performance dashboard at apps/dashboard/app/performance/page.tsx with latency charts, slowest operations ranking, per-connector breakdown. Full integration tests verifying spans are created and exported correctly. Reference code-style.md for logging patterns.
+- **Files**:
+  - packages/semantic-core/src/performance-profiler.ts
+  - packages/semantic-core/src/__tests__/performance-profiler.test.ts
+  - apps/api/src/middleware/telemetry.ts (update)
+  - apps/mcp-server/src/telemetry.ts (update)
+  - apps/dashboard/app/performance/page.tsx
+  - apps/dashboard/components/performance-charts.tsx
+  - apps/api/src/__tests__/metrics.test.ts
+- **Depends on**: OpenTelemetry distributed tracing (from completed tasks)
+- **Added**: 2026-06-07
+
+---
+
+## Layer 32: Compliance & Security Hardening
+
+### Task: GDPR Data Subject Request Handler
+- **Layer**: 32 — Compliance & Security Hardening
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Implement a Data Subject Request (DSR) handler to support GDPR "right to access" and "right to erasure" requests. Create packages/semantic-core/src/dsr-handler.ts with DataSubjectRequestHandler class supporting: (1) finding all entities linked to a data subject (email, user ID, or PII identifier), (2) generating a portable export of the subject's data in JSON format, (3) scheduling PII deletion with audit trail. Add dsr_requests table (migration 035) tracking request_id, subject_identifier, request_type (access|erasure), status, created_at. Implement endpoints POST /api/v1/dsr/request, GET /api/v1/dsr/:requestId, DELETE /api/v1/dsr/:requestId/execute (after confirmation delay). Full audit logging of all DSR operations per user request. Unit + integration tests with GDPR-specific test data.
+- **Files**:
+  - packages/semantic-core/src/dsr-handler.ts
+  - packages/semantic-core/src/__tests__/dsr-handler.test.ts
+  - apps/api/migrations/035_add_dsr_requests.sql
+  - apps/api/src/routes/dsr.ts
+  - apps/api/src/__tests__/dsr.test.ts
+- **Depends on**: Fine-Grained PII & Sensitive Field Masking
+- **Added**: 2026-06-07

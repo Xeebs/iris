@@ -10,6 +10,7 @@ export default defineConfig({
       '@iris/core/logger': path.resolve(__dirname, '../core/src/logger.ts'),
       '@iris/core/errors': path.resolve(__dirname, '../core/src/errors.ts'),
       '@iris/core/config': path.resolve(__dirname, '../core/src/config.ts'),
+      '@iris/core/email-service': path.resolve(__dirname, '../core/src/email-service.ts'),
       '@iris/core': path.resolve(__dirname, '../core/src/index.ts'),
       '@iris/connector-sdk': path.resolve(__dirname, '../connector-sdk/src/index.ts'),
     },

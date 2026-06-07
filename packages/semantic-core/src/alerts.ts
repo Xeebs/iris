@@ -2,6 +2,8 @@ import { ok, err } from 'neverthrow';
 import type { Result } from 'neverthrow';
 
 import { logger } from '@iris/core/logger';
+import { EmailService } from '@iris/core/email-service';
+import type { EmailServiceConfig } from '@iris/core/email-service';
 
 const log = logger.child({ service: 'alerts' });
 
@@ -401,7 +403,22 @@ export class HttpAlertNotifier implements AlertNotifier {
       });
       if (!res.ok) throw new Error(`PagerDuty returned ${res.status}`);
     } else if (channel.type === 'email') {
-      log.info('Email alert dispatched (stub — configure SendGrid)', { ruleId: rule.id, channelId: channel.id });
+      const address = channel.config['address'] as string | undefined;
+      if (!address) throw new Error('Email channel missing address');
+      const emailConfig: EmailServiceConfig = {
+        apiKey: (channel.config['sendgridApiKey'] as string | undefined) ?? process.env['SENDGRID_API_KEY'] ?? '',
+        fromEmail: (channel.config['fromEmail'] as string | undefined) ?? 'alerts@iris.ai',
+        fromName: (channel.config['fromName'] as string | undefined) ?? 'Iris Alerts',
+      };
+      if (!emailConfig.apiKey) throw new Error('Email channel: SENDGRID_API_KEY not configured');
+      const emailSvc = new EmailService(emailConfig);
+      const subject = `[Iris Alert] ${rule.name} triggered`;
+      const valueStr = payload['value'] !== undefined ? `Current value: ${String(payload['value'])}` : '';
+      const html = `<p><strong>${rule.name}</strong> alert triggered.</p><p>Condition: <code>${rule.condition}</code> — threshold: ${rule.threshold}. ${valueStr}</p>`;
+      const text = `${rule.name} alert triggered. Condition: ${rule.condition}, threshold: ${rule.threshold}. ${valueStr}`;
+      const result = await emailSvc.send({ to: { email: address }, subject, html, text });
+      if (result.isErr()) throw result.error;
+      log.info('Email alert dispatched', { ruleId: rule.id, channelId: channel.id, to: address });
     }
   }
 }

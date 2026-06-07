@@ -106,26 +106,51 @@ export class EmailService {
   }
 
   private async sendViaSendGrid(payload: Record<string, unknown>): Promise<SendResult> {
-    const response = await fetch(SENDGRID_API_URL, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${this.config.apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload),
-    });
+    const MAX_RETRIES = 3;
+    const RETRY_DELAYS_MS = [1000, 5000, 15000];
 
-    if (!response.ok) {
-      const body = await response.text().catch(() => '');
-      throw new Error(`SendGrid API error ${response.status}: ${body}`);
+    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+      const response = await fetch(SENDGRID_API_URL, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${this.config.apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+        signal: AbortSignal.timeout(10_000),
+      });
+
+      if (response.status === 429 || (response.status >= 500 && response.status < 600)) {
+        const retryAfterHeader = response.headers.get('Retry-After');
+        const delayMs = retryAfterHeader
+          ? Number(retryAfterHeader) * 1000
+          : (RETRY_DELAYS_MS[attempt] ?? 15_000);
+
+        if (attempt < MAX_RETRIES - 1) {
+          log.warn('SendGrid rate-limited or server error; retrying', {
+            status: response.status,
+            attempt: attempt + 1,
+            delayMs,
+          });
+          await new Promise((resolve) => setTimeout(resolve, delayMs));
+          continue;
+        }
+      }
+
+      if (!response.ok) {
+        const body = await response.text().catch(() => '');
+        throw new Error(`SendGrid API error ${response.status}: ${body}`);
+      }
+
+      // SendGrid returns 202 Accepted with no body on success
+      const messageId = response.headers.get('X-Message-Id') ?? `sg-${Date.now()}`;
+      const personalizations = (payload['personalizations'] as Array<{ to: Array<{ email: string }> }>)[0];
+      const accepted = personalizations?.to.map((r) => r.email) ?? [];
+
+      return { messageId, accepted };
     }
 
-    // SendGrid returns 202 Accepted with no body on success
-    const messageId = response.headers.get('X-Message-Id') ?? `sg-${Date.now()}`;
-    const personalizations = (payload['personalizations'] as Array<{ to: Array<{ email: string }> }>)[0];
-    const accepted = personalizations?.to.map((r) => r.email) ?? [];
-
-    return { messageId, accepted };
+    throw new Error('SendGrid: max retries exceeded');
   }
 }
 
