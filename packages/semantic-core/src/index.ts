@@ -22,3 +22,5 @@ export type { ContextRole, EntityTypePermission, ContextPermissions } from './co
 export { ContextPermissionService, filterContextByRole } from './context-permissions.js';
 export type { PiiStrategy, PiiDetectionType, PiiFieldConfig, WorkspacePiiConfig, MaskedEntity } from './pii-masker.js';
 export { detectPiiType, maskValue, maskEntity, maskEntities, PiiConfigService } from './pii-masker.js';
+export type { InferredFieldType, DiscoveredField, DiscoveredEntityType, DiscoveredSchema, SchemaConfirmation, SchemaFieldDecision } from './schema-discoverer.js';
+export { discoverJsonSchema, discoverCsvSchema, discoverSchema, SchemaDiscovererService } from './schema-discoverer.js';

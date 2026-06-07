@@ -7,6 +7,7 @@ import { logger } from '@iris/core/logger';
 import type { SyncJobQueue } from '@iris/queue';
 import type { SyncScheduleService } from '@iris/queue/sync-schedule-service';
 import type { ConnectorHealthService } from '@iris/semantic-core/connector-health-service';
+import { SchemaDiscovererService } from '@iris/semantic-core/schema-discoverer';
 
 import { ConnectorService } from '../services/connector-service.js';
 
@@ -34,6 +35,19 @@ const upsertScheduleSchema = z.object({
   startTime: z.string().regex(/^\d{2}:\d{2}$/).optional(),
 });
 
+const schemaFieldDecisionSchema = z.object({
+  originalName: z.string().min(1),
+  accepted: z.boolean(),
+  renamedTo: z.string().optional(),
+  isPii: z.boolean(),
+  entityRelationshipType: z.string().optional(),
+});
+
+const schemaConfirmationBodySchema = z.object({
+  entityType: z.string().min(1),
+  fields: z.array(schemaFieldDecisionSchema).min(1),
+});
+
 /**
  * @param sql - Postgres client for instance persistence
  * @param syncQueue - BullMQ queue for async connector sync jobs
@@ -48,6 +62,7 @@ export function createConnectorRoutes(
 ): Hono {
   const routes = new Hono();
   const service = new ConnectorService(sql);
+  const schemaService = new SchemaDiscovererService(sql);
 
   /** GET /api/v1/connectors/types — list all registered connector manifests */
   routes.get('/types', (c) => {
@@ -308,6 +323,64 @@ export function createConnectorRoutes(
       log.error('Failed to get connector health', { error: result.error });
       return c.json({ error: { code: 'INTERNAL_ERROR', message: 'Failed to get connector health' } }, 500);
     }
+    return c.json({ data: result.value });
+  });
+
+  /** POST /api/v1/connectors/:id/schema-confirmation?workspaceId= — save user schema decisions */
+  routes.post('/:id/schema-confirmation', async (c) => {
+    const parsed = workspaceQuerySchema.safeParse(c.req.query());
+    if (!parsed.success) {
+      return c.json({ error: { code: 'VALIDATION_ERROR', message: 'workspaceId is required' } }, 400);
+    }
+
+    const body = schemaConfirmationBodySchema.safeParse(await c.req.json());
+    if (!body.success) {
+      return c.json(
+        { error: { code: 'VALIDATION_ERROR', message: 'Invalid schema confirmation', details: body.error.errors } },
+        400,
+      );
+    }
+
+    const id = c.req.param('id');
+    const instanceResult = await service.getInstance(parsed.data.workspaceId, id);
+    if (instanceResult.isErr()) {
+      return c.json({ error: { code: 'INTERNAL_ERROR', message: 'Failed to fetch connector instance' } }, 500);
+    }
+    if (!instanceResult.value) {
+      return c.json({ error: { code: 'NOT_FOUND', message: `Instance "${id}" not found` } }, 404);
+    }
+
+    const result = await schemaService.saveConfirmation(
+      id,
+      parsed.data.workspaceId,
+      body.data.entityType,
+      body.data.fields,
+    );
+
+    if (result.isErr()) {
+      log.error('Failed to save schema confirmation', { instanceId: id, error: result.error });
+      return c.json({ error: { code: 'INTERNAL_ERROR', message: 'Failed to save schema confirmation' } }, 500);
+    }
+
+    log.info('Schema confirmation saved', { instanceId: id, entityType: body.data.entityType });
+    return c.json({ data: result.value }, 201);
+  });
+
+  /** GET /api/v1/connectors/:id/schema-confirmation?workspaceId= — get saved schema decisions */
+  routes.get('/:id/schema-confirmation', async (c) => {
+    const parsed = workspaceQuerySchema.safeParse(c.req.query());
+    if (!parsed.success) {
+      return c.json({ error: { code: 'VALIDATION_ERROR', message: 'workspaceId is required' } }, 400);
+    }
+
+    const id = c.req.param('id');
+    const result = await schemaService.getConfirmations(id, parsed.data.workspaceId);
+
+    if (result.isErr()) {
+      log.error('Failed to get schema confirmations', { instanceId: id, error: result.error });
+      return c.json({ error: { code: 'INTERNAL_ERROR', message: 'Failed to get schema confirmations' } }, 500);
+    }
+
     return c.json({ data: result.value });
   });
 
