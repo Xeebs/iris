@@ -30,7 +30,8 @@
     "./advanced-query-engine": "./dist/advanced-query-engine.js",
     "./connector-cdc": "./dist/connector-cdc.js",
     "./data-quality-scorer": "./dist/data-quality-scorer.js",
-    "./dsr-handler": "./dist/dsr-handler.js"
+    "./dsr-handler": "./dist/dsr-handler.js",
+    "./entity-audit-service": "./dist/entity-audit-service.js"
   },
   "scripts": {
     "build": "tsc --build",
