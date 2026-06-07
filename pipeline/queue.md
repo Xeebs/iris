@@ -1031,7 +1031,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Benchmarking Dashboard Widget & Visualization
 - **Layer**: 22 — API Wiring & Integration
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: Medium
 - **Description**: Build benchmarking dashboard widget at apps/dashboard/components/benchmarking-card.tsx showing: (1) current workspace metrics (token savings %, entity count, cache hit rate), (2) peer benchmark comparison with box plots or quartile visualization (e.g., "your token savings: 62%, peer median: 55%"), (3) percentile rank badge (e.g., "top 15% for compression"), (4) opt-in toggle for data sharing with explanatory tooltip. Integrate into dashboard overview page (apps/dashboard/app/page.tsx) in a dedicated section. Add E2E test verifying: widget loads metrics via GET /api/v1/workspace/benchmark-snapshot, renders comparison chart, opt-in toggle persists via API. Use Recharts or similar for visualization. Reference dashboard component patterns for consistent styling.
 - **Files**:

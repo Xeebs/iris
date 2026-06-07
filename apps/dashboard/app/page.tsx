@@ -1,9 +1,40 @@
 import Link from 'next/link';
 import { ConnectorCard } from '@/components/connector-card';
+import { BenchmarkingCard } from '@/components/benchmarking-card';
 import { listConnectors, getTokenAnalytics } from '@/lib/api';
 import type { TokenAnalyticsSummary } from '@/lib/api';
 
 const WORKSPACE_ID = process.env['IRIS_WORKSPACE_ID'] ?? 'default';
+const API_BASE = process.env['NEXT_PUBLIC_API_URL'] ?? 'http://localhost:3001';
+
+async function fetchBenchmarkData(workspaceId: string) {
+  try {
+    const [settingsRes, snapshotRes] = await Promise.allSettled([
+      fetch(`${API_BASE}/api/v1/workspace/benchmarks/settings?workspaceId=${workspaceId}`, { next: { revalidate: 300 } }),
+      fetch(`${API_BASE}/api/v1/workspace/benchmark-snapshot?workspaceId=${workspaceId}`, { next: { revalidate: 300 } }),
+    ]);
+    const settingsBody = settingsRes.status === 'fulfilled' && settingsRes.value.ok
+      ? (await settingsRes.value.json() as { data: { workspaceId: string; benchmarkingEnabled: boolean; industry: string | null; companySize: string | null } }).data
+      : { workspaceId, benchmarkingEnabled: false, industry: null, companySize: null };
+
+    let report = null;
+    if (snapshotRes.status === 'fulfilled' && snapshotRes.value.ok) {
+      const compRes = await fetch(
+        `${API_BASE}/api/v1/workspace/benchmarks/peer-comparison?workspaceId=${workspaceId}`,
+        { next: { revalidate: 300 } },
+      );
+      if (compRes.ok) {
+        report = (await compRes.json() as { data: unknown }).data;
+      }
+    }
+    return { settingsBody, report };
+  } catch {
+    return {
+      settingsBody: { workspaceId, benchmarkingEnabled: false, industry: null, companySize: null },
+      report: null,
+    };
+  }
+}
 
 function TokenStat({
   label,
@@ -32,12 +63,18 @@ export default async function DashboardPage(): Promise<React.JSX.Element> {
     compressionRatio: 1,
   };
   let tokenQueryCount = 0;
+  let benchmarkSettings = { workspaceId: WORKSPACE_ID, benchmarkingEnabled: false, industry: null as string | null, companySize: null as string | null };
+  let benchmarkReport = null;
 
   await Promise.allSettled([
     listConnectors().then((r) => { connectors = r.data; }),
     getTokenAnalytics(WORKSPACE_ID, 30).then((r) => {
       tokenTotals = r.data.totals;
       tokenQueryCount = r.data.days.reduce((sum, d) => sum + d.queryCount, 0);
+    }),
+    fetchBenchmarkData(WORKSPACE_ID).then(({ settingsBody, report }) => {
+      benchmarkSettings = settingsBody;
+      benchmarkReport = report;
     }),
   ]);
 
@@ -105,6 +142,15 @@ export default async function DashboardPage(): Promise<React.JSX.Element> {
           />
         </div>
       </section>
+
+      {/* Peer benchmarking widget */}
+      <div className="mb-8">
+        <BenchmarkingCard
+          workspaceId={WORKSPACE_ID}
+          initialSettings={benchmarkSettings}
+          initialReport={benchmarkReport}
+        />
+      </div>
 
       <section>
         <h2 className="mb-4 text-xl font-semibold">Connected Sources</h2>
