@@ -35,7 +35,8 @@
     "./audit-log-service": "./dist/audit-log-service.js",
     "./secret-vault": "./dist/secret-vault.js",
     "./sync-diagnostics": "./dist/sync-diagnostics.js",
-    "./index-snapshot": "./dist/index-snapshot.js"
+    "./index-snapshot": "./dist/index-snapshot.js",
+    "./email-templates": "./dist/email-templates.js"
   },
   "scripts": {
     "build": "tsc --build",

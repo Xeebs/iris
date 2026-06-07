@@ -5,6 +5,7 @@ Completed tasks are logged here by the daemon after each successful commit.
 ---
 
 - 2026-06-07: feat(semantic-core,api,dashboard): index snapshot export & disaster recovery — IndexSnapshotService (gzip compressed snapshots, pruneOldSnapshots, create/list/restore), migration 040, REST routes /api/v1/snapshots, SnapshotManager dashboard component, 8 tests
+- 2026-06-07: feat(semantic-core,api,dashboard): email template system & customization — EmailTemplateService (CRUD + render + variable interpolation), migration 041, REST routes /api/v1/email-templates, EmailTemplateEditor dashboard component with live preview, 21 tests
 
 - 2026-06-07 feat(semantic-core,api,dashboard): proactive context surfacing — suggestion engine with time-of-day patterns, role affinities, co-occurrence analysis + REST API + dashboard widget
 

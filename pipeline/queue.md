@@ -1552,7 +1552,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Email Template System & Customization
 - **Layer**: 29 — Email Integration & Outbound Messaging
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: Medium
 - **Description**: Build a template system for email alerts to allow workspace admins to customize alert message formatting. Create packages/semantic-core/src/email-templates.ts with EmailTemplate interface (id, subject, htmlBody, textBody, variables). Implement email_templates and email_template_versions tables (migration 030) with upsert/get/list endpoints. Add /api/v1/email-templates CRUD routes. Build dashboard component at apps/dashboard/components/email-template-editor.tsx with live preview and variable interpolation. Integrate into alert dispatch pipeline so alerts use workspace's custom template if set, fallback to default. Full unit + integration tests with Handlebars-style template variable syntax.
 - **Files**:
