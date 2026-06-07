@@ -18,6 +18,8 @@ import { createIndexStatusRoutes } from './routes/index-status.js';
 import { createWebhookRoutes } from './routes/webhooks.js';
 import { createGraphRoutes } from './routes/graph.js';
 import { createPiiConfigRoutes } from './routes/pii-config.js';
+import { createSuggestionsRoutes } from './routes/suggestions.js';
+import { createExportRoutes } from './routes/export.js';
 
 export { createApp };
 
@@ -58,6 +60,8 @@ function createApp(
   authed.route('/index', createIndexStatusRoutes(sql));
   authed.route('/graph', createGraphRoutes(sql));
   authed.route('/pii-config', createPiiConfigRoutes(sql));
+  authed.route('/context-suggestions', createSuggestionsRoutes(sql));
+  authed.route('/export', createExportRoutes(sql));
 
   // Webhook route is unauthenticated (events arrive from external services)
   app.route('/api/v1/webhooks', createWebhookRoutes(sql));

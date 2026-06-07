@@ -24,3 +24,7 @@ export type { PiiStrategy, PiiDetectionType, PiiFieldConfig, WorkspacePiiConfig,
 export { detectPiiType, maskValue, maskEntity, maskEntities, PiiConfigService } from './pii-masker.js';
 export type { InferredFieldType, DiscoveredField, DiscoveredEntityType, DiscoveredSchema, SchemaConfirmation, SchemaFieldDecision } from './schema-discoverer.js';
 export { discoverJsonSchema, discoverCsvSchema, discoverSchema, SchemaDiscovererService } from './schema-discoverer.js';
+export type { RecentActivity, SuggestedContext, SuggestionResult } from './proactive-suggester.js';
+export { generateSuggestions, ProactiveSuggesterService } from './proactive-suggester.js';
+export type { OsiExportOptions, OsiNode, OsiDocument } from './osi-exporter.js';
+export { entityToOsiNode, glossaryTermToOsiNode, metricToOsiNode, exportToOSI } from './osi-exporter.js';
