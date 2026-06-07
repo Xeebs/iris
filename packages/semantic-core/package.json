@@ -15,7 +15,9 @@
     "./metrics": "./dist/metrics.js",
     "./sync-events": "./dist/sync-events.js",
     "./connector-health-service": "./dist/connector-health-service.js",
-    "./context-permissions": "./dist/context-permissions.js"
+    "./context-permissions": "./dist/context-permissions.js",
+    "./schema-discoverer": "./dist/schema-discoverer.js",
+    "./proactive-suggester": "./dist/proactive-suggester.js"
   },
   "scripts": {
     "build": "tsc --build",

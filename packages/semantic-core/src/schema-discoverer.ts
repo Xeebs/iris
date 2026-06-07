@@ -14,7 +14,7 @@ export interface DiscoveredField {
   inferredType: InferredFieldType;
   isPii: boolean;
   accepted: boolean;
-  renamedTo?: string;
+  renamedTo?: string | undefined;
   sampleValues: string[];
   nullRate: number;
   confidence: number;
@@ -43,9 +43,9 @@ export interface SchemaConfirmation {
 export interface SchemaFieldDecision {
   originalName: string;
   accepted: boolean;
-  renamedTo?: string;
+  renamedTo?: string | undefined;
   isPii: boolean;
-  entityRelationshipType?: string;
+  entityRelationshipType?: string | undefined;
 }
 
 // ─── Pattern Detection ────────────────────────────────────────────────────────
