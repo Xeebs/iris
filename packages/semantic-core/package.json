@@ -21,7 +21,8 @@
     "./osi-exporter": "./dist/osi-exporter.js",
     "./nlp-config-parser": "./dist/nlp-config-parser.js",
     "./workflow-templates": "./dist/workflow-templates.js",
-    "./index-optimizer": "./dist/index-optimizer.js"
+    "./index-optimizer": "./dist/index-optimizer.js",
+    "./benchmarking": "./dist/benchmarking.js"
   },
   "scripts": {
     "build": "tsc --build",

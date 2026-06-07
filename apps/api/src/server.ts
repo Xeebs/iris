@@ -23,6 +23,7 @@ import { createExportRoutes } from './routes/export.js';
 import { createWorkspaceConfigRoutes } from './routes/workspace-config.js';
 import { createIndexOptimizationRoutes } from './routes/index-optimization.js';
 import { createWorkflowTemplateRoutes } from './routes/workflow-templates.js';
+import { createWorkspaceBenchmarkingRoutes } from './routes/workspace-benchmarking.js';
 
 export { createApp };
 
@@ -68,6 +69,7 @@ function createApp(
   authed.route('/workspace', createWorkspaceConfigRoutes(sql));
   authed.route('/index-optimization', createIndexOptimizationRoutes(sql));
   authed.route('/workflow-templates', createWorkflowTemplateRoutes(sql));
+  authed.route('/workspace', createWorkspaceBenchmarkingRoutes(sql));
 
   // Webhook route is unauthenticated (events arrive from external services)
   app.route('/api/v1/webhooks', createWebhookRoutes(sql));

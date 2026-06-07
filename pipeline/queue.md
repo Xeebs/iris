@@ -975,7 +975,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Workflow Templates API Routes & Server Registration
 - **Layer**: 22 — API Wiring & Integration
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: High
 - **Description**: Complete workflow templates integration by: (1) creating apps/api/src/routes/workflow-templates.ts with full CRUD endpoints (GET /api/v1/workflow-templates, POST, PUT /:id, DELETE /:id) following api-conventions.md (paginated responses, standard error envelope, workspace isolation via auth middleware); (2) wiring the routes into apps/api/src/server.ts via createWorkflowTemplateRoutes and register with authed.route('/workflow-templates', ...); (3) exporting WorkflowTemplate types from packages/semantic-core/src/index.ts; (4) adding integration tests verifying CRUD operations, workspace isolation (cross-workspace access returns 403), and error handling. Reference the existing glossary/metrics routes for pattern reuse.
 - **Files**:
@@ -988,7 +988,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Workspace Configuration Routes & Server Registration
 - **Layer**: 22 — API Wiring & Integration
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: High
 - **Description**: Wire the created workspace-config routes into the main API server. Update apps/api/src/server.ts to import createWorkspaceConfigRoutes and register with authed.route('/workspace/config', ...). Verify integration tests confirm that NL config parsing, approval flow, and config persistence work end-to-end. Ensure workspace isolation is enforced (users can only access/modify their own workspace configs). Add missing integration tests to validate GET workspace metrics vs config, PUT to update interpreted settings, and DELETE to reset. Reference api-conventions.md for auth and response envelope patterns.
 - **Files**:
@@ -999,7 +999,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Workflow Templates Dashboard Pages
 - **Layer**: 22 — API Wiring & Integration
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: High
 - **Description**: Build complete workflow templates dashboard UI at apps/dashboard/app/workflows/page.tsx with: (1) gallery view showing all templates (GET /api/v1/workflow-templates), (2) template cards with name, description, trigger type, and action count, (3) "Create Template" button opening modal with template editor component (name, description, MCP tool picker, trigger condition selector), (4) edit/delete actions per template, (5) apply/disable templates with toggle. Create components: WorkflowTemplateGallery (card grid layout), WorkflowTemplateEditor (form with validation), TemplatePreview (shows MCP calls and trigger config). Add E2E test verifying full flow: create template -> view in gallery -> edit -> trigger condition change -> delete. Reference dashboard components (shadcn/ui) for styling consistency.
 - **Files**:
@@ -1014,7 +1014,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Benchmarking Service Implementation & API
 - **Layer**: 22 — API Wiring & Integration
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: Medium
 - **Description**: Implement complete benchmarking functionality. Create packages/semantic-core/src/benchmarking.ts with BenchmarkingService: (1) collectMetrics(workspaceId) aggregates token_events, entity counts, query patterns from Postgres; (2) getPeerBenchmarks(workspaceId, industry, companySize) queries hashed peer data and returns percentile rankings (25th, 50th, 75th, 90th percentiles); (3) exportMetrics(workspaceId) returns shareable JSON for opt-in aggregation. Create apps/api/migrations/020_add_workspace_benchmarking.sql with workspace_benchmarking table. Create apps/api/src/routes/workspace-benchmarking.ts with GET /api/v1/workspace/benchmark-snapshot, GET /api/v1/workspace/benchmarks/peer-comparison endpoints. Export BenchmarkingService from semantic-core/index.ts. Add comprehensive unit + integration tests with synthetic benchmark fixture data. Wire into server.ts.
 - **Files**:
