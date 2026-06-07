@@ -11,6 +11,8 @@ import { assertWorkspace } from '../workspace-guard.js';
 
 const log = logger.child({ tool: 'list-entities' });
 
+const MAX_PAGE_SIZE = 100;
+
 const inputSchema = {
   entityType: z.string().min(1).describe('Entity type to list (e.g., contact, deal, company)'),
   workspaceId: z.string().min(1).describe('Workspace ID for tenant isolation'),
@@ -18,9 +20,13 @@ const inputSchema = {
     .number()
     .int()
     .positive()
-    .max(200)
+    .max(MAX_PAGE_SIZE)
     .default(50)
-    .describe('Maximum number of entities to return'),
+    .describe(`Maximum number of entities per page (max ${MAX_PAGE_SIZE})`),
+  cursor: z
+    .string()
+    .optional()
+    .describe('Opaque pagination cursor returned by a previous call. Pass to retrieve the next page.'),
   contextBudget: z
     .number()
     .int()
@@ -50,7 +56,8 @@ export function registerListEntities(
     {
       title: 'List Entities',
       description:
-        'List entities of a given type within a workspace, ordered by most recently modified.',
+        'List entities of a given type within a workspace, ordered by most recently modified. ' +
+        'Supports pagination via the `cursor` field — pass `nextCursor` from a previous response to get the next page.',
       inputSchema,
     },
     async (params) => {
@@ -69,13 +76,24 @@ export function registerListEntities(
           };
         }
 
+        const pageSize = Math.min(params.limit ?? 50, MAX_PAGE_SIZE);
         const entities = await vectorStore.listByType(
           params.workspaceId,
           params.entityType,
-          params.limit ?? 50,
+          pageSize + 1,
+          params.cursor,
         );
 
-        if (entities.length === 0) {
+        const hasMore = entities.length > pageSize;
+        const page = hasMore ? entities.slice(0, pageSize) : entities;
+        const lastEntity = page[page.length - 1];
+        const nextCursor = hasMore && lastEntity?.lastModified
+          ? (lastEntity.lastModified instanceof Date
+              ? lastEntity.lastModified.toISOString()
+              : String(lastEntity.lastModified))
+          : undefined;
+
+        if (page.length === 0) {
           return {
             content: [
               {
@@ -87,27 +105,35 @@ export function registerListEntities(
         }
 
         const roleFiltered = contextPermissions
-          ? filterContextByRole(entities, contextPermissions)
-          : entities;
+          ? filterContextByRole(page, contextPermissions)
+          : page;
 
         const masked = piiConfig ? maskEntities(roleFiltered, piiConfig) : roleFiltered;
 
         const compressed = compress(masked, { contextBudget: params.contextBudget ?? 2000 });
 
-        const text = compressed.truncated
+        let text = compressed.truncated
           ? compressed.content + `\n\n[truncated: ${compressed.savedTokens} tokens saved]`
           : compressed.content;
+
+        if (nextCursor) {
+          text += `\n\n[nextCursor: ${nextCursor}]`;
+        }
 
         log.info('list-entities complete', {
           workspaceId: params.workspaceId,
           entityType: params.entityType,
           entityCount: compressed.entityCount,
           tokenCount: compressed.tokenCount,
+          hasMore,
           roleFiltered: !!contextPermissions,
           piiMasked: !!piiConfig,
         });
 
-        return { content: [{ type: 'text' as const, text }] };
+        return {
+          content: [{ type: 'text' as const, text }],
+          ...(nextCursor ? { nextCursor } : {}),
+        };
       } catch (err) {
         log.error('list-entities failed', { error: err });
         const message = err instanceof Error ? err.message : String(err);

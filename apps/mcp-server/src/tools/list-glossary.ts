@@ -3,12 +3,25 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { GlossaryService } from '@iris/semantic-core';
 import { assertWorkspace } from '../workspace-guard.js';
 
+const MAX_PAGE_SIZE = 100;
+
 const inputSchema = {
   workspaceId: z.string().min(1).describe('Workspace ID for tenant isolation'),
   filter: z
     .string()
     .optional()
     .describe('Optional substring filter for term names'),
+  limit: z
+    .number()
+    .int()
+    .positive()
+    .max(MAX_PAGE_SIZE)
+    .default(50)
+    .describe(`Maximum number of terms per page (max ${MAX_PAGE_SIZE})`),
+  cursor: z
+    .string()
+    .optional()
+    .describe('Opaque pagination cursor from a previous response. Pass to retrieve the next page.'),
 };
 
 /**
@@ -28,7 +41,8 @@ export function registerListGlossary(
       title: 'List Glossary',
       description:
         'Return business terminology definitions for this workspace. ' +
-        'Includes metric names, entity type descriptions, and domain-specific terms.',
+        'Includes metric names, entity type descriptions, and domain-specific terms. ' +
+        'Supports pagination via the `cursor` field — pass `nextCursor` from a previous response to get the next page.',
       inputSchema,
     },
     async (params) => {
@@ -37,13 +51,27 @@ export function registerListGlossary(
         return { content: [{ type: 'text' as const, text: authError }] };
       }
 
-      const result = await glossaryService.listTerms(params.workspaceId, params.filter);
+      const pageSize = Math.min(params.limit ?? 50, MAX_PAGE_SIZE);
+      const result = await glossaryService.listTerms(
+        params.workspaceId,
+        params.filter,
+        undefined,
+        pageSize + 1,
+        params.cursor,
+      );
+
       if (result.isErr()) {
         return {
           content: [{ type: 'text' as const, text: `Error retrieving glossary: ${result.error.message}` }],
         };
       }
-      const terms = result.value;
+
+      const allTerms = result.value;
+      const hasMore = allTerms.length > pageSize;
+      const terms = hasMore ? allTerms.slice(0, pageSize) : allTerms;
+      const lastTerm = terms[terms.length - 1];
+      const nextCursor = hasMore ? lastTerm?.term : undefined;
+
       if (terms.length === 0) {
         return {
           content: [
@@ -57,11 +85,18 @@ export function registerListGlossary(
           ],
         };
       }
-      const formatted = terms
+
+      let formatted = terms
         .map((t) => `${t.term}: ${t.definition}${t.exampleValue ? ` (e.g. ${t.exampleValue})` : ''}`)
         .join('\n');
+
+      if (nextCursor) {
+        formatted += `\n\n[nextCursor: ${nextCursor}]`;
+      }
+
       return {
         content: [{ type: 'text' as const, text: formatted }],
+        ...(nextCursor ? { nextCursor } : {}),
       };
     },
   );

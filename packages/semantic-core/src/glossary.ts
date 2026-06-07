@@ -177,6 +177,8 @@ export class GlossaryService {
     workspaceId: string,
     filter?: string,
     status?: TermStatus,
+    limit?: number,
+    cursor?: string,
   ): Promise<Result<GlossaryTerm[], Error>> {
     try {
       const rows = await this.sql<z.infer<typeof termRow>[]>`
@@ -184,7 +186,9 @@ export class GlossaryService {
         WHERE workspace_id = ${workspaceId}
           ${filter ? this.sql`AND term ILIKE ${'%' + filter + '%'}` : this.sql``}
           ${status ? this.sql`AND status = ${status}` : this.sql``}
+          ${cursor ? this.sql`AND term > ${cursor}` : this.sql``}
         ORDER BY term ASC
+        ${limit ? this.sql`LIMIT ${limit}` : this.sql``}
       `;
       return ok(rows.map(toGlossaryTerm));
     } catch (e) {

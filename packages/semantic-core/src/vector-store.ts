@@ -39,8 +39,9 @@ export interface VectorStore {
 
   /**
    * List entities of a given type within a workspace, ordered by most recently modified.
+   * Pass `cursor` (ISO timestamp of the last entity from the previous page) for pagination.
    */
-  listByType(workspaceId: string, entityType: string, limit: number): Promise<SemanticEntity[]>;
+  listByType(workspaceId: string, entityType: string, limit: number, cursor?: string): Promise<SemanticEntity[]>;
 
   /**
    * Retrieve a single entity by its globally unique ID within a workspace.
@@ -170,7 +171,7 @@ export class PgvectorStore implements VectorStore {
     log.debug('Deleted entities', { count: ids.length });
   }
 
-  async listByType(workspaceId: string, entityType: string, limit: number): Promise<SemanticEntity[]> {
+  async listByType(workspaceId: string, entityType: string, limit: number, cursor?: string): Promise<SemanticEntity[]> {
     const rows = await this.sql<
       Array<{
         id: string;
@@ -185,6 +186,7 @@ export class PgvectorStore implements VectorStore {
       SELECT id, type, label, attributes, relationships, last_modified, source_id
       FROM iris_entities
       WHERE workspace_id = ${workspaceId} AND type = ${entityType}
+        ${cursor ? this.sql`AND last_modified < ${cursor}::timestamptz` : this.sql``}
       ORDER BY last_modified DESC
       LIMIT ${limit}
     `;
