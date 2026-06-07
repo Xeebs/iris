@@ -1,5 +1,6 @@
 import { createHmac, timingSafeEqual } from 'crypto';
 import { Hono } from 'hono';
+import { z } from 'zod';
 import type postgres from 'postgres';
 
 import { logger } from '@iris/core/logger';
@@ -191,4 +192,85 @@ export function createWebhookRoutes(sql: SqlClient): Hono {
   });
 
   return routes;
+}
+
+type WebhookEventRow = {
+  id: string;
+  workspace_id: string;
+  webhook_id: string;
+  event_type: string;
+  target_url: string;
+  status: string;
+  attempt_count: number;
+  http_status: number | null;
+  error_message: string | null;
+  next_retry_at: Date | null;
+  completed_at: Date | null;
+  created_at: Date;
+  updated_at: Date;
+};
+
+/**
+ * Authenticated routes for webhook event delivery status.
+ * Mount at /api/v1/webhooks (authed).
+ *
+ * @param sql - Postgres client
+ */
+export function createWebhookEventsRoutes(sql: SqlClient) {
+  const app = new Hono();
+
+  /** GET /events?workspaceId=&status=&limit=&cursor= */
+  app.get('/events', async (c) => {
+    const parsed = z.object({
+      workspaceId: z.string().min(1),
+      status: z.enum(['pending', 'delivered', 'failed', 'dead']).optional(),
+      limit: z.coerce.number().int().min(1).max(200).optional().default(50),
+      cursor: z.string().optional(),
+    }).safeParse({
+      workspaceId: c.req.query('workspaceId'),
+      status: c.req.query('status'),
+      limit: c.req.query('limit'),
+      cursor: c.req.query('cursor'),
+    });
+    if (!parsed.success) {
+      return c.json({ error: { code: 'VALIDATION_ERROR', message: parsed.error.message } }, 400);
+    }
+    const { workspaceId, status, limit, cursor } = parsed.data;
+
+    try {
+      const rows = await sql<WebhookEventRow[]>`
+        SELECT * FROM webhook_events
+        WHERE workspace_id = ${workspaceId}
+          ${status ? sql`AND status = ${status}` : sql``}
+          ${cursor ? sql`AND id < ${cursor}` : sql``}
+        ORDER BY created_at DESC
+        LIMIT ${limit + 1}
+      `;
+      const hasMore = rows.length > limit;
+      const data = hasMore ? rows.slice(0, limit) : rows;
+      const nextCursor = hasMore ? data[data.length - 1]?.id : undefined;
+
+      return c.json({
+        data: data.map((r) => ({
+          id: r.id,
+          workspaceId: r.workspace_id,
+          webhookId: r.webhook_id,
+          eventType: r.event_type,
+          targetUrl: r.target_url,
+          status: r.status,
+          attemptCount: r.attempt_count,
+          httpStatus: r.http_status,
+          errorMessage: r.error_message,
+          nextRetryAt: r.next_retry_at,
+          completedAt: r.completed_at,
+          createdAt: r.created_at,
+        })),
+        meta: { hasMore, nextCursor },
+      });
+    } catch (e) {
+      return c.json({ error: { code: 'INTERNAL_ERROR', message: String(e) } }, 500);
+    }
+  });
+
+  return app;
 }

@@ -15,7 +15,7 @@ import { createGlossaryRoutes } from './routes/glossary.js';
 import { createMetricRoutes } from './routes/metrics.js';
 import { createAnalyticsRoutes } from './routes/analytics.js';
 import { createIndexStatusRoutes } from './routes/index-status.js';
-import { createWebhookRoutes } from './routes/webhooks.js';
+import { createWebhookRoutes, createWebhookEventsRoutes } from './routes/webhooks.js';
 import { createGraphRoutes } from './routes/graph.js';
 import { createPiiConfigRoutes } from './routes/pii-config.js';
 import { createSuggestionsRoutes } from './routes/suggestions.js';
@@ -71,8 +71,9 @@ function createApp(
   authed.route('/workflow-templates', createWorkflowTemplateRoutes(sql));
   authed.route('/workspace', createWorkspaceBenchmarkingRoutes(sql));
 
-  // Webhook route is unauthenticated (events arrive from external services)
+  // Webhook routes: inbound (unauthenticated) + events status (authenticated)
   app.route('/api/v1/webhooks', createWebhookRoutes(sql));
+  authed.route('/webhooks', createWebhookEventsRoutes(sql));
 
   app.route('/api/v1', authed);
 

@@ -1060,7 +1060,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Webhook Delivery & Retry Queue Implementation
 - **Layer**: 23 — E2E Integration & Testing
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: High
 - **Description**: Implement a webhook delivery system with automatic retries for failed webhook events. Create packages/queue/src/webhook-queue.ts with WebhookQueue class managing delivery attempts (BullMQ job queue). Methods: enqueueWebhook(event), processDelivery(job) with exponential backoff (max 5 retries, base 2s delay). Track delivery status in webhooks_events table (id, workspace_id, event_type, payload, status, attempt_count, nextRetryAt, completedAt). Expose GET /api/v1/webhooks/events endpoint with filtering/pagination. Build dashboard component at apps/dashboard/components/webhook-delivery-status.tsx showing delivery queues and retry logs. Full integration tests with real BullMQ queue. Reference api-conventions.md for REST patterns.
 - **Files**:
@@ -1075,7 +1075,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: PII Masking Enforcement E2E Tests
 - **Layer**: 23 — E2E Integration & Testing
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: High
 - **Description**: Write end-to-end tests to verify PII masking is correctly applied in MCP and REST API responses. Tests should: (1) index entities with PII fields (email, SSN, phone), (2) configure masking rules (redaction, hashing, tokenization), (3) query context via MCP and verify PII fields are masked in response, (4) verify unmasked fields still appear, (5) test role-based PII filtering (some roles see email, others don't), (6) verify audit logs record which fields were masked and by whom. Add 6–8 Playwright test cases covering integration with query-context tool and REST API. Reference pii-masker.ts and role-based-context-segmentation.md for masking patterns.
 - **Files**:
