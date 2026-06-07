@@ -18,7 +18,7 @@ const templateBodySchema = z.object({
 });
 
 const renderBodySchema = z.object({
-  templateId: z.string().uuid().nullable().optional(),
+  templateId: z.string().nullable().optional(),
   variables: z.record(z.string()),
 });
 
