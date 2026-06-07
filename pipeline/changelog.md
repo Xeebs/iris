@@ -4,6 +4,8 @@ Completed tasks are logged here by the daemon after each successful commit.
 
 ---
 
+- 2026-06-07: feat(semantic-core,api,dashboard): index snapshot export & disaster recovery — IndexSnapshotService (gzip compressed snapshots, pruneOldSnapshots, create/list/restore), migration 040, REST routes /api/v1/snapshots, SnapshotManager dashboard component, 8 tests
+
 - 2026-06-07 feat(semantic-core,api,dashboard): proactive context surfacing — suggestion engine with time-of-day patterns, role affinities, co-occurrence analysis + REST API + dashboard widget
 
 - 2026-06-07 feat(semantic-core,api,dashboard,mcp-server): PII field masking (redact/hash/tokenize) + workspace config API + dashboard panel + MCP tool integration + token consumption widget on dashboard overview
@@ -46,3 +48,7 @@ feat(api): webhook-driven real-time sync (HubSpot + Slack HMAC validation, 10 te
 2026-06-07 feat(queue,api,dashboard): sync job error recovery & dead letter queue — deadletter_jobs migration, DlqService with archive/list/retry, admin routes GET /admin/dlq + POST /admin/dlq/:id/retry, DlqInspector component, /admin/dlq dashboard page
 - feat(semantic-core,api,dashboard): workspace data export & backup service — DataExporter, export jobs table, REST routes, admin import, BackupManager UI, 33 tests
 - feat(connector-sdk,api): custom connector framework & user-extensible SDK — loadUserConnector, validateConnectorDefinition, REST CRUD, migration 023, 26 tests
+- feat(api,semantic-core,dashboard): cross-connector entity linking & data enrichment (667a392)
+- feat(mcp-server,semantic-core): advanced MCP query features & aggregations (f921772)
+- feat(connector-sdk,dashboard): comprehensive webhook validation & testing suite (75973e2)
+- feat(api,dashboard,queue): real-time sync performance monitoring dashboard (9651820)
