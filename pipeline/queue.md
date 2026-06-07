@@ -1686,7 +1686,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Session Management & Device Tracking
 - **Layer**: 33 — Advanced Security & Compliance
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: Medium
 - **Description**: Implement user session tracking and device management for enhanced security monitoring. Create apps/api/migrations/038_add_session_tracking.sql with: user_sessions table (session_id, workspace_id, user_id, device_id, ip_address, user_agent, browserName, osName, createdAt, lastActivityAt, expiresAt), trusted_devices table (device_id, user_id, device_name, fingerprint, trustedAt, lastUsedAt). Implement SessionManager in packages/core/src/session-manager.ts with: createSession(userId, device), refreshSession(sessionId), revokeSession(sessionId), getActiveSessions(userId). Add dashboard page at apps/dashboard/app/settings/security/sessions/page.tsx showing: active sessions with location/device/last-activity, trusted devices list with rename/revoke buttons. Implement: (1) automatic session expiration after 30 days inactivity, (2) concurrent session limits (max 5 per user), (3) geo-anomaly detection (flag new country login), (4) device trust prompt on first use. Full tests with mocked device fingerprinting library. Reference api-conventions.md for auth patterns.
 - **Files**:
@@ -1771,4 +1771,124 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
   - apps/dashboard/components/entity-lineage-viewer.tsx
   - apps/api/src/__tests__/entity-lineage.test.ts
 - **Depends on**: Entity Relationship Indexing, MCP Server API Key Authentication & Workspace Isolation
+- **Added**: 2026-06-07
+
+---
+
+## Layer 36: Billing & Monetization
+
+### Task: Usage-Based Billing & Metering Infrastructure
+- **Layer**: 36 — Billing & Monetization
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Implement a usage-based metering system to track and bill customers based on actual platform consumption. Create apps/api/migrations/042_add_billing_metering.sql with: usage_events table (workspace_id, event_type: 'entity_indexed'|'query_executed'|'token_spent'|'api_call', quantity, unit_price_cents, timestamp), billing_periods table (workspace_id, period_start, period_end, total_charges_cents, status: 'open'|'invoiced'|'paid'), and billing_tiers table (tier_name: 'starter'|'growth'|'enterprise', monthly_base_cents, entity_index_price_cents, query_price_cents, included_tokens). Create packages/semantic-core/src/billing-meter.ts with BillingMeter class: (1) recordUsage(workspaceId, eventType, quantity) persisting metered events, (2) calculateCharges(workspaceId, periodStart, periodEnd) summing events by type and applying tier pricing, (3) getWorkspaceTier(workspaceId) returning current plan tier. Implement Stripe integration in packages/core/src/stripe-client.ts for: payment processing, invoice generation, webhook handling (subscription updates). Expose GET /api/v1/billing/usage returning current period costs and forecasted month-end total. Wire usage recording into: indexer (on entity index), retrieval engine (on query), MCP tools (on invocation), and token analytics. Build dashboard billing page at apps/dashboard/app/settings/[workspaceId]/billing/page.tsx showing: current usage metrics (entities, queries, tokens), tiered pricing breakdown, month-to-date charges, upcoming invoice, upgrade button. Add 20+ unit tests for metering logic and integration tests with mocked Stripe API.
+- **Files**:
+  - packages/semantic-core/src/billing-meter.ts
+  - packages/semantic-core/src/__tests__/billing-meter.test.ts
+  - packages/semantic-core/src/__tests__/billing-meter.integration.test.ts
+  - packages/core/src/stripe-client.ts
+  - packages/core/src/__tests__/stripe-client.test.ts
+  - apps/api/migrations/042_add_billing_metering.sql
+  - apps/api/src/routes/billing.ts
+  - apps/api/src/__tests__/billing.test.ts
+  - apps/dashboard/app/settings/[workspaceId]/billing/page.tsx
+  - apps/dashboard/components/billing-usage-chart.tsx
+  - apps/dashboard/components/billing-invoice-list.tsx
+- **Depends on**: Token Analytics Service & Dashboard, Multi-Tenant Support & Workspace Isolation
+- **Added**: 2026-06-07
+
+### Task: Connector Marketplace & Discovery Platform
+- **Layer**: 36 — Billing & Monetization
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Build a connector marketplace and discovery system allowing users to browse, install, and manage connectors. Create apps/api/migrations/043_add_connector_marketplace.sql with: connector_listings table (id, connector_id, name, description, icon_url, documentation_url, popularity_score, workspace_installs_count, published_at), connector_reviews table (listing_id, reviewer_id, rating: 1–5, comment, created_at). Create packages/semantic-core/src/connector-marketplace.ts with ConnectorMarketplaceService: (1) getListings(filters: category, rating, popularity) returning paginated connector listings, (2) installConnector(workspaceId, connectorId) adding to workspace (calls registry to instantiate), (3) submitConnector(definition, icon, docs) allowing users to publish custom connectors, (4) getRatings(connectorId) and rateConnector(connectorId, rating, comment). Expose GET /api/v1/marketplace/connectors (with filtering/sorting), POST /api/v1/marketplace/connectors/:id/install, POST /api/v1/marketplace/connectors/:id/rate. Build marketplace discovery page at apps/dashboard/app/marketplace/page.tsx with: searchable connector grid, ratings/reviews, install buttons, detail modals with docs. Build admin curation dashboard at apps/dashboard/app/admin/marketplace-curation/page.tsx for approving/promoting connectors. Include popularity scoring: (installs × 0.4 + avg_rating × 0.3 + recency × 0.3). Add 18+ tests covering marketplace queries, curation workflows, and rating aggregation.
+- **Files**:
+  - packages/semantic-core/src/connector-marketplace.ts
+  - packages/semantic-core/src/__tests__/connector-marketplace.test.ts
+  - packages/semantic-core/src/__tests__/connector-marketplace.integration.test.ts
+  - apps/api/migrations/043_add_connector_marketplace.sql
+  - apps/api/src/routes/marketplace.ts
+  - apps/api/src/__tests__/marketplace.test.ts
+  - apps/dashboard/app/marketplace/page.tsx
+  - apps/dashboard/components/connector-grid.tsx
+  - apps/dashboard/components/connector-detail-modal.tsx
+  - apps/dashboard/app/admin/marketplace-curation/page.tsx
+  - apps/dashboard/components/connector-curation-panel.tsx
+- **Depends on**: Connector Instance Management API, Workspace Onboarding Flow & First-Sync Guided Experience
+- **Added**: 2026-06-07
+
+---
+
+## Layer 37: Response Caching & Query Optimization
+
+### Task: Full Response-Level Caching for MCP Tools
+- **Layer**: 37 — Response Caching & Query Optimization
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Implement a second layer of caching that caches entire MCP tool responses, not just semantic embeddings. Create packages/cache/src/response-cache.ts with ResponseCache class: (1) cacheKey(tool, input) generating deterministic cache keys from tool name and validated input, (2) get(key) returning cached response if still valid, (3) set(key, response, ttl) storing full response with optional TTL override per tool, (4) invalidate(pattern) bulk invalidation using key patterns. Store in Redis with msgpack serialization for compact storage. Integrate into apps/mcp-server/src/server.ts: before executing any tool, check response cache; if hit and valid, return cached response immediately (log cache hit to audit); on cache miss, execute tool and cache result. Make caching configurable per tool (list-entities: 5min TTL, query-context: 2min TTL, get-metric: 1hour TTL). Add cache stats endpoint GET /api/v1/cache/stats showing hit rate, evictions, memory usage. Build admin dashboard panel at apps/dashboard/components/cache-stats-panel.tsx visualizing cache performance over time. Add 22+ tests covering: cache hit/miss logic, TTL expiration, serialization, pattern-based invalidation, and interaction with semantic cache.
+- **Files**:
+  - packages/cache/src/response-cache.ts
+  - packages/cache/src/__tests__/response-cache.test.ts
+  - packages/cache/src/__tests__/response-cache.integration.test.ts
+  - apps/mcp-server/src/server.ts (update)
+  - apps/api/src/routes/cache-stats.ts
+  - apps/dashboard/components/cache-stats-panel.tsx
+  - apps/mcp-server/src/__tests__/server.integration.test.ts (update)
+- **Depends on**: Semantic Cache, MCP Server Bootstrap
+- **Added**: 2026-06-07
+
+### Task: Advanced Connector Retry & Resilience Patterns
+- **Layer**: 37 — Response Caching & Query Optimization
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Implement sophisticated retry strategies and resilience patterns for all connectors to handle transient failures gracefully. Create packages/queue/src/connector-resilience.ts with ConnectorResilienceManager supporting: (1) configurable retry policies (max attempts, backoff strategy: exponential|linear|fibonacci with jitter), (2) circuit breaker pattern (fail-fast if error rate > threshold, reset after cooldown), (3) timeout configuration per connector (default 10s, configurable), (4) bulkhead pattern (limit concurrent requests per connector to avoid cascading failures). Store policies in connector_resilience_config table (connector_id, max_retries, backoff_strategy, circuit_breaker_threshold, timeout_ms, max_concurrent). Implement integration into sync-worker.ts: before invoking connector.sync(), wrap with resilience manager that enforces retry/timeout/circuit breaker logic. Add metrics tracking: retry_count, timeout_count, circuit_breaker_trips per connector. Expose GET /api/v1/admin/connectors/resilience returning resilience metrics and config. Build admin panel at apps/dashboard/components/connector-resilience-config.tsx allowing tuning of retry policies per connector with real-time metrics overlay. Add 25+ tests covering all retry scenarios, circuit breaker state transitions, timeout behavior, and bulkhead enforcement with synthetic workloads.
+- **Files**:
+  - packages/queue/src/connector-resilience.ts
+  - packages/queue/src/__tests__/connector-resilience.test.ts
+  - apps/api/migrations/044_add_connector_resilience.sql
+  - apps/api/src/routes/admin-resilience.ts
+  - apps/api/src/__tests__/admin-resilience.test.ts
+  - apps/dashboard/components/connector-resilience-config.tsx
+  - apps/api/src/workers/sync-worker.ts (update)
+- **Depends on**: BullMQ Job Queue Infrastructure, Connector Rate Limiting & Backoff Strategy Manager
+- **Added**: 2026-06-07
+
+### Task: Bulk Data Import & Export UI
+- **Layer**: 37 — Response Caching & Query Optimization
+- **Status**: UNWORKED
+- **Priority**: Medium
+- **Description**: Build a user-friendly import/export interface for bulk data operations, enabling testing and migration workflows. Create apps/dashboard/app/data-tools/page.tsx with tabs: (1) Import Data (CSV/JSON file upload, field mapping wizard, preview, execute import), (2) Export Data (select entities to export, format picker: CSV/JSON/Parquet, download), (3) Migration Tools (export from workspace A, import to workspace B with entity matching/deduplication options). Implement backend: POST /api/v1/data/import accepting multipart form with file + mappings, executing async job, tracking progress. POST /api/v1/data/export with filters returning streamed file. Create packages/semantic-core/src/data-import-export.ts with: (1) parseCSV/parseJSON (detect schema automatically), (2) validateMapping(rows, schema) ensuring field compatibility, (3) transformRows(rows, mapping) converting to SemanticEntity, (4) batchInsert(entities, workspaceId) feeding into indexer. Add file size limits (max 100MB), entity count limits (max 50K per import), and job history tracking. Build import/export job history page showing: status, record count, timestamp, download links for exports, retry button for failed imports. Add 20+ tests covering: CSV parsing, schema detection, entity transformation, error handling (missing fields, type mismatches), and async job orchestration.
+- **Files**:
+  - packages/semantic-core/src/data-import-export.ts
+  - packages/semantic-core/src/__tests__/data-import-export.test.ts
+  - apps/api/migrations/045_add_import_export_jobs.sql
+  - apps/api/src/routes/data-import-export.ts
+  - apps/api/src/__tests__/data-import-export.test.ts
+  - apps/dashboard/app/data-tools/page.tsx
+  - apps/dashboard/components/import-wizard.tsx
+  - apps/dashboard/components/export-configurator.tsx
+  - apps/dashboard/components/job-history-table.tsx
+- **Depends on**: Workspace Data Export & Backup Service, Entity Relationship Indexing
+- **Added**: 2026-06-07
+
+---
+
+## Layer 38: Testing & Developer Experience
+
+### Task: Connector Integration Testing Framework & Test Utilities
+- **Layer**: 38 — Testing & Developer Experience
+- **Status**: UNWORKED
+- **Priority**: Medium
+- **Description**: Build a comprehensive testing framework for connector developers to simplify connector implementation and validation. Create packages/connector-sdk/src/testing/connector-test-harness.ts with ConnectorTestHarness class providing: (1) createTestContext(connectorConfig) setting up mocked API client, test database, and mock data, (2) mockConnectorAPI(responses) setting up MSW handlers per vendor, (3) assertSyncOutput(result, expectedEntities) validating sync generator output matches schema, (4) assertEntityShape(entity) strict validation per connector manifest, (5) timeoutAssertion(operation, maxMs) verifying operation completes within latency SLA. Add test fixtures in packages/connector-sdk/tests/fixtures/ with real API responses for: HubSpot (contacts, companies, deals), Slack (channels, users, messages), Notion (databases, pages). Create a test generator: generateConnectorTest(connectorId) that scaffolds a test file with boilerplate for: connect, sync, healthCheck, error handling. Implement ConnectorTestRunner CLI tool that runs all connector tests and generates a test report (coverage %, pass rate, performance metrics). Add documentation guide at packages/connector-sdk/README.test.md with examples. Include 30+ unit tests validating test harness correctness and 5 reference connector test suites demonstrating best practices.
+- **Files**:
+  - packages/connector-sdk/src/testing/connector-test-harness.ts
+  - packages/connector-sdk/src/testing/test-generator.ts
+  - packages/connector-sdk/src/testing/__tests__/connector-test-harness.test.ts
+  - packages/connector-sdk/tests/fixtures/hubspot-responses.json
+  - packages/connector-sdk/tests/fixtures/slack-responses.json
+  - packages/connector-sdk/tests/fixtures/notion-responses.json
+  - packages/connector-sdk/bin/test-runner.ts
+  - packages/connector-sdk/README.test.md
+  - packages/connector-sdk/examples/example-connector.test.ts
+- **Depends on**: Connector Test Utilities, Comprehensive Webhook Validation & Testing Suite
 - **Added**: 2026-06-07

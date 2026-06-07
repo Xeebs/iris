@@ -11,7 +11,8 @@
     "./errors": "./dist/errors.js",
     "./config": "./dist/config.js",
     "./email-service": "./dist/email-service.js",
-    "./request-context": "./dist/request-context.js"
+    "./request-context": "./dist/request-context.js",
+    "./session-manager": "./dist/session-manager.js"
   },
   "scripts": {
     "build": "tsc --build",
