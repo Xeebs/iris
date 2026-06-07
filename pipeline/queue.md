@@ -1293,7 +1293,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Advanced Entity Deduplication & Fuzzy Matching
 - **Layer**: 26 — Production Operations & Advanced Features
-- **Status**: UNWORKED
+- **Status**: IN_PROGRESS
 - **Priority**: High
 - **Description**: Implement sophisticated cross-connector entity matching to unify duplicate data from multiple sources (e.g., same contact appears in HubSpot and Salesforce under slightly different names/emails). Create packages/semantic-core/src/entity-deduplication.ts with EntityDuplicateMatcher class: (1) build a similarity matrix for entities using multiple signals (name Levenshtein distance, email domain match, phone number match, semantic embedding cosine similarity), (2) apply fuzzy matching rules (e.g., if name_similarity > 0.8 AND email_domain_match, link entities), (3) create canonical_entity_links table mapping duplicate entity IDs to a canonical entity ID, (4) update retrieval engine to return canonical entities and suppress duplicates. Expose POST /api/v1/admin/dedup/analyze to scan for duplicates and return recommendations, and POST /api/v1/admin/dedup/merge/:canonicalId/:duplicateId to merge two entities. Add admin dashboard page at apps/dashboard/app/admin/dedup/page.tsx with duplicate pair inspector and merge workflows. Include unit tests with synthetic duplicate datasets (100 entity pairs with varied similarity profiles) and integration tests. Reference embedding-patterns.md for similarity threshold tuning.
 - **Files**:

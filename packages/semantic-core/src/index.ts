@@ -36,3 +36,5 @@ export type { RecentActivity, SuggestedContext, SuggestionResult } from './proac
 export { generateSuggestions, ProactiveSuggesterService } from './proactive-suggester.js';
 export type { OsiExportOptions, OsiNode, OsiDocument } from './osi-exporter.js';
 export { entityToOsiNode, glossaryTermToOsiNode, metricToOsiNode, exportToOSI } from './osi-exporter.js';
+export type { DuplicateSignals, DuplicatePair, CanonicalLink, DeduplicationReport } from './entity-deduplication.js';
+export { nameSimilarity, emailDomainMatch, computeCompositeScore, EntityDuplicateMatcher } from './entity-deduplication.js';

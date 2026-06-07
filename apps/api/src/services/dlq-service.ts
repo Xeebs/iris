@@ -156,7 +156,7 @@ export class SyncJobDlqService {
         LIMIT ${limitParam}
       `;
 
-      const rows = await this.sql.unsafe(query, params) as DlqEntry[];
+      const rows = await this.sql.unsafe(query, params as Parameters<typeof this.sql.unsafe>[1]) as DlqEntry[];
       const hasMore = rows.length > pageSize;
       return ok({ entries: rows.slice(0, pageSize), hasMore });
     } catch (e) {
