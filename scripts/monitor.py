@@ -24,6 +24,7 @@ from rich.text import Text
 IRIS        = Path(__file__).resolve().parent.parent
 DAEMON_JSON = IRIS / "pipeline" / "daemon.json"
 STATE_JSON  = IRIS / "pipeline" / "state.json"
+USAGE_JSON  = IRIS / "pipeline" / "usage.json"
 QUEUE_MD    = IRIS / "pipeline" / "queue.md"
 CHANGE_MD   = IRIS / "pipeline" / "changelog.md"
 LOG_DIR     = IRIS / "logs"
@@ -280,6 +281,49 @@ def _queue_table(tasks: list[dict]) -> Table:
     return tbl
 
 
+def _budget_panel(daemon: dict) -> Panel:
+    tb = daemon.get("token_budget", {})
+    used  = tb.get("used",  0)
+    limit = tb.get("limit", 0)
+    pct   = tb.get("pct",   0.0)   # already multiplied by 100
+    hours = tb.get("window_hours", 5)
+
+    t = Text()
+
+    if limit == 0:
+        t.append("No budget configured.\n", style="dim")
+        t.append("Set CLAUDE_TOKEN_BUDGET in .env.local\n", style="dim italic")
+        return Panel(t, title="[bold]TOKEN BUDGET[/bold]", border_style="dim")
+
+    # colour thresholds: green < 70%, yellow < 90%, red >= 90%
+    if pct >= 90:
+        bar_style = "bold red"
+        pct_style = "bold red"
+    elif pct >= 70:
+        bar_style = "bold yellow"
+        pct_style = "bold yellow"
+    else:
+        bar_style = "bold green"
+        pct_style = "bold green"
+
+    filled = int(round(pct / 100 * 20))
+    bar    = "█" * filled + "░" * (20 - filled)
+
+    t.append(f"[{bar}]", style=bar_style)
+    t.append(f"  {pct:.1f}%\n", style=pct_style)
+    t.append("\n")
+    t.append("Used      ", style="dim"); t.append(f"{used:,} tokens\n",       style="white")
+    t.append("Limit     ", style="dim"); t.append(f"{limit:,} tokens\n",      style="white")
+    t.append("Remaining ", style="dim"); t.append(f"{limit - used:,} tokens\n", style=pct_style)
+    t.append("Window    ", style="dim"); t.append(f"{hours:.0f}h rolling\n",  style="white")
+
+    if pct >= 95:
+        t.append("\n⚠  Budget paused — waiting for window reset\n", style="bold red")
+
+    border = "red" if pct >= 90 else ("yellow" if pct >= 70 else "green")
+    return Panel(t, title="[bold]TOKEN BUDGET[/bold]", border_style=border)
+
+
 def _log_panel(lines: list[str]) -> Panel:
     t = Text()
     for line in lines:
@@ -312,6 +356,7 @@ def _make_layout() -> Layout:
     layout["left"].split_column(
         Layout(name="daemon",     ratio=2),
         Layout(name="pipeline",   ratio=3),
+        Layout(name="budget",     ratio=2),
         Layout(name="changelog",  ratio=2),
     )
     return layout
@@ -340,6 +385,7 @@ def _update(layout: Layout) -> None:
 
     layout["daemon"].update(_daemon_panel(daemon))
     layout["pipeline"].update(_pipeline_panel(state, tasks))
+    layout["budget"].update(_budget_panel(daemon))
     layout["changelog"].update(_changelog_panel(changelog))
 
     layout["right"].update(Panel(

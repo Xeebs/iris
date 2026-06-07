@@ -62,7 +62,6 @@ describe('checkHealth', () => {
 });
 
 describe('GET /health endpoint', () => {
-  const { checkHealth: realCheck } = await import('../health.js');
 
   it('returns 200 when services are healthy', async () => {
     const { createApp } = await import('../server.js');
@@ -80,7 +79,7 @@ describe('GET /health endpoint', () => {
     const app = new Hono();
     const { checkHealth: mocked } = await import('../health.js');
     app.get('/health', async (c) => {
-      const result = await (mocked as typeof realCheck)(mockSql, mockRedis);
+      const result = await (mocked as typeof checkHealth)(mockSql, mockRedis);
       return c.json(result, result.status === 'ok' ? 200 : 503);
     });
     app.get('/ready', (c) => c.json({ status: 'ready' }, 200));

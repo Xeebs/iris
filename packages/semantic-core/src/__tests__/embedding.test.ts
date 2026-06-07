@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { buildEmbeddingInput, generateEmbeddings, TOKEN_WARNING_THRESHOLD, EMBEDDING_MODEL } from '../embedding.js';
 import type { SemanticEntity } from '@iris/connector-sdk';
-import OpenAI from 'openai';
+import { AzureOpenAI } from 'openai';
 
 vi.mock('openai');
 
@@ -83,12 +83,19 @@ describe('generateEmbeddings', () => {
   const mockCreate = vi.fn();
 
   beforeEach(() => {
-    vi.mocked(OpenAI).mockImplementation(() => ({
+    vi.stubEnv('AZURE_OPENAI_ENDPOINT', 'https://test.openai.azure.com/');
+    vi.stubEnv('AZURE_OPENAI_API_KEY', 'test-key');
+    vi.stubEnv('AZURE_OPENAI_API_VERSION', '2023-05-15');
+    vi.stubEnv('AZURE_OPENAI_SMALL_DEPLOYMENT', 'text-embedding-3-small');
+    vi.stubEnv('AZURE_OPENAI_LARGE_DEPLOYMENT', 'text-embedding-3-large');
+
+    vi.mocked(AzureOpenAI).mockImplementation(() => ({
       embeddings: { create: mockCreate },
-    }) as unknown as OpenAI);
+    }) as unknown as AzureOpenAI);
   });
 
   afterEach(() => {
+    vi.unstubAllEnvs();
     vi.clearAllMocks();
   });
 
@@ -98,16 +105,16 @@ describe('generateEmbeddings', () => {
     expect(mockCreate).not.toHaveBeenCalled();
   });
 
-  it('calls OpenAI once for a small batch', async () => {
+  it('calls Azure OpenAI once for a small batch', async () => {
     mockCreate.mockResolvedValue(makeEmbeddingResponse([0]));
-    const results = await generateEmbeddings([contactEntity], { apiKey: 'test-key' });
+    const results = await generateEmbeddings([contactEntity]);
     expect(mockCreate).toHaveBeenCalledOnce();
     expect(results).toHaveLength(1);
     expect(results[0]?.entityId).toBe('hubspot:contact:1');
     expect(results[0]?.vector).toHaveLength(1536);
   });
 
-  it('calls OpenAI multiple times for batches > 100', async () => {
+  it('calls Azure OpenAI multiple times for batches > 100', async () => {
     const entities = Array.from({ length: 150 }, (_, i) => ({
       ...contactEntity,
       id: `hubspot:contact:${i}`,
@@ -116,14 +123,21 @@ describe('generateEmbeddings', () => {
       .mockResolvedValueOnce(makeEmbeddingResponse(Array.from({ length: 100 }, (_, i) => i)))
       .mockResolvedValueOnce(makeEmbeddingResponse(Array.from({ length: 50 }, (_, i) => i)));
 
-    const results = await generateEmbeddings(entities, { apiKey: 'test-key' });
+    const results = await generateEmbeddings(entities);
     expect(mockCreate).toHaveBeenCalledTimes(2);
     expect(results).toHaveLength(150);
   });
 
-  it('throws IndexerError when OpenAI call fails', async () => {
+  it('throws IndexerError when Azure OpenAI call fails', async () => {
     mockCreate.mockRejectedValue(new Error('API unavailable'));
-    await expect(generateEmbeddings([contactEntity], { apiKey: 'test-key' })).rejects.toMatchObject({
+    await expect(generateEmbeddings([contactEntity])).rejects.toMatchObject({
+      code: 'INDEXER_ERROR',
+    });
+  });
+
+  it('throws IndexerError when Azure env vars are missing', async () => {
+    vi.unstubAllEnvs();
+    await expect(generateEmbeddings([contactEntity])).rejects.toMatchObject({
       code: 'INDEXER_ERROR',
     });
   });

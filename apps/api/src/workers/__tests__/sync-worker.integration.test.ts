@@ -31,11 +31,24 @@ vi.mock('bullmq', () => {
     };
   });
 
-  return { Worker };
+  const Queue = vi.fn().mockImplementation(() => ({
+    add: vi.fn().mockResolvedValue({ id: 'mock-job-id' }),
+    close: vi.fn(),
+  }));
+
+  return { Worker, Queue };
 });
 
 vi.mock('@iris/semantic-core/sync-events', () => ({
   emitSyncEvent: vi.fn(),
+}));
+
+vi.mock('../../services/dlq-service.js', () => ({
+  SyncJobDlqService: vi.fn().mockImplementation(() => ({
+    archive: vi.fn().mockResolvedValue({ isOk: () => true }),
+    listJobs: vi.fn(),
+    retryJob: vi.fn(),
+  })),
 }));
 
 vi.mock('@iris/semantic-core', async (importOriginal) => {

@@ -2,8 +2,9 @@ import { Worker } from 'bullmq';
 import type { Job } from 'bullmq';
 
 import { logger } from '@iris/core/logger';
-import { SYNC_QUEUE_NAME } from '@iris/queue';
+import { SYNC_QUEUE_NAME, SyncJobQueue } from '@iris/queue';
 import type { SyncJobData } from '@iris/queue';
+import { SyncJobDlqService } from '../services/dlq-service.js';
 import { registry } from '@iris/connector-sdk';
 import { indexEntities } from '@iris/semantic-core';
 import { emitSyncEvent } from '@iris/semantic-core/sync-events';
@@ -39,6 +40,8 @@ export function createSyncWorker(
   openAiApiKey: string,
   redisUrl: string,
 ): Worker<SyncJobData> {
+  const syncQueue = new SyncJobQueue(redisUrl);
+  const dlqService = new SyncJobDlqService(sql, syncQueue);
   const connectorService = new ConnectorService(sql);
   const connection = parseRedisUrl(redisUrl);
 
@@ -132,7 +135,26 @@ export function createSyncWorker(
   });
 
   worker.on('failed', (job: Job<SyncJobData> | undefined, workerErr: Error) => {
-    log.error('Sync job failed permanently', { jobId: job?.id, error: workerErr });
+    if (!job) return;
+    const maxAttempts = (job.opts.attempts ?? 1);
+    const isExhausted = job.attemptsMade >= maxAttempts;
+    if (isExhausted) {
+      log.error('Sync job exhausted all retries — archiving to DLQ', {
+        jobId: job.id,
+        attempts: job.attemptsMade,
+        error: workerErr.message,
+      });
+      dlqService.archive(job.id!, job.data, workerErr, job.attemptsMade).catch((archiveErr) => {
+        log.error('Failed to archive exhausted job to DLQ', { jobId: job.id, error: archiveErr });
+      });
+    } else {
+      log.warn('Sync job failed, will retry', {
+        jobId: job.id,
+        attempt: job.attemptsMade,
+        maxAttempts,
+        error: workerErr.message,
+      });
+    }
   });
 
   worker.on('error', (workerErr: Error) => {

@@ -2,8 +2,9 @@
 """Iris build pipeline daemon.
 
 Runs the Claude build pipeline in a continuous loop. Only pauses when:
+  - Token budget >= 95% of configured limit   →  sleeps until window resets
   - The Claude API returns a rate-limit error  →  sleeps 1 hour
-  - The task queue is exhausted               →  sleeps 2 hours then researches new tasks
+  - The task queue is exhausted               →  sleeps 1 hour then researches new tasks
   - Unexpected Claude exit                    →  retries after 2 minutes
 """
 
@@ -12,22 +13,31 @@ import os
 import signal
 import subprocess
 import sys
+import threading
 import time
 from datetime import datetime, timezone
 from pathlib import Path
 
-IRIS = Path(__file__).resolve().parent.parent
+IRIS        = Path(__file__).resolve().parent.parent
 STATE_FILE  = IRIS / "pipeline" / "state.json"
 DAEMON_FILE = IRIS / "pipeline" / "daemon.json"
+USAGE_FILE  = IRIS / "pipeline" / "usage.json"
 LOG_DIR     = IRIS / "logs"
 CLAUDE      = Path.home() / ".local" / "bin" / "claude"
 ENV_FILE    = IRIS / ".env"
 
-SLEEP_RATE_LIMITED  = 3600  # 1 hour
-SLEEP_QUEUE_EMPTY   = 3600  # 1 hour — matches heartbeat cadence; researcher adds new tasks
-SLEEP_UNEXPECTED    = 120   # 2 min retry on unexpected exit
+SLEEP_RATE_LIMITED  = 3600   # 1 hour
+SLEEP_QUEUE_EMPTY   = 3600   # 1 hour
+SLEEP_UNEXPECTED    = 120    # 2 min
 
-PROMPT = """\
+# ── token budget ─────────────────────────────────────────────────────────────
+# Set CLAUDE_TOKEN_BUDGET in .env.local to match your plan's per-window limit.
+# Set CLAUDE_BUDGET_WINDOW_HOURS to match the rate-limit reset window (default: 5h).
+BUDGET_LIMIT        = int(float(os.environ.get("CLAUDE_TOKEN_BUDGET", "2000000")))
+BUDGET_WINDOW_HOURS = float(os.environ.get("CLAUDE_BUDGET_WINDOW_HOURS", "5"))
+BUDGET_THRESHOLD    = 0.95   # stop at 95%
+
+BASE_PROMPT = """\
 Run the Iris build pipeline as defined in CLAUDE.md. This is a wake-up trigger \
 — resume any in-flight work or start fresh if idle.
 
@@ -37,10 +47,13 @@ Rules:
 - After committing a task, immediately pick the next UNWORKED High task and continue — do NOT stop
 - Run task research (spawn the task-researcher subagent) whenever fewer than 3 UNWORKED items remain — \
 no date restriction; the researcher will generate the next batch and update last_research in state
-- Only stop if: (a) the Claude API returns a rate-limit error, or (b) the queue has no UNWORKED \
-High or Medium tasks left AND task research produced 0 new tasks
+- Only stop if: (a) the Claude API returns a rate-limit error, (b) the queue has no UNWORKED \
+High or Medium tasks left AND task research produced 0 new tasks, or (c) the token budget \
+is at or above 95% of the session limit (see TOKEN BUDGET below)
 - On rate-limit: write rate_limit_hit=true and current phase/task to pipeline/state.json, then exit
 - On queue exhausted after research: write current_phase=IDLE to pipeline/state.json, then exit
+- On budget threshold reached: write current phase/task to pipeline/state.json, then exit cleanly \
+(do NOT start a new task if you estimate it cannot complete within the remaining budget)
 - Write pipeline/state.json after every phase transition so a crash is recoverable
 
 Do not treat this as a one-task-per-invocation boundary. Drive all work forward until genuinely blocked.\
@@ -51,6 +64,76 @@ _wake_early  = False
 _current_proc: subprocess.Popen | None = None
 _started_at  = datetime.now(timezone.utc).isoformat()
 
+# shared token counter updated by the stdout-reader thread
+_session_tokens_lock   = threading.Lock()
+_session_input_tokens  = 0
+_session_output_tokens = 0
+_budget_kill_triggered = False
+
+
+# ── usage file ────────────────────────────────────────────────────────────────
+
+def read_usage() -> dict:
+    try:
+        return json.loads(USAGE_FILE.read_text())
+    except Exception:
+        return {"sessions": []}
+
+
+def write_usage(usage: dict) -> None:
+    tmp = USAGE_FILE.with_suffix(".tmp")
+    tmp.write_text(json.dumps(usage, indent=2))
+    tmp.replace(USAGE_FILE)
+
+
+def get_window_tokens(usage: dict) -> int:
+    """Sum tokens from sessions that fall inside the current budget window."""
+    cutoff = time.time() - (BUDGET_WINDOW_HOURS * 3600)
+    return sum(
+        s.get("input_tokens", 0) + s.get("output_tokens", 0)
+        for s in usage.get("sessions", [])
+        if s.get("timestamp", 0) > cutoff
+    )
+
+
+def record_session(input_tokens: int, output_tokens: int) -> None:
+    usage    = read_usage()
+    sessions = usage.get("sessions", [])
+    sessions.append({
+        "timestamp":     time.time(),
+        "input_tokens":  input_tokens,
+        "output_tokens": output_tokens,
+    })
+    # Prune entries older than 2× the window
+    cutoff   = time.time() - (BUDGET_WINDOW_HOURS * 3600 * 2)
+    sessions = [s for s in sessions if s.get("timestamp", 0) > cutoff]
+    usage["sessions"] = sessions
+    write_usage(usage)
+
+
+def budget_status() -> tuple[int, int, float]:
+    """Return (used_tokens, limit, pct_used) for the current window."""
+    used = get_window_tokens(read_usage())
+    pct  = used / BUDGET_LIMIT if BUDGET_LIMIT > 0 else 0.0
+    return used, BUDGET_LIMIT, pct
+
+
+def is_near_budget() -> bool:
+    _, _, pct = budget_status()
+    return pct >= BUDGET_THRESHOLD
+
+
+def seconds_until_window_resets() -> float:
+    """Seconds until the oldest in-window session falls out of scope."""
+    usage     = read_usage()
+    cutoff    = time.time() - (BUDGET_WINDOW_HOURS * 3600)
+    in_window = [s for s in usage.get("sessions", []) if s.get("timestamp", 0) > cutoff]
+    if not in_window:
+        return 60  # window already clear
+    oldest    = min(s["timestamp"] for s in in_window)
+    resets_at = oldest + (BUDGET_WINDOW_HOURS * 3600)
+    return max(60.0, resets_at - time.time())
+
 
 # ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -59,6 +142,7 @@ def _now_iso() -> str:
 
 
 def write_daemon(status: str, message: str, sleep_until: str | None = None) -> None:
+    used, limit, pct = budget_status()
     payload = {
         "pid":         os.getpid(),
         "status":      status,
@@ -66,6 +150,12 @@ def write_daemon(status: str, message: str, sleep_until: str | None = None) -> N
         "started_at":  _started_at,
         "updated_at":  _now_iso(),
         "sleep_until": sleep_until,
+        "token_budget": {
+            "used":         used,
+            "limit":        limit,
+            "pct":          round(pct * 100, 1),
+            "window_hours": BUDGET_WINDOW_HOURS,
+        },
     }
     tmp = DAEMON_FILE.with_suffix(".tmp")
     tmp.write_text(json.dumps(payload, indent=2))
@@ -80,14 +170,15 @@ def read_state() -> dict:
 
 
 def load_env() -> None:
-    if not ENV_FILE.exists():
-        return
-    for raw in ENV_FILE.read_text().splitlines():
-        line = raw.strip()
-        if not line or line.startswith("#") or "=" not in line:
+    for env_path in [ENV_FILE, IRIS / ".env.local"]:
+        if not env_path.exists():
             continue
-        k, _, v = line.partition("=")
-        os.environ.setdefault(k.strip(), v.strip())
+        for raw in env_path.read_text().splitlines():
+            line = raw.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            k, _, v = line.partition("=")
+            os.environ.setdefault(k.strip(), v.strip())
 
 
 def wake_iso(seconds_from_now: float) -> str:
@@ -104,6 +195,103 @@ def interruptible_sleep(seconds: float) -> None:
         time.sleep(1)
 
 
+def build_prompt() -> str:
+    used, limit, pct = budget_status()
+    remaining = limit - used
+    budget_line = (
+        f"\n\nTOKEN BUDGET: {used:,} / {limit:,} tokens used in the last "
+        f"{BUDGET_WINDOW_HOURS:.0f}h ({pct * 100:.1f}%). "
+        f"Hard stop before {BUDGET_THRESHOLD * 100:.0f}% — approximately {remaining:,} tokens remain. "
+        f"Do not start a new task if you estimate it cannot complete within the remaining budget."
+    )
+    return BASE_PROMPT + budget_line
+
+
+# ── stream-json stdout reader ─────────────────────────────────────────────────
+
+def _extract_text(content: list) -> str:
+    """Pull plaintext from a Claude message content array."""
+    parts = []
+    for block in content:
+        if isinstance(block, dict) and block.get("type") == "text":
+            parts.append(block.get("text", ""))
+    return "\n".join(p for p in parts if p)
+
+
+def _stdout_reader(proc: subprocess.Popen, log_file_path: Path) -> None:
+    """
+    Read stream-json stdout line by line.
+    - Writes human-readable output to the log file alongside raw JSON-L.
+    - Updates shared session token counters.
+    - Triggers a SIGTERM if the combined (historical + session) budget is hit.
+    """
+    global _session_input_tokens, _session_output_tokens, _budget_kill_triggered
+
+    with open(log_file_path, "a", buffering=1) as lf:
+        for raw_line in proc.stdout:  # type: ignore[union-attr]
+            lf.write(raw_line)
+
+            line = raw_line.strip()
+            if not line:
+                continue
+
+            try:
+                event = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+
+            etype = event.get("type", "")
+
+            if etype == "assistant":
+                msg     = event.get("message", {})
+                content = msg.get("content", [])
+                usage   = msg.get("usage", {})
+
+                text = _extract_text(content)
+                if text:
+                    lf.write(f"[claude] {text[:500]}\n")
+
+                with _session_tokens_lock:
+                    _session_output_tokens += usage.get("output_tokens", 0)
+                    # input_tokens grows with context — keep the running max
+                    _session_input_tokens = max(
+                        _session_input_tokens,
+                        usage.get("input_tokens", 0),
+                    )
+
+            elif etype == "result":
+                usage = event.get("usage", {})
+                cost  = event.get("cost_usd", 0)
+                dur   = event.get("duration_ms", 0)
+                with _session_tokens_lock:
+                    # Authoritative totals override running estimates
+                    _session_input_tokens  = usage.get("input_tokens",  _session_input_tokens)
+                    _session_output_tokens = usage.get("output_tokens", _session_output_tokens)
+                    sess_in  = _session_input_tokens
+                    sess_out = _session_output_tokens
+                lf.write(
+                    f"[budget] Session total — in: {sess_in:,}  out: {sess_out:,}  "
+                    f"cost: ${cost:.4f}  dur: {dur / 1000:.1f}s\n"
+                )
+
+            # Mid-session budget check after every event
+            with _session_tokens_lock:
+                session_total = _session_input_tokens + _session_output_tokens
+
+            historical = get_window_tokens(read_usage())
+            combined   = historical + session_total
+            pct        = combined / BUDGET_LIMIT if BUDGET_LIMIT > 0 else 0.0
+
+            if pct >= BUDGET_THRESHOLD and not _budget_kill_triggered:
+                _budget_kill_triggered = True
+                lf.write(
+                    f"\n[budget] ⚠  {pct * 100:.1f}% of {BUDGET_LIMIT:,}-token window used "
+                    f"({combined:,} tokens). Sending SIGTERM to Claude.\n"
+                )
+                if proc.poll() is None:
+                    proc.terminate()
+
+
 # ── signal handling ───────────────────────────────────────────────────────────
 
 def _on_signal(signum, frame) -> None:
@@ -113,6 +301,7 @@ def _on_signal(signum, frame) -> None:
         _current_proc.terminate()
     write_daemon("stopped", "Daemon stopped by signal")
     sys.exit(0)
+
 
 def _on_sigusr1(signum, frame) -> None:
     global _wake_early
@@ -127,50 +316,104 @@ signal.signal(signal.SIGUSR1, _on_sigusr1)
 # ── main loop ─────────────────────────────────────────────────────────────────
 
 def main() -> None:
-    global _current_proc
+    global _current_proc, _session_input_tokens, _session_output_tokens, _budget_kill_triggered
+    global BUDGET_LIMIT, BUDGET_WINDOW_HOURS
 
     LOG_DIR.mkdir(parents=True, exist_ok=True)
     load_env()
+
+    # Re-read budget config now that env is loaded
+    BUDGET_LIMIT        = int(float(os.environ.get("CLAUDE_TOKEN_BUDGET",        str(BUDGET_LIMIT))))
+    BUDGET_WINDOW_HOURS = float(os.environ.get("CLAUDE_BUDGET_WINDOW_HOURS", str(BUDGET_WINDOW_HOURS)))
+
     write_daemon("starting", "Daemon initializing")
 
     while _running:
+        # ── pre-flight budget check ───────────────────────────────────────────
+        if is_near_budget():
+            wait_sec       = seconds_until_window_resets()
+            used, limit, pct = budget_status()
+            msg = (
+                f"Token budget at {pct * 100:.1f}% ({used:,}/{limit:,}) — "
+                f"sleeping {wait_sec / 3600:.1f}h until window resets"
+            )
+            write_daemon("sleeping", msg, wake_iso(wait_sec))
+            interruptible_sleep(wait_sec)
+            continue
+
         log_file = LOG_DIR / f"daemon-{datetime.now().strftime('%Y%m%d')}.log"
         write_daemon("running", "Pipeline running")
 
-        with open(log_file, "a", buffering=1) as lf:
-            sep = f"\n[{datetime.now().isoformat()}] === Pipeline run starting ===\n"
-            lf.write(sep)
+        with open(log_file, "a") as lf:
+            lf.write(f"\n[{datetime.now().isoformat()}] === Pipeline run starting ===\n")
 
-            _current_proc = subprocess.Popen(
-                [str(CLAUDE), "--dangerously-skip-permissions", "-p", PROMPT],
-                cwd=str(IRIS),
-                stdout=lf,
-                stderr=subprocess.STDOUT,
-                env=os.environ.copy(),
-            )
-            returncode = _current_proc.wait()
-            _current_proc = None
+        # Reset per-session state
+        _session_input_tokens  = 0
+        _session_output_tokens = 0
+        _budget_kill_triggered = False
 
+        _current_proc = subprocess.Popen(
+            [
+                str(CLAUDE),
+                "--dangerously-skip-permissions",
+                "--output-format", "stream-json",
+                "-p", build_prompt(),
+            ],
+            cwd=str(IRIS),
+            stdout=subprocess.PIPE,
+            stderr=open(log_file, "a"),
+            env=os.environ.copy(),
+            text=True,
+            bufsize=1,
+        )
+
+        reader = threading.Thread(
+            target=_stdout_reader,
+            args=(_current_proc, log_file),
+            daemon=True,
+        )
+        reader.start()
+        returncode = _current_proc.wait()
+        reader.join(timeout=5)
+        _current_proc = None
+
+        with open(log_file, "a") as lf:
             lf.write(f"[{datetime.now().isoformat()}] === Pipeline run ended (exit {returncode}) ===\n")
+
+        # Persist this session's token usage
+        with _session_tokens_lock:
+            sess_in  = _session_input_tokens
+            sess_out = _session_output_tokens
+        if sess_in + sess_out > 0:
+            record_session(sess_in, sess_out)
 
         if not _running:
             break
 
-        state = read_state()
+        # ── post-run decision ─────────────────────────────────────────────────
+        state        = read_state()
         rate_limited = state.get("rate_limit_hit", False)
         phase        = state.get("current_phase", "")
+        budget_hit   = _budget_kill_triggered or is_near_budget()
 
-        if rate_limited:
-            sleep_sec = SLEEP_RATE_LIMITED
-            write_daemon("sleeping", "Rate limited — resuming in 1 hour", wake_iso(sleep_sec))
+        if budget_hit:
+            wait_sec         = seconds_until_window_resets()
+            used, limit, pct = budget_status()
+            write_daemon(
+                "sleeping",
+                f"Token budget at {pct * 100:.1f}% — sleeping {wait_sec / 3600:.1f}h until window resets",
+                wake_iso(wait_sec),
+            )
+            interruptible_sleep(wait_sec)
+        elif rate_limited:
+            write_daemon("sleeping", "Rate limited — resuming in 1 hour", wake_iso(SLEEP_RATE_LIMITED))
+            interruptible_sleep(SLEEP_RATE_LIMITED)
         elif phase == "IDLE":
-            sleep_sec = SLEEP_QUEUE_EMPTY
-            write_daemon("sleeping", "Queue exhausted — resuming in 1 hour for task research", wake_iso(sleep_sec))
+            write_daemon("sleeping", "Queue exhausted — resuming in 1 hour for task research", wake_iso(SLEEP_QUEUE_EMPTY))
+            interruptible_sleep(SLEEP_QUEUE_EMPTY)
         else:
-            sleep_sec = SLEEP_UNEXPECTED
-            write_daemon("sleeping", f"Unexpected exit (code {returncode}) — retrying in 2 minutes", wake_iso(sleep_sec))
-
-        interruptible_sleep(sleep_sec)
+            write_daemon("sleeping", f"Unexpected exit (code {returncode}) — retrying in 2 minutes", wake_iso(SLEEP_UNEXPECTED))
+            interruptible_sleep(SLEEP_UNEXPECTED)
 
     write_daemon("stopped", "Daemon loop exited cleanly")
 

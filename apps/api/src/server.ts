@@ -26,6 +26,7 @@ import { createWorkspaceConfigRoutes } from './routes/workspace-config.js';
 import { createIndexOptimizationRoutes } from './routes/index-optimization.js';
 import { createWorkflowTemplateRoutes } from './routes/workflow-templates.js';
 import { createWorkspaceBenchmarkingRoutes } from './routes/workspace-benchmarking.js';
+import { createAdminDlqRoutes } from './routes/admin-dlq.js';
 import { openApiSpec } from './openapi.js';
 
 export { createApp };
@@ -37,6 +38,7 @@ function createApp(
   sql: ReturnType<typeof postgres>,
   openAiKey: string,
   redis?: InstanceType<typeof Redis>,
+  redisUrl?: string,
 ): Hono {
   const app = new Hono();
 
@@ -113,6 +115,10 @@ function createApp(
   authed.route('/workflow-templates', createWorkflowTemplateRoutes(sql));
   authed.route('/workspace', createWorkspaceBenchmarkingRoutes(sql));
 
+  if (redisUrl) {
+    authed.route('/admin/dlq', createAdminDlqRoutes(sql, redisUrl));
+  }
+
   // Webhook routes: inbound (unauthenticated) + events status (authenticated)
   app.route('/api/v1/webhooks', createWebhookRoutes(sql));
   authed.route('/webhooks', createWebhookEventsRoutes(sql));
@@ -146,7 +152,7 @@ async function main(): Promise<void> {
   await vectorStore.initialize();
   const redis = new Redis(redisUrl);
 
-  const app = createApp(vectorStore, sql, openAiKey, redis);
+  const app = createApp(vectorStore, sql, openAiKey, redis, redisUrl);
 
   serve({ fetch: app.fetch, port }, (info) => {
     log.info('Iris API server started', { port: info.port });

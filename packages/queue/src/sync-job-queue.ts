@@ -4,6 +4,7 @@ import type { Result } from 'neverthrow';
 
 import { logger } from '@iris/core/logger';
 
+
 const log = logger.child({ service: 'sync-job-queue' });
 
 export const SYNC_QUEUE_NAME = 'connector-sync';
@@ -44,9 +45,9 @@ export class SyncJobQueue {
       connection: parseRedisUrl(redisUrl),
       defaultJobOptions: {
         attempts: 3,
-        backoff: { type: 'exponential', delay: 2000 },
+        backoff: { type: 'exponential', delay: 1000 },
         removeOnComplete: 100,
-        removeOnFail: 200,
+        removeOnFail: false,
       },
     });
   }

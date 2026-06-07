@@ -1,15 +1,48 @@
-import OpenAI from 'openai';
+import { AzureOpenAI } from 'openai';
 import type { SemanticEntity, AttributeValue } from '@iris/connector-sdk';
 import { logger } from '@iris/core/logger';
 import { IndexerError } from '@iris/core/errors';
 
-export const EMBEDDING_MODEL = 'text-embedding-3-small' as const;
-export const EMBEDDING_DIMENSIONS = 1536;
+export const EMBEDDING_MODEL_SMALL = 'text-embedding-3-small' as const;
+export const EMBEDDING_MODEL_LARGE = 'text-embedding-3-large' as const;
+export type EmbeddingModel = typeof EMBEDDING_MODEL_SMALL | typeof EMBEDDING_MODEL_LARGE;
+
+export const EMBEDDING_DIMENSIONS: Record<EmbeddingModel, number> = {
+  'text-embedding-3-small': 1536,
+  'text-embedding-3-large': 3072,
+};
+
+/** @deprecated Use EMBEDDING_MODEL_SMALL */
+export const EMBEDDING_MODEL = EMBEDDING_MODEL_SMALL;
+/** @deprecated Use EMBEDDING_DIMENSIONS[model] */
+export const EMBEDDING_DIMENSIONS_DEFAULT = 1536;
+
 export const MAX_INPUT_TOKENS = 8191;
 export const BATCH_SIZE = 100;
 export const TOKEN_WARNING_THRESHOLD = 512;
 
 const log = logger.child({ service: 'embedding' });
+
+function resolveDeploymentName(model: EmbeddingModel): string {
+  if (model === EMBEDDING_MODEL_LARGE) {
+    return process.env['AZURE_OPENAI_LARGE_DEPLOYMENT'] ?? 'text-embedding-3-large';
+  }
+  return process.env['AZURE_OPENAI_SMALL_DEPLOYMENT'] ?? 'text-embedding-3-small';
+}
+
+function buildAzureClient(deploymentName: string): AzureOpenAI {
+  const endpoint = process.env['AZURE_OPENAI_ENDPOINT'];
+  const apiKey = process.env['AZURE_OPENAI_API_KEY'];
+  const apiVersion = process.env['AZURE_OPENAI_API_VERSION'] ?? '2023-05-15';
+
+  if (!endpoint || !apiKey) {
+    throw new IndexerError(
+      'AZURE_OPENAI_ENDPOINT and AZURE_OPENAI_API_KEY must be set in environment',
+    );
+  }
+
+  return new AzureOpenAI({ endpoint, apiKey, apiVersion, deployment: deploymentName });
+}
 
 /**
  * Build a semantic embedding input string from a SemanticEntity.
@@ -48,14 +81,13 @@ export interface EmbeddingResult {
 }
 
 export interface EmbeddingServiceOptions {
-  apiKey?: string;
-  model?: typeof EMBEDDING_MODEL | 'text-embedding-3-large';
+  model?: EmbeddingModel;
   piiFields?: Set<string>;
 }
 
 /**
- * Generate embeddings for a batch of SemanticEntity objects.
- * Calls OpenAI in batches of BATCH_SIZE (100) per embedding-patterns.md.
+ * Generate embeddings for a batch of SemanticEntity objects via Azure AI Foundry.
+ * Calls Azure OpenAI in batches of BATCH_SIZE (100) per embedding-patterns.md.
  *
  * @param entities - Entities to embed
  * @param options  - Model and PII config
@@ -67,9 +99,10 @@ export async function generateEmbeddings(
 ): Promise<EmbeddingResult[]> {
   if (entities.length === 0) return [];
 
-  const model = options.model ?? EMBEDDING_MODEL;
+  const model = options.model ?? EMBEDDING_MODEL_SMALL;
   const piiFields = options.piiFields ?? new Set<string>();
-  const client = new OpenAI({ apiKey: options.apiKey ?? process.env['OPENAI_API_KEY'] });
+  const deploymentName = resolveDeploymentName(model);
+  const client = buildAzureClient(deploymentName);
   const results: EmbeddingResult[] = [];
 
   for (let i = 0; i < entities.length; i += BATCH_SIZE) {
@@ -79,10 +112,11 @@ export async function generateEmbeddings(
     const start = Date.now();
     let response;
     try {
-      response = await client.embeddings.create({ model, input: inputs });
+      // Azure OpenAI: model field must match the deployment name
+      response = await client.embeddings.create({ model: deploymentName, input: inputs });
     } catch (e) {
       throw new IndexerError(
-        `Embedding API call failed: ${e instanceof Error ? e.message : String(e)}`,
+        `Azure OpenAI embedding call failed (deployment: ${deploymentName}): ${e instanceof Error ? e.message : String(e)}`,
         e,
       );
     }
@@ -95,6 +129,7 @@ export async function generateEmbeddings(
       totalTokens,
       latencyMs,
       model,
+      deployment: deploymentName,
     });
 
     for (const item of response.data) {

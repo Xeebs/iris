@@ -1,4 +1,4 @@
-import OpenAI from 'openai';
+import { AzureOpenAI } from 'openai';
 import type { SemanticEntity } from '@iris/connector-sdk';
 import { logger } from '@iris/core/logger';
 import { IndexerError } from '@iris/core/errors';
@@ -74,7 +74,7 @@ export async function retrieveContext(
   const opts = { ...DEFAULT_RETRIEVAL_OPTIONS, ...options };
 
   const embeddingStart = Date.now();
-  const queryVector = await embedQuery(query, opts.openAiApiKey);
+  const queryVector = await embedQuery(query);
   const queryEmbeddingMs = Date.now() - embeddingStart;
 
   // Auto-detect entity types from the query when caller hasn't specified them
@@ -124,11 +124,20 @@ export async function retrieveContext(
   };
 }
 
-async function embedQuery(query: string, apiKey?: string): Promise<number[]> {
-  const client = new OpenAI({ apiKey: apiKey ?? process.env['OPENAI_API_KEY'] });
+async function embedQuery(query: string): Promise<number[]> {
+  const endpoint = process.env['AZURE_OPENAI_ENDPOINT'];
+  const apiKey = process.env['AZURE_OPENAI_API_KEY'];
+  const apiVersion = process.env['AZURE_OPENAI_API_VERSION'] ?? '2023-05-15';
+  const deployment = process.env['AZURE_OPENAI_SMALL_DEPLOYMENT'] ?? 'text-embedding-3-small';
+
+  if (!endpoint || !apiKey) {
+    throw new IndexerError('AZURE_OPENAI_ENDPOINT and AZURE_OPENAI_API_KEY must be set');
+  }
+
+  const client = new AzureOpenAI({ endpoint, apiKey, apiVersion, deployment });
   let response;
   try {
-    response = await client.embeddings.create({ model: EMBEDDING_MODEL, input: query });
+    response = await client.embeddings.create({ model: deployment, input: query });
   } catch (e) {
     throw new IndexerError(
       `Failed to embed query: ${e instanceof Error ? e.message : String(e)}`,
