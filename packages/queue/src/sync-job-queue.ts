@@ -91,10 +91,78 @@ export class SyncJobQueue {
     }
   }
 
+  /**
+   * Retrieve queue depth and job counts for monitoring.
+   * @returns Active, waiting, completed, and failed job counts
+   */
+  async getQueueStats(): Promise<Result<SyncQueueStats, Error>> {
+    try {
+      const [active, waiting, completed, failed, delayed] = await Promise.all([
+        this.queue.getActiveCount(),
+        this.queue.getWaitingCount(),
+        this.queue.getCompletedCount(),
+        this.queue.getFailedCount(),
+        this.queue.getDelayedCount(),
+      ]);
+      return ok({ active, waiting, completed, failed, delayed });
+    } catch (e) {
+      log.error('Failed to get queue stats', { error: e });
+      return err(e instanceof Error ? e : new Error(String(e)));
+    }
+  }
+
+  /**
+   * Get recent active and waiting jobs for the monitoring view.
+   * @param limit - Max jobs to return (default 20)
+   */
+  async getActiveJobs(limit = 20): Promise<Result<ActiveJobSummary[], Error>> {
+    try {
+      const [active, waiting] = await Promise.all([
+        this.queue.getActive(0, limit),
+        this.queue.getWaiting(0, limit),
+      ]);
+      type AnyJob = { id?: string; data: SyncJobData; progress: unknown; timestamp?: number };
+      const toSummary = (j: AnyJob, state: 'active' | 'waiting'): ActiveJobSummary => ({
+        jobId: j.id ?? '',
+        connectorInstanceId: j.data.connectorInstanceId,
+        workspaceId: j.data.workspaceId,
+        triggeredAt: j.data.triggeredAt,
+        state,
+        progress: typeof j.progress === 'number' ? j.progress : 0,
+        elapsedMs: j.timestamp ? Date.now() - j.timestamp : 0,
+      });
+      return ok([
+        ...active.slice(0, limit).map((j) => toSummary(j as AnyJob, 'active')),
+        ...waiting.slice(0, Math.max(0, limit - active.length)).map((j) => toSummary(j as AnyJob, 'waiting')),
+      ]);
+    } catch (e) {
+      log.error('Failed to get active jobs', { error: e });
+      return err(e instanceof Error ? e : new Error(String(e)));
+    }
+  }
+
   async close(): Promise<void> {
     await this.queue.close();
   }
 }
+
+export type SyncQueueStats = {
+  active: number;
+  waiting: number;
+  completed: number;
+  failed: number;
+  delayed: number;
+};
+
+export type ActiveJobSummary = {
+  jobId: string;
+  connectorInstanceId: string;
+  workspaceId: string;
+  triggeredAt: string;
+  state: 'active' | 'waiting';
+  progress: number;
+  elapsedMs: number;
+};
 
 // ─── Performance Tracking ─────────────────────────────────────────────────────
 

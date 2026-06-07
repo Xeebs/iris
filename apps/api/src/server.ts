@@ -39,6 +39,7 @@ import { createAdminConsoleRoutes } from './routes/admin-console.js';
 import { createAlertsRoutes } from './routes/alerts.js';
 import { createAdminQueryAnalyticsRoutes } from './routes/admin-query-analytics.js';
 import { createEntityLinkingRoutes } from './routes/entity-linking.js';
+import { createAdminSyncMonitoringRoutes } from './routes/admin-sync-monitoring.js';
 import { openApiSpec } from './openapi.js';
 
 export { createApp };
@@ -142,6 +143,10 @@ function createApp(
   authed.route('/workspace/alerts', createAlertsRoutes(sql));
   authed.route('/admin/analytics', createAdminQueryAnalyticsRoutes(sql));
   authed.route('/admin/entity-linking', createEntityLinkingRoutes(sql));
+
+  if (redisUrl) {
+    authed.route('/admin/sync-monitoring', createAdminSyncMonitoringRoutes(sql, redisUrl));
+  }
 
   // Webhook routes: inbound (unauthenticated) + events status (authenticated)
   app.route('/api/v1/webhooks', createWebhookRoutes(sql));
