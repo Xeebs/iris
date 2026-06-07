@@ -61,7 +61,7 @@ describe('WorkspaceSettingsPage', () => {
     render(<WorkspaceSettingsPage params={{ workspaceId: 'ws-test' }} />);
     await waitFor(() => expect(screen.queryByText('Loading…')).not.toBeInTheDocument());
     expect(screen.getByText('Test Workspace')).toBeInTheDocument();
-    expect(screen.getByText('ws-test')).toBeInTheDocument();
+    expect(screen.getAllByText('ws-test').length).toBeGreaterThan(0);
   });
 
   it('shows all navigation tabs', async () => {

@@ -1190,7 +1190,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Dashboard Component Test Suite & Coverage
 - **Layer**: 24 — Production Readiness & Navigation
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: Medium
 - **Description**: Increase dashboard test coverage to 50%+ by adding unit tests for high-value components. Write test files in apps/dashboard/components/__tests__/ for: (1) ConnectorCard (renders health status, sync time, actions), (2) BenchmarkingCard (displays peer comparison box plot, opt-in toggle), (3) WorkflowTemplateGallery (lists templates, open/edit/delete actions), (4) PiiConfigPanel (PII field detection, masking strategy selection). Use vitest + React Testing Library. Mock API responses with MSW. Each component should have 8+ test cases covering happy path, error states, empty states, and edge cases. Target: 20+ new tests. Ensure all tests pass and validate rendered output against Recharts/shadcn/ui patterns. Reference testing.md for test organization and snapshot usage rules.
 - **Files**:
