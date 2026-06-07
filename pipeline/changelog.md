@@ -4,10 +4,15 @@ Completed tasks are logged here by the daemon after each successful commit.
 
 ---
 
+- 2026-06-07 feat(semantic-core,api,dashboard): proactive context surfacing — suggestion engine with time-of-day patterns, role affinities, co-occurrence analysis + REST API + dashboard widget
+
+- 2026-06-07 feat(semantic-core,api,dashboard,mcp-server): PII field masking (redact/hash/tokenize) + workspace config API + dashboard panel + MCP tool integration + token consumption widget on dashboard overview
+
 - 2026-06-05 | Snowflake Connector — SQL API sync, partition pagination, incremental sync, 17 MSW tests, 97.4% coverage
 
 <!-- Entries appended below by the pipeline daemon -->
 - 2026-06-06: COMMITTED Role-Based Context Segmentation — context_roles/role_entity_type_permissions tables (migration 012), ContextPermissionService, filterContextByRole, MCP tool enforcement, 125/125 tests + 43/43 mcp-server tests pass
+- 2026-06-07: COMMITTED Knowledge Graph Visualization Dashboard — GET /api/v1/graph/query (BFS entity expansion + filters), SVG force-directed GraphVisualization component, EntityDetailPanel, GraphExplorer with type/relationship filters + search, /graph page; 100/100 API tests pass
 - 2026-06-06: COMMITTED Query Decomposition & Entity Type Detection — keyword matching + gpt-4o-mini LLM fallback, in-process cache, retrieval engine integration, 27 unit tests pass
 - 2026-06-06: COMMITTED Sync Scheduling & Frequency Configuration — migration 010, SyncScheduleService (BullMQ repeatable jobs), GET/PUT /connectors/:id/schedule endpoints, wizard frequency picker, 26/26 queue tests + 37/37 API tests pass (fixed mock bleed via mockReset on queue method fns)
 - 2026-06-04: COMMITTED Package Manifests — package.json, tsconfig.json, turbo.json, pnpm workspace; root typecheck passes

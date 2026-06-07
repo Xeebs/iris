@@ -736,7 +736,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Knowledge Graph Visualization Dashboard
 - **Layer**: 18 — Additional Connectors
-- **Status**: IN_PROGRESS
+- **Status**: COMMITTED
 - **Priority**: Medium
 - **Description**: Build a knowledge graph visualization page in the dashboard at apps/dashboard/app/graph/page.tsx. Use react-force-graph or similar library to render entity nodes and relationship edges. Allow filtering by entity type and relationship type. Support clicking an entity to show details (attributes, relationships, source connector). Support expanding relationships to depth-N. Fetch graph data from a new GET /api/v1/graph/query endpoint that returns nodes/edges. Include search by entity label and fulltext attributes. Target: functional graph visualization with filter and detail panels.
 - **Files**:
@@ -835,7 +835,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Fine-Grained PII & Sensitive Field Masking
 - **Layer**: 20 — V2 Features & Production Hardening
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: High
 - **Description**: Implement comprehensive PII detection and field-level masking to protect sensitive data in the context layer. Extend connector schemas to support pii: true flag on fields (email, phone, SSN, credit card, etc.). Create packages/semantic-core/src/pii-masker.ts with detectPII(entity, schema) returning masked entity and maskingStrategy(fieldName, fieldType) supporting: redaction (***), hashing (one-way), tokenization (reversible). Integrate into indexer pipeline before embedding and storage. Add dashboard UI at apps/dashboard/components/pii-config-panel.tsx to define custom PII patterns per workspace. Update MCP tools (query-context, get-entity, list-entities) to apply PII masking per API key's role permissions. Full unit + integration tests with GDPR/HIPAA masking examples. See code-style.md for error handling patterns.
 - **Files**:
@@ -853,7 +853,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Schema Auto-Discovery with Human-in-the-Loop Confirmation
 - **Layer**: 20 — V2 Features & Production Hardening
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: High
 - **Description**: Build a guided schema discovery workflow for connectors that lack native schema support (CSV, JSON files, custom APIs). Create packages/semantic-core/src/schema-discoverer.ts with discoverSchema(connector, sampleData) using heuristics (field names, value patterns, type inference) to infer entity types and attributes. Implement human-in-the-loop confirmation UI at apps/dashboard/app/connectors/setup/[id]/schema-review/page.tsx where users can: accept/reject inferred fields, rename fields, mark PII fields, define entity type relationships. Wire up POST /api/v1/connectors/:id/schema-confirmation endpoint to persist user decisions. Store schema overrides in connector_instances table. Add unit tests with varied data formats (CSV, JSON, Parquet). See connector-patterns.md for entity transformation validation.
 - **Files**:
@@ -868,7 +868,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Proactive Context Surfacing (V2 Intelligence)
 - **Layer**: 20 — V2 Features & Production Hardening
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: Medium
 - **Description**: Implement proactive context delivery that surfaces relevant information to AI agents before they request it. Create packages/semantic-core/src/proactive-suggester.ts with suggestContext(workspaceId, userId, recentActivity) analyzing user's recent MCP queries to predict what context they'll need next. Build a suggestion engine using: (1) entity co-occurrence patterns from semantic index, (2) user role and typical workflows, (3) time-of-day patterns (sales queries at different times than finance). Expose GET /api/v1/context-suggestions endpoint returning top-3 suggested entities/metrics. Build dashboard widget at apps/dashboard/components/context-suggestions-widget.tsx showing suggestions on main dashboard. Wire up to MCP server to optionally include suggestions in response metadata. Full tests with activity pattern fixtures.
 - **Files**:

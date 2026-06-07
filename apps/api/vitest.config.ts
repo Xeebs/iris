@@ -17,6 +17,7 @@ export default defineConfig({
       '@iris/semantic-core/connector-health-service': path.resolve(__dirname, '../../packages/semantic-core/src/connector-health-service.ts'),
       '@iris/semantic-core/context-permissions': path.resolve(__dirname, '../../packages/semantic-core/src/context-permissions.ts'),
       '@iris/semantic-core/schema-discoverer': path.resolve(__dirname, '../../packages/semantic-core/src/schema-discoverer.ts'),
+      '@iris/semantic-core/proactive-suggester': path.resolve(__dirname, '../../packages/semantic-core/src/proactive-suggester.ts'),
       '@iris/semantic-core': path.resolve(__dirname, '../../packages/semantic-core/src/index.ts'),
       '@iris/compression': path.resolve(__dirname, '../../packages/compression/src/index.ts'),
       '@iris/queue': path.resolve(__dirname, '../../packages/queue/src/sync-job-queue.ts'),
