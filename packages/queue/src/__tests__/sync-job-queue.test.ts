@@ -16,7 +16,7 @@ vi.mock('@iris/core/logger', () => ({
   logger: { child: vi.fn().mockReturnValue({ info: vi.fn(), error: vi.fn(), warn: vi.fn() }) },
 }));
 
-const { SyncJobQueue, SYNC_QUEUE_NAME } = await import('../sync-job-queue.js');
+const { SyncJobQueue, SyncPerformanceTracker, SYNC_QUEUE_NAME } = await import('../sync-job-queue.js');
 
 describe('SyncJobQueue', () => {
   let queue: InstanceType<typeof SyncJobQueue>;
@@ -101,5 +101,57 @@ describe('SyncJobQueue', () => {
 
   it('exports the SYNC_QUEUE_NAME constant', () => {
     expect(SYNC_QUEUE_NAME).toBe('connector-sync');
+  });
+});
+
+describe('SyncPerformanceTracker', () => {
+  let mockSql: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockSql = vi.fn((..._args: unknown[]) => Promise.resolve([{ id: 'perf-row-1' }]));
+  });
+
+  it('inserts a started record and returns row id', async () => {
+    const tracker = new SyncPerformanceTracker(mockSql as Parameters<typeof SyncPerformanceTracker>[0]);
+    const rowId = await tracker.start('job-1', 'inst-1', 'ws-1');
+    expect(rowId).toBe('perf-row-1');
+    expect(mockSql).toHaveBeenCalledOnce();
+  });
+
+  it('updates record with metrics on complete', async () => {
+    mockSql.mockResolvedValueOnce([{ id: 'perf-row-1' }]); // start
+    mockSql.mockResolvedValueOnce([]); // complete update
+
+    const tracker = new SyncPerformanceTracker(mockSql as Parameters<typeof SyncPerformanceTracker>[0]);
+    const rowId = await tracker.start('job-1', 'inst-1', 'ws-1');
+    await tracker.complete(rowId, {
+      apiTimeMs: 1000,
+      indexingTimeMs: 2000,
+      apiCalls: 5,
+      entitiesSynced: 100,
+    });
+
+    expect(mockSql).toHaveBeenCalledTimes(2);
+  });
+
+  it('marks record as failed on fail()', async () => {
+    mockSql.mockResolvedValueOnce([{ id: 'perf-row-1' }]); // start
+    mockSql.mockResolvedValueOnce([]); // fail update
+
+    const tracker = new SyncPerformanceTracker(mockSql as Parameters<typeof SyncPerformanceTracker>[0]);
+    const rowId = await tracker.start('job-1', 'inst-1', 'ws-1');
+    await tracker.fail(rowId, 3);
+
+    expect(mockSql).toHaveBeenCalledTimes(2);
+  });
+
+  it('returns empty string when insert returns no rows', async () => {
+    mockSql.mockResolvedValueOnce([]);
+
+    const tracker = new SyncPerformanceTracker(mockSql as Parameters<typeof SyncPerformanceTracker>[0]);
+    const rowId = await tracker.start('job-1', 'inst-1', 'ws-1');
+
+    expect(rowId).toBe('');
   });
 });

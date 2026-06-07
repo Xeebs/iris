@@ -95,3 +95,89 @@ export class SyncJobQueue {
     await this.queue.close();
   }
 }
+
+// ─── Performance Tracking ─────────────────────────────────────────────────────
+
+export interface SyncPerformanceMetrics {
+  apiTimeMs?: number;
+  indexingTimeMs?: number;
+  embeddingTimeMs?: number;
+  apiCalls?: number;
+  entitiesSynced?: number;
+  avgEntitySizeBytes?: number;
+  peakMemoryMb?: number;
+  errorCount?: number;
+}
+
+type SqlFn = (strings: TemplateStringsArray, ...values: unknown[]) => Promise<{ count?: number }[]>;
+
+/**
+ * Records per-sync performance metrics to the sync_performance table.
+ * Inject a postgres tagged-template client to persist metrics.
+ */
+export class SyncPerformanceTracker {
+  private startTime: number = 0;
+
+  constructor(private readonly sql: SqlFn) {}
+
+  /**
+   * @param jobId - BullMQ job ID
+   * @param connectorInstanceId - Connector being synced
+   * @param workspaceId - Tenant workspace
+   * @returns Row ID for the tracking record
+   */
+  async start(
+    jobId: string,
+    connectorInstanceId: string,
+    workspaceId: string,
+  ): Promise<string> {
+    this.startTime = Date.now();
+    const rows = await this.sql`
+      INSERT INTO sync_performance (job_id, connector_instance_id, workspace_id, status)
+      VALUES (${jobId}, ${connectorInstanceId}, ${workspaceId}, 'started')
+      RETURNING id
+    `;
+    const row = rows[0] as { id: string } | undefined;
+    return row?.id ?? '';
+  }
+
+  /**
+   * @param rowId - ID returned from start()
+   * @param metrics - Collected performance metrics
+   */
+  async complete(rowId: string, metrics: SyncPerformanceMetrics): Promise<void> {
+    const totalMs = Date.now() - this.startTime;
+    await this.sql`
+      UPDATE sync_performance
+      SET total_duration_ms = ${totalMs},
+          api_time_ms = ${metrics.apiTimeMs ?? null},
+          indexing_time_ms = ${metrics.indexingTimeMs ?? null},
+          embedding_time_ms = ${metrics.embeddingTimeMs ?? null},
+          api_calls = ${metrics.apiCalls ?? 0},
+          entities_synced = ${metrics.entitiesSynced ?? 0},
+          avg_entity_size_bytes = ${metrics.avgEntitySizeBytes ?? null},
+          peak_memory_mb = ${metrics.peakMemoryMb ?? null},
+          error_count = ${metrics.errorCount ?? 0},
+          status = 'completed',
+          completed_at = now()
+      WHERE id = ${rowId}
+    `;
+    log.info('Sync performance recorded', { rowId, totalMs, ...metrics });
+  }
+
+  /**
+   * @param rowId - ID returned from start()
+   * @param errorCount - Number of errors that occurred
+   */
+  async fail(rowId: string, errorCount = 1): Promise<void> {
+    const totalMs = Date.now() - this.startTime;
+    await this.sql`
+      UPDATE sync_performance
+      SET total_duration_ms = ${totalMs},
+          error_count = ${errorCount},
+          status = 'failed',
+          completed_at = now()
+      WHERE id = ${rowId}
+    `;
+  }
+}

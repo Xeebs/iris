@@ -1330,7 +1330,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Connector Sync Performance Profiling & Analytics
 - **Layer**: 26 — Production Operations & Advanced Features
-- **Status**: UNWORKED
+- **Status**: IN_PROGRESS
 - **Priority**: Medium
 - **Description**: Add detailed performance instrumentation to connector syncs to identify bottlenecks and optimize behavior. Extend packages/queue/src/sync-job-queue.ts to record: (1) sync duration (total, API time, indexing time, embedding time), (2) entity throughput (entities/sec), (3) API call counts and latency distribution, (4) error rates by type, (5) memory usage peak. Store metrics in sync_performance table (job_id, connector_id, total_duration_ms, api_calls, entities_synced, avg_entity_size_bytes, peak_memory_mb, error_count, timestamp). Expose GET /api/v1/admin/performance/connectors/:id returning historical performance metrics with aggregations (daily avg, trend line). Build dashboard page at apps/dashboard/app/admin/performance/page.tsx with: line chart of throughput over time per connector, heatmap of daily sync duration, percentile distribution tables (p50, p90, p99 sync duration). Add alerts: warn if sync duration increases >50% vs 7-day avg. Include integration tests with synthetic sync job fixtures. Reference code-style.md for logging and structured metadata patterns.
 - **Files**:
@@ -1417,7 +1417,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Workspace Onboarding Flow & First-Sync Guided Experience
 - **Layer**: 27 — Advanced Operations & Post-MVP Polish
-- **Status**: IN_PROGRESS
+- **Status**: COMMITTED
 - **Priority**: High
 - **Description**: Build a comprehensive guided onboarding flow for new workspaces to accelerate time-to-value. Create apps/dashboard/app/onboarding/page.tsx with a multi-step wizard: (1) Workspace Setup (name, industry, company size, use case), (2) Connector Selection (pick 1-3 primary connectors from recommended list based on industry/use case), (3) Guided Connector Setup (walk through OAuth/API key per selected connector with explanatory text and example screenshots), (4) Schema Confirmation (auto-discover schemas and let user confirm/customize entity type mappings), (5) Glossary Kickstart (auto-populate glossary with industry templates: finance → ARR, MRR, CAC; sales → pipeline_stage, win_rate), (6) First Sync (trigger a sync, show progress with estimated entity counts), (7) Success (show index overview, suggest MCP integration docs). Use shadcn/ui Stepper component. Store completion state in workspace_onboarding table (workspace_id, completedSteps[], status: 'in_progress'|'completed'). Add branching logic: skip connectors if already configured, offer sample data if real connectors unavailable. Create E2E test covering full flow. Reference connector-patterns.md for connector setup and embedding-patterns.md for glossary templates. Target: onboarding completion < 10 minutes.
 - **Files**:
