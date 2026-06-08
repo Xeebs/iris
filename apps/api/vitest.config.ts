@@ -51,6 +51,7 @@ export default defineConfig({
       '@iris/semantic-core/rate-limiter': path.resolve(__dirname, '../../packages/semantic-core/src/rate-limiter.ts'),
       '@iris/semantic-core/entity-search': path.resolve(__dirname, '../../packages/semantic-core/src/entity-search.ts'),
       '@iris/semantic-core/webhook-debugger': path.resolve(__dirname, '../../packages/semantic-core/src/webhook-debugger.ts'),
+      '@iris/semantic-core/compliance-auditor': path.resolve(__dirname, '../../packages/semantic-core/src/compliance-auditor.ts'),
       '@iris/semantic-core': path.resolve(__dirname, '../../packages/semantic-core/src/index.ts'),
       '@iris/cache/response-cache': path.resolve(__dirname, '../../packages/cache/src/response-cache.ts'),
       '@iris/compression': path.resolve(__dirname, '../../packages/compression/src/index.ts'),

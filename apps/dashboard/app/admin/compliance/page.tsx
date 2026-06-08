@@ -5,6 +5,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { ComplianceStatusPanel } from '../../../components/compliance-status-panel.js';
 import { AuditLogExplorer } from '../../../components/audit-log-explorer.js';
 import { AnomalyAlertDashboard } from '../../../components/anomaly-alert-dashboard.js';
+import { AuditExportWizard } from '../../../components/audit-export-wizard.js';
+import { AnomalyAlertsList } from '../../../components/anomaly-alerts-list.js';
 
 type ComplianceFramework = 'hipaa' | 'soc2' | 'gdpr' | 'ccpa';
 
@@ -27,7 +29,7 @@ const FRAMEWORK_LABELS: Record<ComplianceFramework, string> = {
 
 const DEFAULT_WORKSPACE = 'default';
 
-type Tab = 'overview' | 'audit-log' | 'alerts' | 'dsrs';
+type Tab = 'overview' | 'audit-log' | 'alerts' | 'export' | 'dsrs';
 
 /**
  * Compliance & Audit Reporting admin page.
@@ -40,6 +42,14 @@ export default function CompliancePage() {
   const [reports, setReports] = useState<Record<ComplianceFramework, ComplianceReport | null>>({
     hipaa: null, soc2: null, gdpr: null, ccpa: null,
   });
+  const [anomalyAlerts, setAnomalyAlerts] = useState<Array<{
+    alertType: 'bulk_access' | 'off_hours' | 'pii_overaccess';
+    userId: string;
+    entityIdsInvolved: string[];
+    confidence: number;
+    flaggedAt: string;
+    details: string;
+  }>>([]);
   const [loadingFramework, setLoadingFramework] = useState<ComplianceFramework | null>(null);
   const [selectedFramework, setSelectedFramework] = useState<ComplianceFramework>('gdpr');
 
@@ -67,6 +77,7 @@ export default function CompliancePage() {
     { id: 'overview', label: 'Framework Overview' },
     { id: 'audit-log', label: 'Audit Log' },
     { id: 'alerts', label: 'Anomaly Alerts' },
+    { id: 'export', label: 'Signed Export' },
     { id: 'dsrs', label: 'Data Requests' },
   ];
 
@@ -168,9 +179,25 @@ export default function CompliancePage() {
       )}
 
       {activeTab === 'alerts' && (
-        <div>
-          <h2 className="mb-4 text-lg font-semibold text-gray-800">Anomaly Alerts</h2>
+        <div className="space-y-6">
+          <h2 className="text-lg font-semibold text-gray-800">Anomaly Alerts</h2>
           <AnomalyAlertDashboard workspaceId={workspaceId} />
+          {anomalyAlerts.length > 0 && (
+            <div>
+              <h3 className="text-base font-medium text-gray-700 mb-3">Detected Anomalies</h3>
+              <AnomalyAlertsList alerts={anomalyAlerts} onRefresh={() => setAnomalyAlerts([])} />
+            </div>
+          )}
+        </div>
+      )}
+
+      {activeTab === 'export' && (
+        <div className="space-y-4">
+          <h2 className="text-lg font-semibold text-gray-800">Signed Audit Export</h2>
+          <p className="text-sm text-gray-500">
+            Generate RSA-2048 signed audit reports for SOC 2, GDPR, and HIPAA compliance submissions.
+          </p>
+          <AuditExportWizard workspaceId={workspaceId} />
         </div>
       )}
 
