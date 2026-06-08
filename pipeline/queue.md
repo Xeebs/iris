@@ -1823,7 +1823,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Full Response-Level Caching for MCP Tools
 - **Layer**: 37 — Response Caching & Query Optimization
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: High
 - **Description**: Implement a second layer of caching that caches entire MCP tool responses, not just semantic embeddings. Create packages/cache/src/response-cache.ts with ResponseCache class: (1) cacheKey(tool, input) generating deterministic cache keys from tool name and validated input, (2) get(key) returning cached response if still valid, (3) set(key, response, ttl) storing full response with optional TTL override per tool, (4) invalidate(pattern) bulk invalidation using key patterns. Store in Redis with msgpack serialization for compact storage. Integrate into apps/mcp-server/src/server.ts: before executing any tool, check response cache; if hit and valid, return cached response immediately (log cache hit to audit); on cache miss, execute tool and cache result. Make caching configurable per tool (list-entities: 5min TTL, query-context: 2min TTL, get-metric: 1hour TTL). Add cache stats endpoint GET /api/v1/cache/stats showing hit rate, evictions, memory usage. Build admin dashboard panel at apps/dashboard/components/cache-stats-panel.tsx visualizing cache performance over time. Add 22+ tests covering: cache hit/miss logic, TTL expiration, serialization, pattern-based invalidation, and interaction with semantic cache.
 - **Files**:

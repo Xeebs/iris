@@ -16,6 +16,7 @@ export default defineConfig({
       '@iris/semantic-core/proactive-suggester': path.resolve(__dirname, '../../packages/semantic-core/src/proactive-suggester.ts'),
       '@iris/semantic-core': path.resolve(__dirname, '../../packages/semantic-core/src/index.ts'),
       '@iris/cache/semantic-cache': path.resolve(__dirname, '../../packages/cache/src/semantic-cache.ts'),
+      '@iris/cache/response-cache': path.resolve(__dirname, '../../packages/cache/src/response-cache.ts'),
       '@iris/cache': path.resolve(__dirname, '../../packages/cache/src/index.ts'),
       '@iris/compression': path.resolve(__dirname, '../../packages/compression/src/index.ts'),
     },

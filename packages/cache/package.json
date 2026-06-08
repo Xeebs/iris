@@ -8,7 +8,8 @@
   "exports": {
     ".": "./dist/index.js",
     "./semantic-cache": "./dist/semantic-cache.js",
-    "./prefix-cache": "./dist/prefix-cache.js"
+    "./prefix-cache": "./dist/prefix-cache.js",
+    "./response-cache": "./dist/response-cache.js"
   },
   "scripts": {
     "build": "tsc --build",

@@ -25,6 +25,7 @@ export default defineConfig({
       '@iris/semantic-core/benchmarking': path.resolve(__dirname, '../../packages/semantic-core/src/benchmarking.ts'),
       '@iris/semantic-core/connector-marketplace': path.resolve(__dirname, '../../packages/semantic-core/src/connector-marketplace.ts'),
       '@iris/semantic-core': path.resolve(__dirname, '../../packages/semantic-core/src/index.ts'),
+      '@iris/cache/response-cache': path.resolve(__dirname, '../../packages/cache/src/response-cache.ts'),
       '@iris/compression': path.resolve(__dirname, '../../packages/compression/src/index.ts'),
       '@iris/queue': path.resolve(__dirname, '../../packages/queue/src/sync-job-queue.ts'),
       '@iris/connector-hubspot/webhook-handler': path.resolve(__dirname, '../../packages/connectors/hubspot/src/webhook-handler.ts'),

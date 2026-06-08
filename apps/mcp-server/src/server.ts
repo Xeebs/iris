@@ -1,6 +1,7 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { SemanticCache } from '@iris/cache/semantic-cache';
+import { ResponseCache } from '@iris/cache/response-cache';
 import { PgvectorStore, GlossaryService, MetricRegistry, ContextPermissionService, PiiConfigService } from '@iris/semantic-core';
 import type { VectorStore, ContextPermissions, WorkspacePiiConfig } from '@iris/semantic-core';
 import { logger } from '@iris/core/logger';
@@ -32,6 +33,7 @@ const log = logger.child({ service: 'mcp-server' });
  * @param authenticatedWorkspaceId - Workspace from validated API key; null = dev/unauthenticated mode
  * @param contextPermissions - Role-based access permissions; null = unrestricted
  * @param piiConfig          - Workspace PII masking config; null = no masking applied
+ * @param responseCache      - Optional response-level cache; null = no response caching
  */
 export function createMcpServer(
   vectorStore: VectorStore,
@@ -42,14 +44,15 @@ export function createMcpServer(
   authenticatedWorkspaceId: string | null = null,
   contextPermissions: ContextPermissions | null = null,
   piiConfig: WorkspacePiiConfig | null = null,
+  responseCache: ResponseCache | null = null,
 ): McpServer {
   const server = new McpServer({ name: 'iris', version: '0.0.1' });
 
   registerQueryContext(server, vectorStore, semanticCache, openAiKey, authenticatedWorkspaceId, contextPermissions, piiConfig);
   registerListEntities(server, vectorStore, authenticatedWorkspaceId, contextPermissions, piiConfig);
   registerGetEntity(server, vectorStore, authenticatedWorkspaceId, contextPermissions, piiConfig);
-  registerGetMetric(server, metricRegistry, authenticatedWorkspaceId);
-  registerListGlossary(server, glossaryService, authenticatedWorkspaceId);
+  registerGetMetric(server, metricRegistry, authenticatedWorkspaceId, responseCache);
+  registerListGlossary(server, glossaryService, authenticatedWorkspaceId, responseCache);
   registerSuggestContext(server, authenticatedWorkspaceId);
   registerAdvancedQueryContext(server, vectorStore, openAiKey, authenticatedWorkspaceId);
 
@@ -113,6 +116,7 @@ async function main(): Promise<void> {
 
   const redis = new Redis(redisUrl);
   const semanticCache = new SemanticCache(redis);
+  const responseCache = new ResponseCache(redis);
   const glossaryService = new GlossaryService(sql);
   const metricRegistry = new MetricRegistry(sql);
 
@@ -125,6 +129,7 @@ async function main(): Promise<void> {
     authenticatedWorkspaceId,
     contextPermissions,
     piiConfig,
+    responseCache,
   );
 
   const sessionId = await recordSessionStart(sql, keyId, authenticatedWorkspaceId ?? 'unauthenticated');

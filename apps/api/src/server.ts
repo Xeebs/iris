@@ -50,6 +50,7 @@ import { createPerformanceRoutes } from './routes/performance.js';
 import { createSessionRoutes } from './routes/sessions.js';
 import { createBillingRoutes } from './routes/billing.js';
 import { createMarketplaceRoutes } from './routes/marketplace.js';
+import { createCacheStatsRoutes } from './routes/cache-stats.js';
 import { openApiSpec } from './openapi.js';
 
 export { createApp };
@@ -168,6 +169,9 @@ function createApp(
   authed.route('/sessions', createSessionRoutes(sql));
   authed.route('/billing', createBillingRoutes(sql));
   authed.route('/marketplace', createMarketplaceRoutes(sql));
+  if (redis) {
+    authed.route('/cache', createCacheStatsRoutes(redis));
+  }
 
   // Webhook routes: inbound (unauthenticated) + events status (authenticated)
   app.route('/api/v1/webhooks', createWebhookRoutes(sql));
