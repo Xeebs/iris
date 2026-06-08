@@ -2458,7 +2458,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Multi-LLM Provider Support with Model-Specific Optimizations
 - **Layer**: 47 — Enterprise Search & Advanced AI Integration
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: Medium
 - **Description**: Extend Iris to support multiple LLM providers beyond OpenAI (Claude, Gemini, Llama, Mistral, etc.) with automatic context optimization per provider's capabilities. Create packages/semantic-core/src/multi-provider-optimizer.ts implementing: (1) provider registry with name, token limits, context window, pricing, serialization preference, streaming support, prefix cache support, (2) dynamically select embedding model per provider (OpenAI for OpenAI, Google models for Gemini, open-source for Ollama), (3) optimize context format per provider (Claude prefers specific JSON, Gemini prefers XML-like), (4) cost estimation per provider for a query/context, (5) provider-specific token counting. Update apps/api/src/routes/billing.ts to show cost breakdown by provider. Build admin panel at apps/dashboard/components/provider-config.tsx allowing: setup multiple providers, set fallback ordering, configure provider access per workspace, view cost comparisons for sample queries. Add 16+ unit tests for cost calculations and provider logic, 8+ integration tests with mock APIs. Reference embedding-patterns.md for multi-model best practices.
 - **Files**:
@@ -2490,4 +2490,155 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
   - apps/dashboard/components/anomaly-alert-dashboard.tsx
   - apps/api/src/__tests__/compliance.test.ts
 - **Depends on**: MCP Server API Key Authentication & Workspace Isolation, Fine-Grained PII & Sensitive Field Masking
+- **Added**: 2026-06-08
+
+---
+
+## Layer 48: Real-Time Updates & Advanced Data Governance
+
+### Task: Real-Time Entity Updates via WebSocket Subscriptions
+- **Layer**: 48 — Real-Time Updates & Advanced Data Governance
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Implement WebSocket-based real-time entity subscription system to push live updates to dashboard clients whenever entities are indexed or modified. Create apps/api/src/websocket/entity-subscriptions.ts with EntitySubscriptionManager handling: (1) client subscriptions by entity ID or entity type (e.g., subscribe to all 'contact' entities), (2) broadcast updates when indexer persists changes to vector store, (3) optional filtering by workspace_id to prevent cross-workspace leaks, (4) heartbeat pings to detect stale connections. Update apps/mcp-server/src/server.ts to emit subscription events when entities are indexed. Build WebSocket endpoint at /ws/entities that accepts JSON subscribe/unsubscribe messages. Add dashboard hook at apps/dashboard/lib/use-entity-subscription.ts that manages subscriptions and optimistic updates. Update entity list pages (apps/dashboard/app/entities/page.tsx, connectors page, graph page) to use real-time subscriptions for live entity counts, status, and relationship changes. Add 14+ unit tests for subscription logic and connection management, integration tests with real WebSocket connections, E2E test verifying live updates on dashboard. Reference api-conventions.md for WebSocket patterns.
+- **Files**:
+  - apps/api/src/websocket/entity-subscriptions.ts
+  - apps/api/src/websocket/__tests__/entity-subscriptions.test.ts
+  - apps/api/src/server.ts (update WebSocket registration)
+  - apps/dashboard/lib/use-entity-subscription.ts
+  - apps/dashboard/app/entities/page.tsx (update)
+  - apps/dashboard/app/connectors/page.tsx (update)
+  - tests/e2e/real-time-updates.spec.ts
+  - packages/semantic-core/src/indexer.ts (update to emit events)
+- **Depends on**: Hybrid Semantic + Full-Text Search Engine with Advanced Filtering
+- **Added**: 2026-06-08
+
+### Task: Data Lineage & Impact Analysis Engine
+- **Layer**: 48 — Real-Time Updates & Advanced Data Governance
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Build a data lineage tracking system that traces entity data flow from source connectors through transformations and relationships, enabling impact analysis when data changes. Create packages/semantic-core/src/data-lineage.ts with DataLineageService: (1) track entity provenance (source connector, sync timestamp, source record ID), (2) model relationship dependencies (entityA references entityB, entityB's change impacts entityA), (3) compute impact scope (given entity X changed, what other entities are affected?), (4) build lineage graph (parents/ancestors and children/descendants up to depth N). Add apps/api/migrations/067_add_lineage_tables.sql with tables: entity_lineage (entity_id, source_connector, source_record_id, last_modified_at, sync_run_id), entity_dependencies (entity_id, depends_on_entity_id, relationship_type, confidence). Expose GET /api/v1/lineage/:entityId (fetch lineage for entity), POST /api/v1/lineage/:entityId/impact-analysis (compute change impact). Build dashboard page at apps/dashboard/app/data-lineage/page.tsx with: interactive lineage graph (upstream/downstream), impact analysis tool (select entity, see affected entities), sync history timeline. Add 18+ unit tests for graph traversal and impact computation, integration tests with synthetic lineage fixtures. Reference code-style.md for error handling.
+- **Files**:
+  - packages/semantic-core/src/data-lineage.ts
+  - packages/semantic-core/src/__tests__/data-lineage.test.ts
+  - packages/semantic-core/src/__tests__/data-lineage.integration.test.ts
+  - apps/api/migrations/067_add_lineage_tables.sql
+  - apps/api/src/routes/lineage.ts
+  - apps/dashboard/app/data-lineage/page.tsx
+  - apps/dashboard/components/lineage-graph-viewer.tsx
+  - apps/dashboard/components/impact-analysis-tool.tsx
+  - apps/api/src/__tests__/lineage.test.ts
+- **Depends on**: Entity Relationship Indexing, Knowledge Graph Service (Neo4j)
+- **Added**: 2026-06-08
+
+### Task: Entity Deduplication Review Workflow & Manual Reconciliation UI
+- **Layer**: 48 — Real-Time Updates & Advanced Data Governance
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Implement a comprehensive entity deduplication workflow with UI for users to review and manually reconcile duplicate entities detected by the semantic deduplication engine. Create packages/semantic-core/src/dedup-reconciliation.ts with DedupReconciliationService: (1) maintain dedup_candidates table (source_entity_id, candidate_duplicate_id, similarity_score, detection_timestamp, reviewed, decision), (2) generate dedup batches (group candidates by threshold for efficient review), (3) track reconciliation decisions (merge, keep-separate, ignore). Build comprehensive dashboard page at apps/dashboard/app/admin/dedup/page.tsx with: (1) candidate list showing entity pairs with similarity scores and side-by-side preview, (2) bulk review interface (approve, reject, keep-separate buttons), (3) merge action that combines entities (update relationships, redirect old ID to new), (4) undo capability (restore merged entities within 30 days), (5) metrics dashboard (dedup rate, merge success rate, manual review backlog). Create modal components: EntityPairComparison (shows attributes diff), MergePreview (preview of merged entity), DecisionHistory (audit trail). Add API endpoints: GET /api/v1/dedup/candidates (paginated list), POST /api/v1/dedup/candidates/:sourceId/:dupId/decide (submit decision), POST /api/v1/dedup/merge (execute merge). Add 16+ unit tests for reconciliation logic, integration tests with dedup candidate fixtures, E2E test verifying full merge workflow including undo. Reference embedding-patterns.md for dedup threshold notes.
+- **Files**:
+  - packages/semantic-core/src/dedup-reconciliation.ts
+  - packages/semantic-core/src/__tests__/dedup-reconciliation.test.ts
+  - packages/semantic-core/src/__tests__/dedup-reconciliation.integration.test.ts
+  - apps/api/migrations/068_add_dedup_reconciliation.sql
+  - apps/api/src/routes/dedup-reconciliation.ts
+  - apps/dashboard/app/admin/dedup/page.tsx (update with comprehensive UI)
+  - apps/dashboard/components/entity-pair-comparison.tsx
+  - apps/dashboard/components/merge-preview.tsx
+  - apps/dashboard/components/dedup-decision-history.tsx
+  - apps/api/src/__tests__/dedup-reconciliation.test.ts
+- **Depends on**: Advanced Entity Deduplication with Rule-Based Matching
+- **Added**: 2026-06-08
+
+### Task: Custom Metrics Builder & Formula Engine with UI
+- **Layer**: 48 — Real-Time Updates & Advanced Data Governance
+- **Status**: UNWORKED
+- **Priority**: Medium
+- **Description**: Enable business users to define custom metrics via a no-code formula builder UI, supporting arithmetic operations, aggregations, and entity references. Extend packages/semantic-core/src/metrics.ts with MetricFormulaEngine: (1) parse metric formulas (e.g., "SUM(revenue) / COUNT(customers)"), (2) resolve entity type references dynamically, (3) evaluate formulas at query time against indexed data, (4) cache formula results with TTL. Update apps/api/src/routes/metrics.ts to add: POST /api/v1/metrics/:id/evaluate (compute metric value for workspace), GET /api/v1/metrics/available (list all metrics with descriptions). Build comprehensive dashboard at apps/dashboard/app/workspace/[workspaceId]/metrics/builder/page.tsx with: (1) formula editor with syntax highlighting and validation, (2) drag-and-drop metric builder (select entities, pick aggregation, set filters), (3) preview panel showing formula + sample result, (4) test data input for validation before save, (5) metric history (versions, rollback), (6) usage analytics (how often metric is queried). Create components: MetricFormulaEditor (syntax highlighting, validation), MetricDragDropBuilder (visual formula construction), MetricPreview, MetricTestPanel. Add 20+ unit tests for formula parsing and evaluation, integration tests with sample metrics and data. Reference code-style.md for validation patterns.
+- **Files**:
+  - packages/semantic-core/src/metrics.ts (update FormulaEngine)
+  - packages/semantic-core/src/__tests__/metrics.test.ts (update)
+  - apps/api/src/routes/metrics.ts (update)
+  - apps/dashboard/app/workspace/[workspaceId]/metrics/builder/page.tsx
+  - apps/dashboard/components/metric-formula-editor.tsx
+  - apps/dashboard/components/metric-drag-drop-builder.tsx
+  - apps/dashboard/components/metric-preview.tsx
+  - apps/dashboard/components/metric-test-panel.tsx
+  - apps/api/src/__tests__/metrics.test.ts (update)
+- **Depends on**: Metric Registry Service & API
+- **Added**: 2026-06-08
+
+---
+
+## Layer 49: V2 Intelligence & Business Optimization
+
+### Task: Proactive Context Surfacing with Predictive Agent Suggestions
+- **Layer**: 49 — V2 Intelligence & Business Optimization
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Implement proactive context surfacing to push relevant business context to AI agents before they explicitly request it, improving context quality and reducing agent latency. Create packages/semantic-core/src/proactive-context-engine.ts with ProactiveContextEngine class: (1) analyzeAgentBehavior(workspaceId, agentId) tracking: frequently-accessed entity types, common query patterns (sales calls cluster around accounts/contacts, finance agents around transactions/metrics), (2) predictContext(currentContext, agentId, taskType) using behavioral history to pre-generate likely-needed context beyond the explicit query (e.g., when agent queries "account ABC", automatically surface top 5 deals, recent activity, key contacts), (3) deliverProactiveContext via MCP resource updates: define new MCP resource type "proactive_context" that clients can subscribe to, (4) measure effectiveness via engagement metrics (did agent use the suggestion, query latency reduction). Implement learning feedback loop: POST /api/v1/proactive/feedback endpoint to record agent interactions (suggested context accepted/ignored/modified), train a lightweight scoring model per agent/workspace. Create apps/api/migrations/069_add_proactive_context.sql with: agent_behavior_profiles table (workspace_id, agent_id, entity_types, query_patterns_json, learned_at), proactive_suggestions table (workspace_id, agent_id, suggestion_json, accepted: boolean, feedback_score). Expose: GET /api/v1/agents/:id/proactive-preview (show what would be suggested), POST /api/v1/agents/:id/proactive-settings (tune aggressiveness). Build dashboard component at apps/dashboard/components/agent-proactive-config.tsx showing: suggestion preview, acceptance rate, tuning controls. Add 14+ unit tests for suggestion logic, 8+ integration tests with synthetic agent logs. Reference code-style.md for async patterns and embedding-patterns.md for token budgeting (proactive context must be efficient).
+- **Files**:
+  - packages/semantic-core/src/proactive-context-engine.ts
+  - packages/semantic-core/src/__tests__/proactive-context-engine.test.ts
+  - packages/semantic-core/src/__tests__/proactive-context-engine.integration.test.ts
+  - apps/api/migrations/069_add_proactive_context.sql
+  - apps/api/src/routes/proactive-context.ts
+  - apps/dashboard/components/agent-proactive-config.tsx
+  - apps/api/src/__tests__/proactive-context.test.ts
+- **Depends on**: Query Decomposition & Entity Type Detection, Cost-Per-Context Analytics & Optimization Recommendations
+- **Added**: 2026-06-08
+
+### Task: Cross-Company Benchmarking with Anonymized Insights & Analytics
+- **Layer**: 49 — V2 Intelligence & Business Optimization
+- **Status**: UNWORKED
+- **Priority**: Medium
+- **Description**: Build an opt-in benchmarking system allowing customers to compare their Iris usage metrics and data patterns anonymously against industry peers, enabling data-driven optimization decisions. Create packages/semantic-core/src/benchmarking-service.ts with BenchmarkingService class: (1) collectMetrics(workspaceId) gathering anonymized stats: entity count by type, query patterns (top entity types queried), cache hit rates, token spend per entity type, connector diversity (how many connectors indexed), (2) hashWorkspaceId(workspaceId) to create permanent anonymous identifier (consistent across months), (3) uploadAnonMetrics(metrics, cohort) to central aggregation service (requires explicit opt-in), (4) retrieveBenchmarks(workspaceId, cohort) returning percentile rankings: "Your cache hit rate (45%) is at 60th percentile vs. similar-sized companies", "Entity count per connector: 10K (30th percentile)", "Token spend trending up 15% MoM (vs. peer 3% avg trend)". Create apps/api/migrations/069_add_benchmarking_data.sql with: workspace_benchmarks table (workspace_id, cohort, metric_type, value, submitted_at, percentile_rank, industry). Expose: GET /api/v1/benchmarks/opt-in (status), POST /api/v1/benchmarks/opt-in (join), GET /api/v1/benchmarks/peers (your rank vs. peers with insights). Build dashboard page at apps/dashboard/app/analytics/[workspaceId]/benchmarks/page.tsx with: peer comparison charts (histogram of entity counts, distribution of cache hit rates, cost per entity), personalized insights (areas to optimize based on peer patterns), monthly trends. Add regulatory UI: prominently show "You can opt out anytime" and describe data anonymization (workspace_id is hashed, only aggregated metrics shared). Add 12+ unit tests for metrics collection and anonymization logic, integration tests with synthetic multi-workspace data. Reference code-style.md for logging and api-conventions.md for endpoint patterns.
+- **Files**:
+  - packages/semantic-core/src/benchmarking-service.ts
+  - packages/semantic-core/src/__tests__/benchmarking-service.test.ts
+  - packages/semantic-core/src/__tests__/benchmarking-service.integration.test.ts
+  - apps/api/migrations/069_add_benchmarking_data.sql
+  - apps/api/src/routes/benchmarking.ts
+  - apps/dashboard/app/analytics/[workspaceId]/benchmarks/page.tsx
+  - apps/dashboard/components/peer-comparison-charts.tsx
+  - apps/dashboard/components/benchmark-insights-panel.tsx
+  - apps/api/src/__tests__/benchmarking.test.ts
+- **Depends on**: Token Analytics Service & Dashboard, Multi-Tenant Support & Workspace Isolation
+- **Added**: 2026-06-08
+
+### Task: Natural Language Index Configuration & Intent-Based Setup
+- **Layer**: 49 — V2 Intelligence & Business Optimization
+- **Status**: UNWORKED
+- **Priority**: Medium
+- **Description**: Enable non-technical users to configure and optimize the semantic index using natural language commands and intent-based setup flows (e.g., "our fiscal year starts in February", "hide PII from sales team", "prioritize recent data"). Extend packages/semantic-core/src/nlp-config-parser.ts (if exists, else create packages/semantic-core/src/nlp-config-engine.ts): (1) parseConfigIntent(userInput, workspaceId) using gpt-4o-mini to detect intent categories: temporal ("fiscal year in Feb" → set fiscal_year_start: 2), retention ("archive data older than 6 months" → auto_archive_age_days: 180), access_control ("hide SSN from finance viewers" → PII masking rule), entity_merging ("contacts and people are the same" → dedup rule), (2) generateConfigDiff(intent) returning a diff of what would change with explanations, (3) applyConfigIntent(diff) persisting changes to index_configuration table. Integrate into a conversational UI: apps/dashboard/app/settings/[workspaceId]/nlp-config/page.tsx with: input chat box, intent confirmation ("I understood: archive entities older than 6 months. Is that right?"), preview of affected data (show 5 sample entities that would be archived), apply button. Create apps/api/migrations/070_add_nlp_config.sql with: nlp_intents table (workspace_id, intent, natural_text, interpreted_config_json, confirmed_by_user_id, applied_at). Implement safety: (1) all NLP-generated configs require user confirmation before application, (2) maintain rollback: track before/after snapshots, (3) limit scope: only allow intents for: temporal policies, retention rules, access control, and dedup rules (not destructive index operations). Add 16+ unit tests for intent parsing (temporal formats, retention ranges, access control semantics), 10+ integration tests with diverse user inputs. Reference code-style.md for error handling and api-conventions.md for config change patterns.
+- **Files**:
+  - packages/semantic-core/src/nlp-config-engine.ts
+  - packages/semantic-core/src/__tests__/nlp-config-engine.test.ts
+  - packages/semantic-core/src/__tests__/nlp-config-engine.integration.test.ts
+  - apps/api/migrations/070_add_nlp_config.sql
+  - apps/api/src/routes/nlp-config.ts
+  - apps/dashboard/app/settings/[workspaceId]/nlp-config/page.tsx
+  - apps/dashboard/components/nlp-config-chat.tsx
+  - apps/dashboard/components/intent-confirmation-dialog.tsx
+  - apps/api/src/__tests__/nlp-config.test.ts
+- **Depends on**: Natural Language Index Configuration (if stub exists), Multi-Tenant Support & Workspace Isolation
+- **Added**: 2026-06-08
+
+### Task: Agent Workflow Templates with Pre-Configured Iris Context
+- **Layer**: 49 — V2 Intelligence & Business Optimization
+- **Status**: UNWORKED
+- **Priority**: Medium
+- **Description**: Build a library of pre-configured agent workflow templates tailored to common business functions, each with recommended Iris context settings and connector selections optimized for the workflow. Extend packages/semantic-core/src/workflow-templates.ts (if exists, else create packages/semantic-core/src/workflow-service.ts): (1) defineWorkflowTemplate(name, description, steps[], recommended_connectors[], context_hints) — e.g., "Sales Pipeline Review" template with steps [analyze_won_deals, forecast_next_quarter, identify_at_risk_accounts], connectors [HubSpot, Salesforce, Slack], context hints ["include recent deals, top accounts by ARR, key contacts"], (2) instantiateWorkflow(workspaceId, templateId) cloning template to user's workspace and auto-configuring recommended connectors if installed, (3) optimizeContextForWorkflow(workflowId) analyzing workflow step definitions to suggest MCP tool configurations (e.g., for "forecast_next_quarter", increase context budget and include metric definitions for ARR/pipeline). Create apps/api/migrations/070_add_workflow_templates.sql with: workflow_templates table (template_id, name, description, steps_json, recommended_connectors_json, context_config_json, created_at) and workflow_instances table (workspace_id, template_id, instance_id, customized_steps_json, enabled_connectors_json, context_config_json, created_at). Expose: GET /api/v1/workflows/templates (library), POST /api/v1/workflows/templates/:id/instantiate (create instance), GET /api/v1/workflows/:id/context-preview (show what context would be available). Build marketplace page at apps/dashboard/app/workflows/page.tsx: template gallery with categories (Sales, Finance, Ops, Engineering), install button, preview of steps and recommended connectors, user ratings. Include curated templates for: Sales Pipeline Review, Financial Forecast, Customer Health Analysis, Project Planning, Resource Allocation. Add 14+ unit tests for template instantiation and context optimization logic, 8+ integration tests with real connector configurations. Reference connector-patterns.md for connector semantics and api-conventions.md for REST patterns.
+- **Files**:
+  - packages/semantic-core/src/workflow-service.ts
+  - packages/semantic-core/src/__tests__/workflow-service.test.ts
+  - packages/semantic-core/src/__tests__/workflow-service.integration.test.ts
+  - apps/api/migrations/070_add_workflow_templates.sql
+  - apps/api/src/routes/workflow-templates.ts
+  - apps/dashboard/app/workflows/page.tsx
+  - apps/dashboard/app/workflows/[id]/preview/page.tsx
+  - apps/dashboard/components/workflow-gallery.tsx
+  - apps/dashboard/components/workflow-installer.tsx
+  - apps/api/src/__tests__/workflow-templates.test.ts
+- **Depends on**: Connector Template & Workflow Recipe System, Multi-Tenant Support & Workspace Isolation
 - **Added**: 2026-06-08
