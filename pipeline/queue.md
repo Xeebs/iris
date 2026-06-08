@@ -3979,3 +3979,176 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
   - apps/dashboard/components/rto-rpo-metrics.tsx
 - **Depends on**: Index Snapshot Export & Disaster Recovery
 - **Added**: 2026-06-08
+
+---
+
+## Layer 65: Security, Observability & Developer Experience
+
+### Task: Advanced User & Role Management with Granular Permissions
+- **Layer**: 65 — Security, Observability & Developer Experience
+- **Status**: COMMITTED
+- **Priority**: High
+- **Description**: Implement comprehensive user and role management system with fine-grained permission controls beyond the existing RBAC. Create packages/semantic-core/src/permission-manager.ts with PermissionManager: (1) definePermission(name, resource, action, conditions?) registering granular permissions (e.g., "read:entities:customer", "write:queries:own", "admin:connectors:salesforce"), (2) assignPermissionToRole(roleId, permission, contextFilter?) assigning permissions with optional context filters (e.g., can read entities from specific connectors only), (3) evaluateUserPermission(userId, permission, context) checking if user has permission with context enforcement, (4) bulkAdjustRolePermissions() for batch permission grants/revokes. Create migration 131 (permissions, role_permissions, permission_audit) with audit trail for all permission changes. Add REST routes: GET /api/v1/admin/roles/:id/permissions (list effective permissions), PUT /api/v1/admin/roles/:id/permissions/:permission/grant, DELETE /api/v1/admin/roles/:id/permissions/:permission/revoke, POST /api/v1/admin/roles/:id/permissions/audit (audit trail with actor/timestamp/change). Add dashboard /admin/permissions page with: role-permission matrix, permission inheritance visualization, bulk permission editor, audit log viewer. Include role templates (Viewer, Analyst, Admin) with preset permissions. Include 28+ tests (16 unit permission evaluation + 12 route permission management + audit compliance).
+- **Files**:
+  - packages/semantic-core/src/permission-manager.ts
+  - packages/semantic-core/src/__tests__/permission-manager.test.ts
+  - apps/api/src/routes/permission-management.ts
+  - apps/api/src/__tests__/permission-management.test.ts
+  - apps/api/migrations/131_granular_permissions.sql
+  - apps/dashboard/app/admin/permissions/page.tsx
+  - apps/dashboard/components/role-permission-matrix.tsx
+  - apps/dashboard/components/permission-inheritance-tree.tsx
+  - apps/dashboard/components/bulk-permission-editor.tsx
+- **Depends on**: nothing
+- **Added**: 2026-06-08
+
+### Task: Rate Limiting & Quota Management System
+- **Layer**: 65 — Security, Observability & Developer Experience
+- **Status**: COMMITTED
+- **Priority**: High
+- **Description**: Implement multi-level rate limiting and quota enforcement (per-user, per-API-key, per-workspace, per-connector) with fair-share algorithms and quota override capabilities for burst scenarios. Create packages/semantic-core/src/rate-limiter.ts with RateLimitManager: (1) configureLimit(identifier, type, limit, window) defining limits (e.g., "10 requests/second per API key", "1M tokens/day per workspace"), (2) checkLimit(identifier, cost?) evaluating if request is within quota and returning remaining allowance, (3) recordUsage(identifier, cost, metadata) incrementing usage counter, (4) requestQuotaIncrease(workspaceId, reason) tracking quota increase requests with approval workflow, (5) computeFairShare(identifiers, totalBudget) allocating budget proportionally when multiple users contend for shared resources. Store limits in Redis with Lua-script atomic increments. Create migration 132 (rate_limits, usage_tracking, quota_overrides, quota_requests). Add Hono middleware apps/api/src/middleware/rate-limiting.ts enforcing limits transparently. Add REST routes: GET /api/v1/usage (current usage + remaining quota), POST /api/v1/quota-increase-request (submit increase request with justification), GET /api/v1/admin/rate-limits (view all configured limits), PUT /api/v1/admin/rate-limits/:id (modify limit), POST /api/v1/admin/quota-overrides (grant temporary override). Add dashboard widgets: usage meter (per endpoint category), quota tracker, pending increase requests, rate limit breach alerts. Include 32+ tests (18 unit rate limiter + quota logic + 14 integration Redis-backed + middleware behavior).
+- **Files**:
+  - packages/semantic-core/src/rate-limiter.ts
+  - packages/semantic-core/src/__tests__/rate-limiter.test.ts
+  - packages/semantic-core/src/__tests__/rate-limiter.integration.test.ts
+  - apps/api/src/middleware/rate-limiting.ts
+  - apps/api/src/routes/quota-management.ts
+  - apps/api/src/__tests__/quota-management.test.ts
+  - apps/api/migrations/132_rate_limits_quota.sql
+  - apps/dashboard/components/usage-meter.tsx
+  - apps/dashboard/components/quota-tracker.tsx
+- **Depends on**: nothing
+- **Added**: 2026-06-08
+
+### Task: CLI Tool Suite for Iris Administration & Connector Management
+- **Layer**: 65 — Security, Observability & Developer Experience
+- **Status**: COMMITTED
+- **Priority**: Medium
+- **Description**: Build a production-ready CLI tool suite (scripts/iris-cli.ts + build as executable) for operators and developers to manage Iris instances from the command line. Implement: (1) connector commands (list, describe, sync, test, health-check), (2) index commands (reindex-connector, analyze-index, rebuild-glossary, deduplicate-entities), (3) workspace commands (create, delete, list-members, export-context), (4) backup commands (create-full-backup, restore-point-in-time, list-backups, verify-integrity), (5) diagnostics commands (check-services, profile-slow-queries, analyze-token-usage, validate-config), (6) admin commands (enable-feature, set-quota, reset-rate-limit, audit-export). All commands should support --workspace, --output (json/table/csv), --dry-run flags and require API key auth via IRIS_API_KEY env var. Use CLI framework (e.g., oclif or Ink for TUI). Create comprehensive help system with examples for each command. Include interactive mode for exploratory queries. Document in docs/cli-guide.md. Include 24+ tests (14 command parsing + 10 integration against mock API).
+- **Files**:
+  - scripts/iris-cli.ts
+  - scripts/__tests__/iris-cli.test.ts
+  - scripts/__tests__/iris-cli.integration.test.ts
+  - scripts/bin/iris (executable wrapper)
+  - docs/cli-guide.md
+  - packages/semantic-core/src/cli-client.ts
+- **Depends on**: nothing
+- **Added**: 2026-06-08
+
+### Task: Advanced Metrics & Analytics Pipeline for Operational Insights
+- **Layer**: 65 — Security, Observability & Developer Experience
+- **Status**: COMMITTED
+- **Priority**: Medium
+- **Description**: Build an advanced analytics pipeline aggregating query latency, token efficiency gains, connector health trends, and cost breakdowns, with retention and rollup policies for long-term insights. Create packages/semantic-core/src/analytics-engine.ts with AnalyticsService: (1) recordMetricEvent(name, value, dimensions, timestamp) capturing events (query_latency, tokens_saved, connector_error, cache_hit), (2) aggregateMetrics(metricName, window, dimensions) computing p50/p95/p99/mean/stddev by time window and dimension (by connector, by workspace, by user), (3) detectAnomalies() via exponential smoothing + z-score detection, (4) rollupOldData() downsampling hourly → daily → monthly on retention schedule. Create migration 133 (metric_events, metric_aggregates_hourly/daily/monthly) with time-based partitioning. Add REST routes: GET /api/v1/analytics/metrics/:name?window=1h|1d|1w&dimensions=connector,user (time-series aggregates + anomalies), GET /api/v1/analytics/dashboards/:templateName returning pre-computed views (token-efficiency, connector-health, user-adoption, cost-trends). Add dashboard /analytics/[workspaceId]/overview page with: metric cards (avg token_saved%, total queries, top connectors by usage), anomaly timeline, cost breakdown by connector/entity-type, user adoption trend. Include 30+ tests (18 unit aggregation + 12 integration partitioned data + anomaly detection).
+- **Files**:
+  - packages/semantic-core/src/analytics-engine.ts
+  - packages/semantic-core/src/__tests__/analytics-engine.test.ts
+  - packages/semantic-core/src/__tests__/analytics-engine.integration.test.ts
+  - apps/api/src/routes/analytics-pipeline.ts
+  - apps/api/src/__tests__/analytics-pipeline.test.ts
+  - apps/api/migrations/133_metric_events_analytics.sql
+  - apps/dashboard/app/analytics/[workspaceId]/overview/page.tsx
+  - apps/dashboard/components/metric-overview-cards.tsx
+  - apps/dashboard/components/anomaly-timeline.tsx
+  - apps/dashboard/components/cost-breakdown-chart.tsx
+- **Depends on**: nothing
+- **Added**: 2026-06-08
+
+---
+
+## Layer 66: Advanced Semantic Features & Intelligent Governance
+
+### Task: Entity Lifecycle Management & Temporal Metadata Tracking
+- **Layer**: 66 — Advanced Semantic Features & Intelligent Governance
+- **Status**: COMMITTED
+- **Priority**: High
+- **Description**: Implement comprehensive entity lifecycle management with temporal tracking of status changes, ownership, approval workflows, and deprecation handling. Create packages/semantic-core/src/entity-lifecycle.ts with EntityLifecycleManager: (1) defineEntityStatus(entityId, status, reason, metadata) registering status transitions (DRAFT/PUBLISHED/DEPRECATED/ARCHIVED), (2) trackStatusHistory(entityId, window) returning full timeline with actor/timestamp/reason, (3) approveEntity(entityId, approverId, conditions?) with optional conditional approvals (e.g., "requires 2 approvals if PII"), (4) deprecateEntity(entityId, replacementId, sunsetDate) marking for retirement with successor mapping, (5) queryEntitiesByLifecycle(filters) retrieving entities by status with stale/at-risk flags, (6) computeEntityHealthScore(entityId) based on recency, approval status, accuracy signal. Create migration 134 (entity_lifecycle_states, lifecycle_events, entity_approvals) with lifecycle history partitioning. Add REST routes: GET /api/v1/entities/:id/lifecycle (status + timeline + approvals), PUT /api/v1/entities/:id/lifecycle/status (status change with audit), GET /api/v1/admin/lifecycle-dashboard (deprecated entity warnings, approval queue, deprecation roadmap). Add dashboard page /admin/entity-lifecycle with: status breakdown pie chart, timeline flow diagram for single entities, bulk status editor for mass transitions, approval queue with SLA tracking. Include 32+ tests (18 unit lifecycle state machine + 14 integration approval workflows + temporal queries).
+- **Files**:
+  - packages/semantic-core/src/entity-lifecycle.ts
+  - packages/semantic-core/src/__tests__/entity-lifecycle.test.ts
+  - packages/semantic-core/src/__tests__/entity-lifecycle.integration.test.ts
+  - apps/api/src/routes/entity-lifecycle.ts
+  - apps/api/src/__tests__/entity-lifecycle.test.ts
+  - apps/api/migrations/134_entity_lifecycle.sql
+  - apps/dashboard/app/admin/entity-lifecycle/page.tsx
+  - apps/dashboard/components/lifecycle-status-bar.tsx
+  - apps/dashboard/components/lifecycle-timeline.tsx
+  - apps/dashboard/components/entity-approval-queue.tsx
+- **Depends on**: nothing
+- **Added**: 2026-06-08
+
+### Task: Intelligent Query Template Library & Auto-Generation
+- **Layer**: 66 — Advanced Semantic Features & Intelligent Governance
+- **Status**: IN_PROGRESS
+- **Priority**: High
+- **Description**: Build a query template library system that allows teams to save, share, and discover reusable query patterns with AI-assisted generation. Create packages/semantic-core/src/query-templates.ts with QueryTemplateManager: (1) createTemplate(name, query, parameters, description, tags, visibility) saving parameterized queries with metadata, (2) generateFromNaturalLanguage(description, entityTypes) using LLM to generate query template from English description, (3) suggestTemplatesForQuery(query) finding similar saved templates via embedding, (4) instantiateTemplate(templateId, parameterValues) binding parameters to template, (5) trackTemplateUsage(templateId) recording usage metrics (frequency, avg_latency, cache_hit_rate), (6) suggestOptimizations(templateId) analyzing usage patterns to recommend query rewrites. Create migration 135 (query_templates, template_parameters, template_usage, template_suggestions). Add REST routes: GET /api/v1/templates (cursor-paginated with search/filter/sort), POST /api/v1/templates (create/share), PUT /api/v1/templates/:id (update), POST /api/v1/templates/:id/instantiate (bind + execute), GET /api/v1/templates/:id/analytics (usage stats + optimization recs). Add dashboard page /templates with: template gallery (filterable, searchable), template creator wizard (natural language input or visual builder), usage analytics per template, suggestion panel for optimization. Include 28+ tests (16 unit template logic + LLM fallback + 12 route template management + instantiation).
+- **Files**:
+  - packages/semantic-core/src/query-templates.ts
+  - packages/semantic-core/src/__tests__/query-templates.test.ts
+  - packages/semantic-core/src/__tests__/query-templates.integration.test.ts
+  - apps/api/src/routes/query-templates.ts
+  - apps/api/src/__tests__/query-templates.test.ts
+  - apps/api/migrations/135_query_templates.sql
+  - apps/dashboard/app/templates/page.tsx
+  - apps/dashboard/components/template-gallery.tsx
+  - apps/dashboard/components/template-creator.tsx
+  - apps/dashboard/components/template-usage-analytics.tsx
+- **Depends on**: nothing
+- **Added**: 2026-06-08
+
+### Task: Connector Marketplace & Plugin Distribution Framework
+- **Layer**: 66 — Advanced Semantic Features & Intelligent Governance
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Create a connector marketplace system enabling community connectors, vendor-verified connectors, and private plugin distribution with dependency resolution and version management. Create packages/semantic-core/src/connector-marketplace.ts with MarketplaceService: (1) publishConnector(manifest, package, version, releaseNotes) uploading connector to registry with signature verification, (2) searchConnectors(query, filters) querying marketplace by name/category/rating/author, (3) resolveConnectorDependencies(connectorId, version) computing transitive dependency tree with conflict detection, (4) installConnector(connectorId, version, workspace) installing verified connector with auto-updates, (5) rateConnector(connectorId, rating, review, verified_installation) tracking quality signals, (6) getConnectorTelemetry(connectorId) returning usage stats (installations, uninstalls, error rates by version). Create migration 136 (connector_registry, connector_versions, connector_dependencies, connector_ratings, marketplace_audit). Add REST routes: GET /api/v1/marketplace/connectors (search + pagination), GET /api/v1/marketplace/connectors/:id/versions (version history + changelogs), POST /api/v1/marketplace/connectors/:id/install, POST /api/v1/marketplace/connectors/:id/rate, GET /api/v1/marketplace/featured (community picks + trending). Add dashboard /marketplace page with: connector catalog (cards with ratings/downloads/version), detail page (compatibility matrix, dependency graph, installation instructions, reviews). Add background job for connector auto-updates (opt-in per workspace). Include 30+ tests (16 unit marketplace logic + dependency resolution + 14 integration registry + install workflows).
+- **Files**:
+  - packages/semantic-core/src/connector-marketplace.ts
+  - packages/semantic-core/src/__tests__/connector-marketplace.test.ts
+  - packages/semantic-core/src/__tests__/connector-marketplace.integration.test.ts
+  - apps/api/src/routes/marketplace.ts
+  - apps/api/src/__tests__/marketplace.test.ts
+  - apps/api/migrations/136_connector_marketplace.sql
+  - apps/dashboard/app/marketplace/page.tsx
+  - apps/dashboard/app/marketplace/[connectorId]/page.tsx
+  - apps/dashboard/components/connector-card.tsx
+  - apps/dashboard/components/connector-detail-panel.tsx
+  - apps/dashboard/components/dependency-graph-viewer.tsx
+- **Depends on**: nothing
+- **Added**: 2026-06-08
+
+### Task: Data Retention Policies & Automated Entity Archival
+- **Layer**: 66 — Advanced Semantic Features & Intelligent Governance
+- **Status**: UNWORKED
+- **Priority**: Medium
+- **Description**: Implement fine-grained data retention and archival policies with automated cleanup, audit trails, and recovery capabilities. Create packages/semantic-core/src/retention-manager.ts with RetentionPolicyService: (1) defineRetentionPolicy(entityType, retentionDays, archiveAction, conditions?) configuring retention by entity type with optional conditions (e.g., "keep indefinitely if belongs to top-100 accounts"), (2) computeArchivalDate(entity, policy) calculating when entity should be archived, (3) archiveEntity(entityId, reason, recoveryWindow) moving to cold storage with recovery window (default: 30 days), (4) restoreArchivedEntity(entityId) restoring from archive within recovery window, (5) runArchivalJobScheduled() batch archival process, (6) queryArchivedEntities(filters) searching archived entities by type/date/reason. Create migration 137 (retention_policies, archived_entities, archival_audit) with archival state tracking. Add REST routes: GET /api/v1/admin/retention-policies, PUT /api/v1/admin/retention-policies/:type (update policy), GET /api/v1/admin/archived-entities (paginated with filters), POST /api/v1/admin/archived-entities/:id/restore (restore within window). Add dashboard page /admin/retention with: policy matrix (entity type vs retention days), archived entity count by type/date, recovery window warnings, bulk restore interface. Include 28+ tests (16 unit archival logic + conditions + 12 integration scheduled jobs + recovery).
+- **Files**:
+  - packages/semantic-core/src/retention-manager.ts
+  - packages/semantic-core/src/__tests__/retention-manager.test.ts
+  - packages/semantic-core/src/__tests__/retention-manager.integration.test.ts
+  - apps/api/src/routes/retention-policies.ts
+  - apps/api/src/__tests__/retention-policies.test.ts
+  - apps/api/migrations/137_retention_policies.sql
+  - apps/dashboard/app/admin/retention/page.tsx
+  - apps/dashboard/components/retention-policy-matrix.tsx
+  - apps/dashboard/components/archived-entity-browser.tsx
+  - apps/dashboard/components/recovery-window-warning.tsx
+- **Depends on**: nothing
+- **Added**: 2026-06-08
+
+### Task: Entity Relationship Recommendations & Auto-Linking Engine
+- **Layer**: 66 — Advanced Semantic Features & Intelligent Governance
+- **Status**: UNWORKED
+- **Priority**: Medium
+- **Description**: Build an intelligent relationship recommendation engine that suggests missing entity links using semantic similarity, co-occurrence patterns, and domain knowledge. Create packages/semantic-core/src/relationship-recommender.ts with RelationshipRecommendationService: (1) suggestRelationships(entityId, topK=10) ranking potential relationship targets by confidence score (embedding similarity 40% + cooccurrence 30% + type compatibility 20% + domain rules 10%), (2) autoLinkEntities(fromId, toId, relationshipType, confidence) creating auto-links above confidence threshold (default: 0.75) with human-in-the-loop review, (3) denyRelationshipSuggestion(fromId, toId) recording negative feedback to avoid re-suggesting, (4) learnFromAcceptedRelationships() updating weighting model based on accepted vs rejected suggestions, (5) bulkSuggestRelationships(entityIds) batch recommendation for entity type reconciliation. Create migration 138 (relationship_suggestions, relationship_feedback, suggestion_metrics). Add REST routes: GET /api/v1/entities/:id/suggested-relationships (ranked suggestions with confidence + reasoning), POST /api/v1/entities/:id/relationships/auto-link (accept suggestions), POST /api/v1/entities/:id/relationship-feedback/:targetId (feedback signal). Add dashboard UI: suggestions widget on entity detail page (shows top 5 + "see all" modal), bulk linking interface for reconciliation, feedback history + model performance metrics. Include 30+ tests (18 unit scoring logic + ML model update + 12 route feedback handling).
+- **Files**:
+  - packages/semantic-core/src/relationship-recommender.ts
+  - packages/semantic-core/src/__tests__/relationship-recommender.test.ts
+  - packages/semantic-core/src/__tests__/relationship-recommender.integration.test.ts
+  - apps/api/src/routes/relationship-recommendations.ts
+  - apps/api/src/__tests__/relationship-recommendations.test.ts
+  - apps/api/migrations/138_relationship_suggestions.sql
+  - apps/dashboard/components/relationship-suggestions-widget.tsx
+  - apps/dashboard/components/bulk-linking-interface.tsx
+  - apps/dashboard/components/suggestion-feedback-chart.tsx
+- **Depends on**: nothing
+- **Added**: 2026-06-08

@@ -126,3 +126,9 @@ Custom Transformation Pipeline & Entity Mapping Language — TransformationDSLEn
 - feat(semantic-core,api,dashboard): API versioning and deprecation management — 6ca89de
 - feat(semantic-core,api,dashboard): content negotiation with JSON/CSV/Parquet response formats — 27ee2cd
 - feat(semantic-core,api,dashboard): webhook DLQ with exponential backoff and pattern analysis — eb6361e
+- feat(mcp-server,api,dashboard): MCP tool expansion with bulk-update, trend analysis, and discovery catalog — 267fbb6
+- feat(connector-sdk,api,dashboard): connector performance optimization (already in git, confirmed) — in prior commits
+- feat(semantic-core,api,dashboard): granular permission management with role templates, audit trail — 272591e
+- feat(semantic-core,api,dashboard): rate limiting & quota management (sliding window, tier configs, override grants) — c3f7cb4
+- feat(scripts): Iris admin CLI suite (connector/workspace/backup/admin/diagnostics commands, 37 tests) — 54c7036
+- feat(semantic-core,api,dashboard): advanced metrics & analytics pipeline (EMA anomaly detection, 42 tests) — 349f306
