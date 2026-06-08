@@ -2887,7 +2887,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Index Rebuild & Corruption Recovery Tools
 - **Layer**: 53 — Data Quality & Resilience
-- **Status**: IN_PROGRESS
+- **Status**: COMMITTED
 - **Priority**: High
 - **Description**: Build tools for detecting and repairing index corruption, handling edge cases like orphaned vectors, missing relationships, and stale cache entries. Create packages/semantic-core/src/index-repair-service.ts with IndexRepairService class: (1) scanIndexIntegrity(workspaceId, progressCallback) scanning for inconsistencies: orphaned vectors, missing vectors, broken relationships, (2) reportCorruption(workspaceId) generating detailed report, (3) rebuildIndex(workspaceId, entityTypeFilter) re-extracting vectors and recomputing relationships, (4) rollbackIndexSnapshot(workspaceId, snapshotId) restoring from backup. Create apps/api/migrations/082_add_index_repair_logs.sql with integrity_scans and rebuild_jobs tables. Expose REST for integrity check, rebuild trigger, snapshot rollback. Build admin page at apps/dashboard/app/admin/index-health/page.tsx with corruption detection status, rebuild trigger with dry-run mode, progress bar. Add 14+ unit tests for corruption detection, rebuild correctness, integrity verification. Integration tests: introduce corruption, detect/repair, verify consistency. Reference code-style.md for logging.
 - **Files**:
@@ -2905,7 +2905,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Custom Transformation Pipeline & Entity Mapping Language
 - **Layer**: 53 — Data Quality & Resilience
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: Medium
 - **Description**: Enable users to define custom transformation pipelines for entity mapping and field normalization without writing code. Create packages/semantic-core/src/transformation-dsl.ts with a DSL engine for chainable transformations: (1) mapping (rename fields), filtering (remove/include-only fields), normalization (case, trim, regex replace), computed fields (concatenate, extract substrings), date formatting, (2) build rule chains executing in sequence on ingested entities, (3) apply transformations at sync time before indexing, (4) test transformations on sample data before activation. Create apps/api/migrations/083_add_custom_transformations.sql with transformation_rules table. Expose REST for testing rules and activating rules. Build transformation builder UI at apps/dashboard/app/admin/transformations/page.tsx with rule chain editor, live preview, connector selector. Add 16+ unit tests for each transformation type, rule chaining, edge cases. Integration tests applying chains to real connector data. Reference code-style.md for validation.
 - **Files**:

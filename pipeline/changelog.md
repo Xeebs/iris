@@ -65,3 +65,5 @@ fe1aa1e feat(semantic-core,api,dashboard): query analytics engine with cache hit
 4ceb035 feat(semantic-core): proactive context engine integration tests and suggestion cache migration
 f57c456 feat(semantic-core): data lineage integration tests and enhanced lineage schema migration
 Entity Validation Engine with Data Quality Rules — entity-validator + rules/failures DB + REST API + dashboard UI
+Index Rebuild & Corruption Recovery Tools — IndexRepairService + integrity_scans/rebuild_jobs DB + REST API + dashboard panels
+Custom Transformation Pipeline & Entity Mapping Language — TransformationDSLEngine with 11 op types + REST API + live test panel

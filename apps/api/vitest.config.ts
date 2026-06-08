@@ -40,6 +40,7 @@ export default defineConfig({
       '@iris/semantic-core/cost-optimizer': path.resolve(__dirname, '../../packages/semantic-core/src/cost-optimizer.ts'),
       '@iris/semantic-core/entity-validator': path.resolve(__dirname, '../../packages/semantic-core/src/entity-validator.ts'),
       '@iris/semantic-core/index-repair-service': path.resolve(__dirname, '../../packages/semantic-core/src/index-repair-service.ts'),
+      '@iris/semantic-core/transformation-dsl': path.resolve(__dirname, '../../packages/semantic-core/src/transformation-dsl.ts'),
       '@iris/semantic-core': path.resolve(__dirname, '../../packages/semantic-core/src/index.ts'),
       '@iris/cache/response-cache': path.resolve(__dirname, '../../packages/cache/src/response-cache.ts'),
       '@iris/compression': path.resolve(__dirname, '../../packages/compression/src/index.ts'),
