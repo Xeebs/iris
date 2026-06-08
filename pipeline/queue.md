@@ -2706,7 +2706,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Schema Evolution & Backwards-Compatible Connector Updates
 - **Layer**: 50 — Advanced MCP Capabilities & Enterprise Features
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: Medium
 - **Description**: Implement schema versioning and migration support to handle connector schema changes (new fields, renamed fields, deprecated entity types) without breaking existing indexes or client subscriptions. Create packages/semantic-core/src/schema-evolution.ts with SchemaEvolutionManager class: (1) track connector schema versions (version timestamp, fields, breaking vs non-breaking changes), (2) support field remapping (old_field_name → new_field_name with transformation function), (3) entity type versioning (mark entity type as deprecated, suggest replacement), (4) backward-compatible retrieval (clients requesting old schema get transformed results), (5) schema migration strategies (additive-only, with safe deprecation periods). Create apps/api/migrations/074_add_schema_versions.sql with: connector_schema_versions table (connector_id, version, schema_json, released_at, breaking_changes_json, migration_guide), schema_migrations table (workspace_id, source_schema_version, target_schema_version, migration_status: 'pending'|'in_progress'|'completed', started_at, completed_at, affected_entity_count). Implement automatic schema update checks: periodic GET to connector to detect schema changes, prompt admin with change summary and migration plan. Build admin UI at apps/dashboard/app/admin/schema-migrations/page.tsx showing: pending schema updates, migration impact (# entities affected, breaking changes), one-click apply migration. Add 16+ unit tests for schema transformation logic and backward compatibility, integration tests with real schema change scenarios. Reference connector-patterns.md for schema semantics.
 - **Files**:
@@ -2738,4 +2738,64 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
   - apps/dashboard/components/cache-performance-dashboard.tsx
   - apps/dashboard/components/query-pattern-explorer.tsx
 - **Depends on**: Semantic Cache, Semantic Response Cache
+- **Added**: 2026-06-08
+
+### Task: ProactiveContextEngine Integration Tests & Full Implementation
+- **Layer**: 50 — Advanced MCP Capabilities & Enterprise Features
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Complete the integration test suite for ProactiveContextEngine and ensure full end-to-end behavioral profiling. The unit tests exist but integration tests are stubbed at packages/semantic-core/src/__tests__/proactive-context-engine.integration.test.ts. Implement: (1) recordQueryEvent(workspaceId, userId, query, entityTypes, tokensSpent, latencyMs) — store query patterns in Postgres (requires migration 076_add_proactive_integration_tables.sql with query_event_log, behavioral_profiles, suggestion_cache tables), (2) buildBehavioralProfile(workspaceId) — aggregate query history to compute: entity_type_affinity (which entity types does this user query most?), temporal_patterns (hourly/daily spikes), context_expansion_habits (does user expand context? how often?), (3) generateSuggestions(workspaceId, userId, currentQuery) — use learned profiles to suggest related entities/queries before user asks, (4) recordFeedbackLoop(suggestionId, accepted: boolean) — track suggestion quality. Add 14 comprehensive integration tests: query recording with concurrent events, behavioral profile computation accuracy, suggestion ranking by confidence score, feedback loop impact on future suggestions, edge cases (new users with no history, single anomalous query), TTL cleanup of stale suggestion cache. Use docker-compose Postgres instance. Reference proactive-context-engine.ts for internal signatures but expand with full DB integration.
+- **Files**:
+  - packages/semantic-core/src/proactive-context-engine.ts (update: add integration methods)
+  - packages/semantic-core/src/__tests__/proactive-context-engine.integration.test.ts (replace stub)
+  - apps/api/migrations/076_add_proactive_integration_tables.sql
+  - apps/api/src/routes/proactive-context.ts (update with recording endpoints)
+- **Depends on**: Proactive Context Surfacing (completed)
+- **Added**: 2026-06-08
+
+### Task: DataLineageService Integration Tests & Lifecycle Management
+- **Layer**: 50 — Advanced MCP Capabilities & Enterprise Features
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Complete integration tests and lifecycle management for DataLineageService. The unit tests exist but integration tests are stubbed at packages/semantic-core/src/__tests__/data-lineage.integration.test.ts. Implement: (1) recordOrigin(workspaceId, entityId, sourceConnectorId, extractedAt, metadata) — create/update data_lineage records with full Postgres integration, (2) getLineage(workspaceId, entityId) — retrieve complete ancestry chain (includes all upstream transformations), (3) trackDataTransformation(workspaceId, sourceEntityIds: string[], targetEntityId, transformationType: 'dedup'|'enrichment'|'aggregation', transformationDetails) — record how entities are derived from others, (4) getImpactedDownstream(workspaceId, entityId) — find all entities derived from a given entity (useful for deletion cascade analysis), (5) computeDataFreshness(workspaceId, entityId) — calculate time since data last changed in source, (6) archiveObsoleteLineage(workspaceId, beforeDate) — cleanup old lineage records with configurable retention. Add 12 integration tests: recording origin with metadata, multi-hop lineage retrieval, transformation chain tracking, impact analysis for deletion safety, bulk batch origin recording (1000+ entities), concurrent lineage updates without race conditions. Use postgres docker-compose. Test with real SemanticEntity transformations from connector flow.
+- **Files**:
+  - packages/semantic-core/src/data-lineage.ts (update: add missing integration methods)
+  - packages/semantic-core/src/__tests__/data-lineage.integration.test.ts (replace stub)
+  - apps/api/migrations/077_enhance_data_lineage_schema.sql (add transformation_tracking table, impact_analysis view)
+  - apps/api/src/routes/data-lineage.ts (update with new endpoints: GET /api/v1/lineage/:entityId, POST /api/v1/lineage/transformations, GET /api/v1/lineage/:entityId/downstream)
+- **Depends on**: Entity Relationship Indexing (completed)
+- **Added**: 2026-06-08
+
+### Task: Multi-Tenant Workspace Isolation & Cost Attribution
+- **Layer**: 51 — Post-MVP Hardening & Scale
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Implement comprehensive multi-tenant support with workspace isolation guarantees and per-workspace cost attribution. Create packages/semantic-core/src/multi-tenant-manager.ts with: (1) enforceWorkspaceIsolation() middleware for all API/MCP routes — verify JWT workspace claim against resource workspace_id before any query (prevents data leakage), (2) validateWorkspaceBoundaries(workspaceId, entityId) — ensure entities returned to a query belong to the requested workspace, (3) computeWorkspaceCosts(workspaceId, periodStart, periodEnd) — aggregate: embeddings_cost (# embeddings × $0.02/1M tokens), cache_hits_saved (# hits × baseline_tokens), compression_savings, mcp_query_cost (# queries × per-query cost). Create apps/api/migrations/078_multi_tenant_cost_tracking.sql with: workspace_cost_attribution table (workspace_id, date, cost_category: 'embeddings'|'queries'|'storage'|'cache_miss', amount_cents, metadata_json), workspace_query_counts table (workspace_id, date, query_type: 'vector_search'|'graph_expansion'|'compression', count, avg_latency_ms). Build REST routes: GET /api/v1/workspaces/:id/costs (period-aware, currency conversion), GET /api/v1/workspaces/:id/cost-breakdown (pie chart data: % by category), POST /api/v1/admin/cost-audit (export all costs for a workspace). Build dashboard page at apps/dashboard/app/workspaces/[id]/costs/page.tsx showing: daily cost trend (line chart), cost breakdown by category (pie), top-10 most expensive queries, cost per entity type. Add 13 unit tests: workspace isolation enforcement, cost calculation accuracy (with known sample data), currency conversions, edge cases (empty period, single-entity cost). Integration tests: multi-workspace queries with isolation verification, cost aggregation over 30 days, cost rollup across connector types.
+- **Files**:
+  - packages/semantic-core/src/multi-tenant-manager.ts
+  - packages/semantic-core/src/__tests__/multi-tenant-manager.test.ts
+  - apps/api/migrations/078_multi_tenant_cost_tracking.sql
+  - apps/api/src/routes/workspace-costs.ts
+  - apps/api/src/routes/admin-cost-audit.ts
+  - apps/api/src/__tests__/multi-tenant.test.ts
+  - apps/api/src/__tests__/workspace-costs.test.ts
+  - apps/dashboard/app/workspaces/[id]/costs/page.tsx
+  - apps/dashboard/components/cost-breakdown-charts.tsx
+- **Depends on**: Role-Based Context Segmentation (completed)
+- **Added**: 2026-06-08
+
+### Task: Connector Performance Optimization & Batching Improvements
+- **Layer**: 51 — Post-MVP Hardening & Scale
+- **Status**: UNWORKED
+- **Priority**: Medium
+- **Description**: Optimize connector sync performance for large-scale data sources through advanced batching, pagination tuning, and concurrency control. Create packages/connector-sdk/src/performance-optimizer.ts with: (1) adaptiveBatchSize(connectorType, recordsProcessedSoFar, avgRecordSize, maxMemory=512MB) — auto-tune batch size based on actual record size and available memory (start at 100, scale to 500 if records < 1KB), (2) identifyPaginationPattern(previousRequests) — detect if API uses offset/cursor/keyset pagination and recommend most efficient (cursor > keyset > offset), (3) computeOptimalConcurrency(connectorType, rateLimit, avgLatency, errorRate) — auto-scale parallel request concurrency (start at 3, scale to 10 if error_rate < 1%), (4) estimateSyncDuration(connectorId, totalRecords, currentThroughput) — predict when sync will complete and alert if > configured max_duration. Create apps/api/migrations/079_connector_performance_metrics.sql with: connector_sync_metrics table (connector_id, sync_run_id, metric_name: 'batch_size'|'concurrency'|'pagination_type'|'total_records'|'duration_ms'|'throughput_records_per_sec', value, recorded_at). Expose REST: GET /api/v1/connectors/:id/performance-stats (show trends in batch size, concurrency, throughput over last 30 syncs), POST /api/v1/connectors/:id/optimize (trigger analysis and recommend config changes). Build admin dashboard page at apps/dashboard/app/admin/connector-optimization/page.tsx with: performance leaderboard (fastest/slowest connectors by throughput), performance metrics over time (batch size evolution, concurrency ramp), optimization recommendations. Add 11 unit tests: batch size adaptation with varying record sizes, pagination pattern detection (offset vs cursor APIs), concurrency scaling logic, sync duration estimation accuracy. Integration tests: full sync with adaptive batching on HubSpot connector, concurrent sync of 3 connectors without resource contention.
+- **Files**:
+  - packages/connector-sdk/src/performance-optimizer.ts
+  - packages/connector-sdk/src/__tests__/performance-optimizer.test.ts
+  - apps/api/migrations/079_connector_performance_metrics.sql
+  - apps/api/src/routes/connector-performance.ts
+  - apps/api/src/__tests__/connector-performance.test.ts
+  - apps/dashboard/app/admin/connector-optimization/page.tsx
+  - apps/dashboard/components/connector-performance-leaderboard.tsx
+- **Depends on**: Connector Framework (completed), Sync Scheduling (completed)
 - **Added**: 2026-06-08

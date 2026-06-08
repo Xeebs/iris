@@ -65,7 +65,9 @@
     "./proactive-context-engine": "./dist/proactive-context-engine.js",
     "./metric-formula-engine": "./dist/metric-formula-engine.js",
     "./nlp-config-engine": "./dist/nlp-config-engine.js",
-    "./workflow-service": "./dist/workflow-service.js"
+    "./workflow-service": "./dist/workflow-service.js",
+    "./enrichment-engine": "./dist/enrichment-engine.js",
+    "./schema-evolution": "./dist/schema-evolution.js"
   },
   "scripts": {
     "build": "tsc --build",
