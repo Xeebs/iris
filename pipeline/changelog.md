@@ -73,3 +73,6 @@ Custom Transformation Pipeline & Entity Mapping Language — TransformationDSLEn
 - feat(connector-google-drive): complete Google Drive connector with folder tree, pagination, error handling tests
 - feat(connector-postgres): PostgreSQL direct connector with sql-query-builder, transformers, 27 tests
 - feat(semantic-core,api,dashboard): schema auto-discovery with human-in-the-loop confirmation — dd4e65a
+- feat(semantic-core,api,dashboard): batch sync optimization & performance tuning — 1b429f8
+- feat(semantic-core,api,dashboard): multi-LLM router & provider abstraction layer — 6e6c729
+- feat(semantic-core,api,dashboard): advanced entity linking & normalization engine — 762f03c

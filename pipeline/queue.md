@@ -2994,7 +2994,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Multi-LLM Router & Provider Abstraction Layer
 - **Layer**: 54 — Connector Expansion & V1 Features
-- **Status**: IN_PROGRESS
+- **Status**: COMMITTED
 - **Priority**: High
 - **Description**: Build an extensible LLM provider abstraction layer to support Claude, GPT-4, Gemini, and local models (via Ollama) with unified token counting and cost tracking. Create packages/semantic-core/src/llm-router.ts with LlmProvider interface (embed, complete, countTokens), concrete implementations for OpenAI, Anthropic, Google, and Ollama. Add provider-specific prompt optimization (e.g., Claude system prompts vs. OpenAI instructions). Create apps/api/migrations/086_add_llm_provider_config.sql with llm_providers table (workspace_id, provider_name, model_id, api_key_encrypted, cost_per_1m_tokens, default_for_use_case). Expose REST: GET /api/v1/llm-providers (list configured), POST /api/v1/llm-providers (register), DELETE /api/v1/llm-providers/:id (deregister), POST /api/v1/llm-providers/:id/test (verify connection). Update MCP server's embedding and completion calls to route through the new abstraction. Build dashboard page at apps/dashboard/app/admin/llm-configuration/page.tsx with provider selector, cost projections, auto-routing rules. Add 20+ unit tests for each provider implementation, token counting accuracy, cost calculation. Integration test: embed same input via three providers, verify consistent rankings. Reference code-style.md for error handling and logging.
 - **Files**:
@@ -3017,7 +3017,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Advanced Entity Linking & Normalization Engine
 - **Layer**: 54 — Connector Expansion & V1 Features
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: High
 - **Description**: Build intelligent cross-connector entity linking to merge duplicate entities across different data sources (e.g., same customer in HubSpot and Salesforce). Create packages/semantic-core/src/entity-linker.ts with EntityLinker class: (1) detectPotentialMatches(entityId) using fuzzy name matching (Levenshtein), domain-based email matching, semantic similarity > 0.92 on embeddings, (2) scoreMatch(entityA, entityB) combining multiple signals (name similarity, attribute overlap, relationship graph distance), (3) suggestMerges(workspaceId) batching all potential cross-connector matches with confidence scores, (4) confirmMerge(sourceId, targetId) merging entities, updating relationships, logging merge history. Create apps/api/migrations/087_add_entity_linking.sql with entity_link_suggestions, entity_merges, merge_history tables. Expose REST: GET /api/v1/entity-linking/suggestions (paginated suggestions with scores), POST /api/v1/entity-linking/merge/:id (confirm and execute merge), GET /api/v1/entity-linking/history (audit trail). Build dashboard page at apps/dashboard/app/admin/entity-linking/page.tsx with merge preview (side-by-side entity comparison), confidence scores, relationship impact visualization, undo capability. Add 18+ unit tests for matching algorithms, score combination, edge cases (null attributes, timezone-aware dates). Integration test: index 100 contacts across 3 sources with intentional duplicates, verify detection rate ≥95%, confirm merge correctness. Reference embedding-patterns.md for semantic similarity thresholds.
 - **Files**:
@@ -3036,7 +3036,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: MCP Tool Versioning & Backwards Compatibility Manager
 - **Layer**: 54 — Connector Expansion & V1 Features
-- **Status**: UNWORKED
+- **Status**: IN_PROGRESS
 - **Priority**: Medium
 - **Description**: Implement version management for MCP tools to enable non-breaking feature additions and schema evolution. Create packages/semantic-core/src/mcp-tool-versioning.ts with ToolVersionManager: (1) registerToolVersion(toolName, version, schema, handler) allowing multiple handlers per tool, (2) resolveHandler(toolName, clientVersion) selecting appropriate handler based on client compatibility, (3) generateClientSdkStub(toolName, language) generating TypeScript/Python stub with type defs for each version, (4) deprecateVersion(toolName, version, sunsetDate) marking versions for removal with grace period. Create apps/api/migrations/088_add_mcp_tool_versions.sql with mcp_tool_versions, mcp_tool_deprecations tables. Update MCP server to negotiate versions in capabilities handshake. Add version headers to all MCP responses. Build admin dashboard page at apps/dashboard/app/admin/mcp-tools/page.tsx with tool browser: search, version selector, schema viewer, handler test console, usage metrics per version. Add 16+ tests for version resolution, deprecation handling, schema compatibility. Integration test: register v1 and v2 of query-context tool with schema changes, verify clients on each version get correct behavior. Reference api-conventions.md for MCP response structure.
 - **Files**:
@@ -3068,4 +3068,76 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
   - apps/dashboard/components/health-detail-panel.tsx
   - apps/dashboard/components/health-alerts-widget.tsx
 - **Depends on**: Connector Registry (completed), Indexer Implementation (completed)
+- **Added**: 2026-06-08
+
+### Task: API Rate Limiting & Quota Management System
+- **Layer**: 54 — Connector Expansion & V1 Features
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Implement comprehensive rate limiting and quota management for the REST API and MCP server to prevent abuse and enforce fair usage. Create packages/semantic-core/src/rate-limiter.ts with RateLimitService: (1) enforceRateLimit(workspaceId, endpoint, limit, windowMs) tracking requests per workspace per endpoint with sliding window algorithm, (2) getQuotaStatus(workspaceId) returning current usage vs. tier limits (free/pro/enterprise), (3) handleQuotaExhausted() returning 429 with retry-after header. Create apps/api/migrations/090_add_rate_limiting.sql with rate_limit_configs, quota_usage, quota_reset_events tables. Integrate middleware into Hono app for all /api/v1/* routes. MCP server enforces limits per API key. Expose REST: GET /api/v1/usage (current usage), GET /api/v1/limits (tier limits), POST /api/v1/limits/increase-request (request quota increase). Build dashboard page apps/dashboard/app/settings/[workspaceId]/usage-limits/page.tsx with usage charts, tier selector, quota upgrade flow. Add 16+ unit tests for sliding window, quota calculation, tier enforcement. Integration test: simulate 1000+ requests, verify rate limit kicks in at threshold, 429s returned. Reference api-conventions.md for status codes.
+- **Files**:
+  - packages/semantic-core/src/rate-limiter.ts
+  - packages/semantic-core/src/__tests__/rate-limiter.test.ts
+  - packages/semantic-core/src/__tests__/rate-limiter.integration.test.ts
+  - apps/api/migrations/090_add_rate_limiting.sql
+  - apps/api/src/middleware/rate-limiting.ts
+  - apps/api/src/routes/usage-limits.ts
+  - apps/api/src/__tests__/usage-limits.test.ts
+  - apps/dashboard/app/settings/[workspaceId]/usage-limits/page.tsx
+  - apps/dashboard/components/usage-quota-card.tsx
+- **Depends on**: API Server Bootstrap (completed)
+- **Added**: 2026-06-08
+
+### Task: Advanced Entity Search & Filtering Engine
+- **Layer**: 54 — Connector Expansion & V1 Features
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Build a sophisticated entity search and filtering system enabling users to query entities by attribute values, relationships, and metadata. Create packages/semantic-core/src/entity-search.ts with EntitySearchEngine: (1) parseFilterQuery(filterString) supporting filters like "type:contact email:*@acme.com status:active", (2) buildSqlQuery(filters) generating safe parameterized SQL for Postgres, (3) searchEntities(workspaceId, query, filters, limit, cursor) combining full-text search and attribute filtering, (4) suggestFilters(query) returning applicable filters based on query context. Expose REST: POST /api/v1/entities/search with json body {query, filters, limit, cursor}, GET /api/v1/entities/search-suggestions (auto-complete filters). Build dashboard search page apps/dashboard/app/search/advanced/page.tsx with filter builder UI, multi-filter AND/OR logic, result counts, saved search ability. Support faceted search with counts per attribute value. Add 18+ unit tests for filter parsing, SQL generation safety (injection), complex filter combinations. Integration test: search 5000+ indexed entities with 10-filter combinations, verify accuracy and <500ms response. Reference code-style.md for SQL escaping patterns.
+- **Files**:
+  - packages/semantic-core/src/entity-search.ts
+  - packages/semantic-core/src/__tests__/entity-search.test.ts
+  - packages/semantic-core/src/__tests__/entity-search.integration.test.ts
+  - apps/api/src/routes/entity-search.ts
+  - apps/api/src/__tests__/entity-search.test.ts
+  - apps/dashboard/app/search/advanced/page.tsx
+  - apps/dashboard/components/filter-builder.tsx
+  - apps/dashboard/components/search-results-table.tsx
+  - apps/dashboard/components/faceted-search-sidebar.tsx
+- **Depends on**: Semantic Index (completed), PgvectorStore (completed)
+- **Added**: 2026-06-08
+
+### Task: Comprehensive Load Testing & Performance Baseline Suite
+- **Layer**: 54 — Connector Expansion & V1 Features
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Create a load testing and performance benchmarking suite to establish baseline metrics and validate system capacity. Build tests/load/ with k6 or Artillery scripts: (1) api-stress-test.js — concurrent requests to /api/v1/query-context, measure p50/p95/p99 latencies at 10, 50, 100, 500 RPS, (2) mcp-throughput-test.js — parallel MCP tool invocations, measure tool response latencies and cache hit rates under load, (3) sync-concurrency-test.js — parallel connector syncs (3+ connectors), measure queue throughput and peak memory, (4) index-query-test.js — vector search performance on 100K+ indexed entities with varying query complexities. Create monitoring dashboard tracking test results over time. Output performance report with: latency percentiles, throughput, error rates, memory/CPU peak, cache effectiveness. Establish baseline thresholds: p95 API latency <2s (cache miss), p95 MCP tool latency <500ms (cached), sync throughput ≥100 entities/sec. Create CI/CD integration to run on merges and alert on regressions. Document baseline results in docs/PERFORMANCE_BASELINE.md. Add recommendations for scaling (batch sizes, parallelism, caching). Reference connector-patterns.md for sync generator patterns during load.
+- **Files**:
+  - tests/load/api-stress-test.js
+  - tests/load/mcp-throughput-test.js
+  - tests/load/sync-concurrency-test.js
+  - tests/load/index-query-test.js
+  - tests/load/load-test-config.ts
+  - tests/load/__tests__/load-test-results.test.ts
+  - docs/PERFORMANCE_BASELINE.md
+  - .github/workflows/load-testing.yml
+- **Depends on**: MCP Server Bootstrap (completed), API Server Bootstrap (completed), Indexer Implementation (completed)
+- **Added**: 2026-06-08
+
+### Task: Webhook Management & Testing Dashboard
+- **Layer**: 54 — Connector Expansion & V1 Features
+- **Status**: UNWORKED
+- **Priority**: Medium
+- **Description**: Build a user-facing dashboard for managing webhooks, testing webhook delivery, and debugging payload issues. Create apps/dashboard/app/admin/webhooks/page.tsx with: (1) WebhookListTable showing all configured webhooks (URL, trigger events, active status, last delivery), (2) WebhookEventLog showing recent deliveries with status, latency, response code, (3) WebhookTestPanel allowing manual delivery of sample payloads and inspecting responses, (4) WebhookRetryQueue managing failed deliveries with manual retry. Add Webhook admin routes at apps/api/src/routes/webhook-admin.ts: GET /api/v1/admin/webhooks (list with pagination), GET /api/v1/admin/webhooks/:id/deliveries (event log), POST /api/v1/admin/webhooks/:id/test-delivery (test fire), POST /api/v1/admin/webhooks/:id/retry/:deliveryId (manual retry). Create packages/semantic-core/src/webhook-debugger.ts with WebhookDebugger: capturePayloads, comparePayloads (expected vs. actual), validateSignature (HMAC-SHA256). Build dashboard component WebhookDebugger showing request/response diff, signature validation status. Add 14+ tests for webhook debugging logic, signature validation, delivery retry logic. Integration test: send 10 webhooks, simulate 2 failures, retry, verify success. Reference api-conventions.md for REST design, code-style.md for error handling.
+- **Files**:
+  - apps/dashboard/app/admin/webhooks/page.tsx
+  - apps/dashboard/components/webhook-list-table.tsx
+  - apps/dashboard/components/webhook-event-log.tsx
+  - apps/dashboard/components/webhook-test-panel.tsx
+  - apps/dashboard/components/webhook-retry-queue.tsx
+  - apps/dashboard/components/webhook-debugger.tsx
+  - apps/api/src/routes/webhook-admin.ts
+  - apps/api/src/__tests__/webhook-admin.test.ts
+  - packages/semantic-core/src/webhook-debugger.ts
+  - packages/semantic-core/src/__tests__/webhook-debugger.test.ts
+- **Depends on**: Webhook-driven Real-Time Sync (completed)
 - **Added**: 2026-06-08
