@@ -81,6 +81,7 @@ export default defineConfig({
       '@iris/semantic-core/webhook-reliability': path.resolve(__dirname, '../../packages/semantic-core/src/webhook-reliability.ts'),
       '@iris/semantic-core/permission-manager': path.resolve(__dirname, '../../packages/semantic-core/src/permission-manager.ts'),
       '@iris/semantic-core/analytics-engine': path.resolve(__dirname, '../../packages/semantic-core/src/analytics-engine.ts'),
+      '@iris/semantic-core/entity-lifecycle': path.resolve(__dirname, '../../packages/semantic-core/src/entity-lifecycle.ts'),
       '@iris/semantic-core': path.resolve(__dirname, '../../packages/semantic-core/src/index.ts'),
       '@iris/cache/response-cache': path.resolve(__dirname, '../../packages/cache/src/response-cache.ts'),
       '@iris/compression': path.resolve(__dirname, '../../packages/compression/src/index.ts'),
