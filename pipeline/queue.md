@@ -2245,3 +2245,80 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
   - apps/dashboard/app/admin/__tests__/overview.test.tsx
 - **Depends on**: Comprehensive Audit Trail & Log Viewer, Token Analytics Service & Dashboard, Health & Readiness Endpoints + Graceful Shutdown
 - **Added**: 2026-06-08
+
+---
+
+## Layer 45: Document Indexing & Search Tuning
+
+### Task: Native Document Indexing from Connector Sources
+- **Layer**: 45 — Document Indexing & Search Tuning
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Extend connectors to extract and index full-text content from document-based sources (Google Drive PDFs, Notion page content, Confluence articles, GitHub README files). Create packages/semantic-core/src/document-indexer.ts with DocumentIndexer class: (1) extractTextFromPDF(buffer) using pdfjs-dist library, (2) extractTextFromDocx(buffer) using docx library, (3) createFullTextIndex for indexing extracted content into a separate documents table (workspace_id, source_connector_id, source_entity_id, document_title, document_content_plaintext, content_hash, extracted_at). Implement a hybrid entity representation: SemanticEntity with both structured attributes AND linked full-text documents. Update retrieval engine to: (1) on query, search both entity attributes AND document full-text, (2) return documents with highlighted excerpts showing context around search keywords, (3) merge document results with entity results ranked by relevance. Add per-connector toggle "Extract Document Content" (default: false for cost control). Wire full-text search into MCP tool query-context to support queries like "find all customer agreements mentioning 'payment terms'" returning matching excerpts. Build dashboard admin panel at apps/dashboard/components/document-indexing-config.tsx showing: indexing status per connector, document count per type, cost per GB of content indexed. Add unit tests (20+) with mock PDFs/docx files, integration tests with real files. Reference embedding-patterns.md for token cost budgeting (full-text indexing can consume 10–100× more tokens than entity-only).
+- **Files**:
+  - packages/semantic-core/src/document-indexer.ts
+  - packages/semantic-core/src/__tests__/document-indexer.test.ts
+  - packages/semantic-core/src/__tests__/document-indexer.integration.test.ts
+  - apps/api/migrations/058_add_document_storage.sql
+  - apps/api/src/routes/document-indexing.ts
+  - apps/dashboard/components/document-indexing-config.tsx
+  - packages/connectors/google-drive/src/document-handler.ts (update)
+  - packages/connectors/notion/src/document-handler.ts (update)
+  - apps/api/src/__tests__/document-indexing.test.ts
+- **Depends on**: Indexer Implementation, Full Response-Level Caching for MCP Tools
+- **Added**: 2026-06-08
+
+### Task: Search Relevance Tuning & Scoring UI
+- **Layer**: 45 — Document Indexing & Search Tuning
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Build a user-facing tool for tuning search relevance scoring to improve query results for business-specific needs. Create packages/semantic-core/src/relevance-tuner.ts with RelevanceTuner class: (1) define scoring factors (BM25 for full-text, cosine similarity for embeddings, entity type match, relationship distance, freshness/recency boost, custom business rules), (2) allow admins to configure weights per workspace (e.g., boost recent contacts, boost high-value accounts), (3) train on labeled query-result pairs via click-through data (users clicking results = positive signal). Expose POST /api/v1/search-tuning/feedback endpoint to record user interactions (query, clicked result rank, dwell time). Store feedback in search_feedback table (workspace_id, query, clicked_entity_id, rank, feedback_score, timestamp). Implement learning: aggregate feedback into search_tuning_config table (workspace_id, factor_name: 'bm25_weight'|'embedding_weight'|'type_boost_contact', tuned_value). Build dashboard page at apps/dashboard/app/search-tuning/page.tsx with: (1) Test Search section (query box, results preview), (2) Tuning Controls (sliders for each factor weight, A/B test toggle), (3) Feedback Analytics (click-through rates per query, factor impact visualization), (4) Learning Status (model training progress if using ML-based tuning). Add validation: prevent tuning weights that would invert result quality (automatic rollback if metrics degrade). Include 15+ unit tests for scoring calculations, 10+ integration tests with real feedback data. Reference embedding-patterns.md for threshold tuning patterns.
+- **Files**:
+  - packages/semantic-core/src/relevance-tuner.ts
+  - packages/semantic-core/src/__tests__/relevance-tuner.test.ts
+  - packages/semantic-core/src/__tests__/relevance-tuner.integration.test.ts
+  - apps/api/migrations/059_add_search_tuning.sql
+  - apps/api/src/routes/search-tuning.ts
+  - apps/dashboard/app/search-tuning/page.tsx
+  - apps/dashboard/components/relevance-factor-control.tsx
+  - apps/dashboard/components/search-results-preview.tsx
+  - apps/dashboard/components/tuning-feedback-analytics.tsx
+  - apps/api/src/__tests__/search-tuning.test.ts
+- **Depends on**: Query Decomposition & Entity Type Detection, Advanced Index Optimization & Query Performance
+- **Added**: 2026-06-08
+
+### Task: Connector Template & Workflow Recipe System
+- **Layer**: 45 — Document Indexing & Search Tuning
+- **Status**: UNWORKED
+- **Priority**: Medium
+- **Description**: Build a system for creating and sharing reusable connector configuration templates and workflow recipes tailored to specific business use cases. Create packages/semantic-core/src/connector-recipes.ts with ConnectorRecipeManager class supporting: (1) predefined recipes (e.g., "Sales Operations Setup" = HubSpot + Salesforce + Stripe, with field mappings configured), (2) custom recipe creation by users (combine connectors, define glossary terms, set up workflows), (3) recipe versioning and sharing across workspaces. Create apps/api/migrations/060_add_connector_recipes.sql with: connector_recipes table (id, workspace_id, recipe_name, description, connectors_config_json, glossary_terms_json, workflows_json, author_user_id, shared: boolean, usage_count), recipe_reviews table (recipe_id, reviewer_id, rating, comment). Expose: POST /api/v1/recipes/templates (create template), GET /api/v1/recipes/shared (list community recipes), POST /api/v1/recipes/:id/apply-to-workspace (fork recipe and apply). Build marketplace-style discovery page at apps/dashboard/app/recipes/page.tsx showing: recipe gallery (category filters: sales, finance, ops, etc.), install buttons, ratings/reviews, preview (shows connectors + glossary snapshot). Enable recipe cloning: POST /api/v1/recipes/:id/clone creates copy in user's workspace with all configs applied. Store recipes as JSON-serializable YAML or JSON files enabling export/GitHub sharing. Add E2E test covering: recipe creation → sharing → installation in another workspace. Include 12+ unit tests for recipe application logic. Reference connector-patterns.md for connector configuration semantics.
+- **Files**:
+  - packages/semantic-core/src/connector-recipes.ts
+  - packages/semantic-core/src/__tests__/connector-recipes.test.ts
+  - apps/api/migrations/060_add_connector_recipes.sql
+  - apps/api/src/routes/connector-recipes.ts
+  - apps/dashboard/app/recipes/page.tsx
+  - apps/dashboard/components/recipe-gallery.tsx
+  - apps/dashboard/components/recipe-installer.tsx
+  - apps/dashboard/components/recipe-editor.tsx
+  - apps/api/src/__tests__/connector-recipes.test.ts
+  - tests/e2e/connector-recipes.spec.ts
+- **Depends on**: Connector Instance Management API, Workflow Templates API Routes & Server Registration
+- **Added**: 2026-06-08
+
+### Task: Cost-Per-Context Analytics & Optimization Recommendations
+- **Layer**: 45 — Document Indexing & Search Tuning
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Implement fine-grained cost attribution and automatic optimization recommendations to help teams reduce AI context costs. Extend packages/semantic-core/src/cost-optimizer.ts (already committed) with: (1) trackContextSize(query, entities, tokensSpent, tokensSaved) recording actual costs per query context, (2) attributeCosts(workspaceId, timeframe) breaking down costs by: source connector (which connectors contribute to context cost), entity type (which entity types consume tokens), query patterns (which question types are expensive). Create apps/api/migrations/061_add_context_cost_tracking.sql with: context_cost_events table (workspace_id, query_hash, entities_returned, tokens_spent, cache_hit, source_connectors, entity_types, timestamp). Implement CostOptimizer.recommend(workspaceId) analyzing patterns and returning: (1) "Disable connector X (1% of queries, 8% of cost)" — suggest archiving low-value connectors, (2) "Index only top 3 fields per entity instead of all" — suggest schema field pruning, (3) "Enable compression for query pattern Y" — suggest selective compression for verbose entity types. Expose GET /api/v1/cost-analytics/breakdown returning cost by connector/type/pattern with trend analysis (week-over-week cost changes). Build admin dashboard panel at apps/dashboard/components/cost-optimization-advisor.tsx showing: pie chart of cost by connector, ranked recommendations with estimated savings (cost reduction %), one-click "apply recommendation" action (e.g., disable connector, update schema). Add automated alerts: warn if week-over-week cost increases >20%. Include 18+ unit tests for cost calculations and recommendation logic, integration tests with real usage data. Reference embedding-patterns.md for cost control rules.
+- **Files**:
+  - packages/semantic-core/src/cost-optimizer.ts (update existing)
+  - packages/semantic-core/src/__tests__/cost-optimizer.test.ts (update)
+  - apps/api/migrations/061_add_context_cost_tracking.sql
+  - apps/api/src/routes/cost-analytics.ts
+  - apps/dashboard/components/cost-optimization-advisor.tsx
+  - apps/dashboard/components/cost-breakdown-chart.tsx
+  - apps/dashboard/components/recommendation-card.tsx
+  - apps/api/src/__tests__/cost-analytics.test.ts
+- **Depends on**: Usage-Based Billing & Metering Infrastructure, Token Analytics Service & Dashboard
+- **Added**: 2026-06-08
