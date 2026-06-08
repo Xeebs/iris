@@ -2755,7 +2755,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: DataLineageService Integration Tests & Lifecycle Management
 - **Layer**: 50 — Advanced MCP Capabilities & Enterprise Features
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: High
 - **Description**: Complete integration tests and lifecycle management for DataLineageService. The unit tests exist but integration tests are stubbed at packages/semantic-core/src/__tests__/data-lineage.integration.test.ts. Implement: (1) recordOrigin(workspaceId, entityId, sourceConnectorId, extractedAt, metadata) — create/update data_lineage records with full Postgres integration, (2) getLineage(workspaceId, entityId) — retrieve complete ancestry chain (includes all upstream transformations), (3) trackDataTransformation(workspaceId, sourceEntityIds: string[], targetEntityId, transformationType: 'dedup'|'enrichment'|'aggregation', transformationDetails) — record how entities are derived from others, (4) getImpactedDownstream(workspaceId, entityId) — find all entities derived from a given entity (useful for deletion cascade analysis), (5) computeDataFreshness(workspaceId, entityId) — calculate time since data last changed in source, (6) archiveObsoleteLineage(workspaceId, beforeDate) — cleanup old lineage records with configurable retention. Add 12 integration tests: recording origin with metadata, multi-hop lineage retrieval, transformation chain tracking, impact analysis for deletion safety, bulk batch origin recording (1000+ entities), concurrent lineage updates without race conditions. Use postgres docker-compose. Test with real SemanticEntity transformations from connector flow.
 - **Files**:
