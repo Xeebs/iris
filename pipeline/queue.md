@@ -2742,7 +2742,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: ProactiveContextEngine Integration Tests & Full Implementation
 - **Layer**: 50 — Advanced MCP Capabilities & Enterprise Features
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: High
 - **Description**: Complete the integration test suite for ProactiveContextEngine and ensure full end-to-end behavioral profiling. The unit tests exist but integration tests are stubbed at packages/semantic-core/src/__tests__/proactive-context-engine.integration.test.ts. Implement: (1) recordQueryEvent(workspaceId, userId, query, entityTypes, tokensSpent, latencyMs) — store query patterns in Postgres (requires migration 076_add_proactive_integration_tables.sql with query_event_log, behavioral_profiles, suggestion_cache tables), (2) buildBehavioralProfile(workspaceId) — aggregate query history to compute: entity_type_affinity (which entity types does this user query most?), temporal_patterns (hourly/daily spikes), context_expansion_habits (does user expand context? how often?), (3) generateSuggestions(workspaceId, userId, currentQuery) — use learned profiles to suggest related entities/queries before user asks, (4) recordFeedbackLoop(suggestionId, accepted: boolean) — track suggestion quality. Add 14 comprehensive integration tests: query recording with concurrent events, behavioral profile computation accuracy, suggestion ranking by confidence score, feedback loop impact on future suggestions, edge cases (new users with no history, single anomalous query), TTL cleanup of stale suggestion cache. Use docker-compose Postgres instance. Reference proactive-context-engine.ts for internal signatures but expand with full DB integration.
 - **Files**:
