@@ -50,7 +50,9 @@
     "./sync-quality-monitor": "./dist/sync-quality-monitor.js",
     "./entity-deduplicator": "./dist/entity-deduplicator.js",
     "./connector-cost-attribution": "./dist/connector-cost-attribution.js",
-    "./onboarding-manager": "./dist/onboarding-manager.js"
+    "./onboarding-manager": "./dist/onboarding-manager.js",
+    "./cost-optimizer": "./dist/cost-optimizer.js",
+    "./document-indexer": "./dist/document-indexer.js"
   },
   "scripts": {
     "build": "tsc --build",

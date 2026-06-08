@@ -49,15 +49,18 @@ import { createEmailTemplateRoutes } from './routes/email-templates.js';
 import { createPerformanceRoutes } from './routes/performance.js';
 import { createSessionRoutes } from './routes/sessions.js';
 import { createBillingRoutes } from './routes/billing.js';
+import { createCostOptimizerRoutes } from './routes/cost-optimizer.js';
 import { createMarketplaceRoutes } from './routes/marketplace.js';
 import { createCacheStatsRoutes } from './routes/cache-stats.js';
 import { createAdminResilienceRoutes } from './routes/admin-resilience.js';
 import { createAdminEmbeddingRoutes } from './routes/admin-embedding.js';
 import { createVectorHealthRoutes } from './routes/vector-health.js';
 import { createEntityLineageRoutes } from './routes/entity-lineage.js';
+import { createAdminSystemRoutes } from './routes/admin-system.js';
 import { createDataImportExportRoutes } from './routes/data-import-export.js';
 import { createMcpResourcesRoutes } from './routes/mcp-resources.js';
 import { createAdminSyncQualityRoutes } from './routes/admin-sync-quality.js';
+import { createDocumentIndexingRoutes } from './routes/document-indexing.js';
 import { openApiSpec } from './openapi.js';
 
 export { createApp };
@@ -175,6 +178,7 @@ function createApp(
   authed.route('/performance', createPerformanceRoutes(sql));
   authed.route('/sessions', createSessionRoutes(sql));
   authed.route('/billing', createBillingRoutes(sql));
+  authed.route('/cost-optimizer', createCostOptimizerRoutes(sql));
   authed.route('/marketplace', createMarketplaceRoutes(sql));
   if (redis) {
     authed.route('/cache', createCacheStatsRoutes(redis));
@@ -187,6 +191,8 @@ function createApp(
   authed.route('/data', createDataImportExportRoutes(sql));
   authed.route('/mcp/resources', createMcpResourcesRoutes());
   authed.route('/admin/connectors', createAdminSyncQualityRoutes(sql));
+  authed.route('/admin/system', createAdminSystemRoutes(sql));
+  authed.route('/document-indexing', createDocumentIndexingRoutes(sql));
 
   // Webhook routes: inbound (unauthenticated) + events status (authenticated)
   app.route('/api/v1/webhooks', createWebhookRoutes(sql));
