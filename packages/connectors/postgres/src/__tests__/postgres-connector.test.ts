@@ -1,4 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { pgTypeToAttributeType, isIncrementalSync, describeQuery } from '../sql-query-builder.js';
+import { rowToEntity } from '../transformers.js';
 
 // ─── Mock the postgres module ─────────────────────────────────────────────────
 // The postgres library uses tagged template literals for queries (sql`...`) and
@@ -184,5 +186,117 @@ describe('PostgresConnector', () => {
       });
       expect(parsed.success).toBe(true);
     });
+  });
+});
+
+// ─── sql-query-builder unit tests ────────────────────────────────────────────
+
+describe('pgTypeToAttributeType', () => {
+  it('maps integer to number', () => {
+    expect(pgTypeToAttributeType('integer')).toBe('number');
+    expect(pgTypeToAttributeType('bigint')).toBe('number');
+    expect(pgTypeToAttributeType('numeric')).toBe('number');
+  });
+
+  it('maps boolean to boolean', () => {
+    expect(pgTypeToAttributeType('boolean')).toBe('boolean');
+  });
+
+  it('maps timestamp to date', () => {
+    expect(pgTypeToAttributeType('timestamp')).toBe('date');
+    expect(pgTypeToAttributeType('timestamptz')).toBe('date');
+    expect(pgTypeToAttributeType('date')).toBe('date');
+  });
+
+  it('maps text/varchar to string', () => {
+    expect(pgTypeToAttributeType('text')).toBe('string');
+    expect(pgTypeToAttributeType('character varying')).toBe('string');
+    expect(pgTypeToAttributeType('uuid')).toBe('string');
+  });
+});
+
+describe('isIncrementalSync', () => {
+  it('returns true when updatedAtColumn and lastSyncedAt are both set', () => {
+    expect(isIncrementalSync({ updatedAtColumn: 'updated_at' }, new Date())).toBe(true);
+  });
+
+  it('returns false when updatedAtColumn is missing', () => {
+    expect(isIncrementalSync({ updatedAtColumn: undefined }, new Date())).toBe(false);
+  });
+
+  it('returns false when lastSyncedAt is missing', () => {
+    expect(isIncrementalSync({ updatedAtColumn: 'updated_at' }, undefined)).toBe(false);
+  });
+});
+
+describe('describeQuery', () => {
+  it('includes table name and limit', () => {
+    const desc = describeQuery({
+      tableName: 'orders',
+      updatedAtColumn: undefined,
+      sinceDate: null,
+      batchSize: 500,
+      offset: 0,
+    });
+    expect(desc).toContain('orders');
+    expect(desc).toContain('LIMIT 500');
+  });
+
+  it('includes WHERE clause for incremental sync', () => {
+    const sinceDate = new Date('2024-01-01T00:00:00Z');
+    const desc = describeQuery({
+      tableName: 'orders',
+      updatedAtColumn: 'updated_at',
+      sinceDate,
+      batchSize: 500,
+      offset: 0,
+    });
+    expect(desc).toContain('WHERE updated_at');
+    expect(desc).toContain('2024-01-01');
+  });
+});
+
+// ─── transformers unit tests ─────────────────────────────────────────────────
+
+describe('rowToEntity', () => {
+  const tableConf = { name: 'customers', entityType: 'customer', updatedAtColumn: undefined as string | undefined, labelColumn: undefined as string | undefined };
+
+  it('builds entity ID from row id field', () => {
+    const entity = rowToEntity({ id: 'cust-1', name: 'Acme' }, tableConf);
+    expect(entity.id).toBe('postgres:customer:cust-1');
+    expect(entity.sourceId).toBe('postgres:customers:cust-1');
+  });
+
+  it('uses labelColumn for entity label when configured', () => {
+    const entity = rowToEntity(
+      { id: 'c-1', company_name: 'Acme Corp' },
+      { ...tableConf, labelColumn: 'company_name' }
+    );
+    expect(entity.label).toBe('Acme Corp');
+  });
+
+  it('falls back to table:id label when no labelColumn', () => {
+    const entity = rowToEntity({ id: 'c-1', name: 'Acme' }, tableConf);
+    expect(entity.label).toBe('customers:c-1');
+  });
+
+  it('converts Date values to ISO strings in attributes', () => {
+    const d = new Date('2024-01-15T10:00:00Z');
+    const entity = rowToEntity({ id: 'r-1', created_at: d }, tableConf);
+    expect(entity.attributes['created_at']).toBe(d.toISOString());
+  });
+
+  it('maps null column values to null attributes', () => {
+    const entity = rowToEntity({ id: 'r-1', description: null }, tableConf);
+    expect(entity.attributes['description']).toBeNull();
+  });
+
+  it('uses updatedAtColumn for lastModified', () => {
+    const d = new Date('2024-06-08T00:00:00Z');
+    const entity = rowToEntity(
+      { id: 'r-1', updated_at: d },
+      { ...tableConf, updatedAtColumn: 'updated_at' }
+    );
+    expect(entity.lastModified.getTime()).toBe(d.getTime());
   });
 });
