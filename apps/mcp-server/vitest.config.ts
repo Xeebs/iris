@@ -17,6 +17,7 @@ export default defineConfig({
       '@iris/semantic-core/resource-builder': path.resolve(__dirname, '../../packages/semantic-core/src/resource-builder.ts'),
       '@iris/semantic-core/advanced-query-engine': path.resolve(__dirname, '../../packages/semantic-core/src/advanced-query-engine.ts'),
       '@iris/semantic-core/metrics-anomaly-detector': path.resolve(__dirname, '../../packages/semantic-core/src/metrics-anomaly-detector.ts'),
+      '@iris/semantic-core/schema-discovery': path.resolve(__dirname, '../../packages/semantic-core/src/schema-discovery.ts'),
       '@iris/semantic-core': path.resolve(__dirname, '../../packages/semantic-core/src/index.ts'),
       '@iris/cache/semantic-cache': path.resolve(__dirname, '../../packages/cache/src/semantic-cache.ts'),
       '@iris/cache/response-cache': path.resolve(__dirname, '../../packages/cache/src/response-cache.ts'),
