@@ -201,3 +201,117 @@ describe('DataLineageService.recordOriginBatch', () => {
     expect(sqlFn).toHaveBeenCalledTimes(2); // sql(rows) helper + INSERT query
   });
 });
+
+describe('DataLineageService.recordDependency', () => {
+  it('returns ok on successful upsert', async () => {
+    const sqlFn = vi.fn().mockResolvedValue([]);
+    const service = new DataLineageService(sqlFn as never);
+    const result = await service.recordDependency('e1', 'e2', 'ws-1');
+    expect(result.isOk()).toBe(true);
+    expect(sqlFn).toHaveBeenCalledOnce();
+  });
+
+  it('uses provided relationship type and confidence', async () => {
+    const sqlFn = vi.fn().mockResolvedValue([]);
+    const service = new DataLineageService(sqlFn as never);
+    const result = await service.recordDependency('e1', 'e2', 'ws-1', 'derived_from', 0.9);
+    expect(result.isOk()).toBe(true);
+  });
+
+  it('returns err on DB failure', async () => {
+    const sqlFn = vi.fn().mockRejectedValue(new Error('constraint'));
+    const service = new DataLineageService(sqlFn as never);
+    const result = await service.recordDependency('e1', 'e2', 'ws-1');
+    expect(result.isErr()).toBe(true);
+    expect(result._unsafeUnwrapErr().message).toBe('constraint');
+  });
+});
+
+describe('DataLineageService.computeImpact', () => {
+  it('returns empty affected list when no dependents', async () => {
+    const sqlFn = vi.fn().mockResolvedValue([]);
+    const service = new DataLineageService(sqlFn as never);
+    const result = await service.computeImpact('e-root', 'ws-1', 2);
+    expect(result.isOk()).toBe(true);
+    const impact = result._unsafeUnwrap();
+    expect(impact.entityId).toBe('e-root');
+    expect(impact.affectedEntityIds).toHaveLength(0);
+    expect(impact.affectedCount).toBe(0);
+  });
+
+  it('returns direct dependents at depth 1', async () => {
+    const sqlFn = vi.fn()
+      .mockResolvedValueOnce([{ entity_id: 'e-dep1' }, { entity_id: 'e-dep2' }])
+      .mockResolvedValue([]);
+    const service = new DataLineageService(sqlFn as never);
+    const result = await service.computeImpact('e-root', 'ws-1', 1);
+    expect(result.isOk()).toBe(true);
+    const impact = result._unsafeUnwrap();
+    expect(impact.affectedEntityIds).toContain('e-dep1');
+    expect(impact.affectedEntityIds).toContain('e-dep2');
+    expect(impact.affectedCount).toBe(2);
+  });
+
+  it('traverses transitively up to maxDepth', async () => {
+    const sqlFn = vi.fn()
+      .mockResolvedValueOnce([{ entity_id: 'e-dep1' }])  // root deps
+      .mockResolvedValueOnce([{ entity_id: 'e-dep2' }])  // e-dep1 deps
+      .mockResolvedValue([]);
+    const service = new DataLineageService(sqlFn as never);
+    const result = await service.computeImpact('e-root', 'ws-1', 3);
+    expect(result.isOk()).toBe(true);
+    const impact = result._unsafeUnwrap();
+    expect(impact.affectedEntityIds).toContain('e-dep1');
+    expect(impact.affectedEntityIds).toContain('e-dep2');
+  });
+
+  it('does not include the root entity in affected list', async () => {
+    const sqlFn = vi.fn().mockResolvedValueOnce([{ entity_id: 'e-root' }, { entity_id: 'e-other' }]).mockResolvedValue([]);
+    const service = new DataLineageService(sqlFn as never);
+    const result = await service.computeImpact('e-root', 'ws-1', 2);
+    expect(result._unsafeUnwrap().affectedEntityIds).not.toContain('e-root');
+  });
+
+  it('returns err on DB failure', async () => {
+    const sqlFn = vi.fn().mockRejectedValue(new Error('timeout'));
+    const service = new DataLineageService(sqlFn as never);
+    const result = await service.computeImpact('e-root', 'ws-1');
+    expect(result.isErr()).toBe(true);
+  });
+});
+
+describe('DataLineageService.getLineageGraph', () => {
+  it('returns empty ancestors and descendants when no edges exist', async () => {
+    const sqlFn = vi.fn().mockResolvedValue([]);
+    const service = new DataLineageService(sqlFn as never);
+    const result = await service.getLineageGraph('e-root', 'ws-1', 2);
+    expect(result.isOk()).toBe(true);
+    const graph = result._unsafeUnwrap();
+    expect(graph.entityId).toBe('e-root');
+    expect(graph.ancestors).toHaveLength(0);
+    expect(graph.descendants).toHaveLength(0);
+  });
+
+  it('returns ancestors (up direction)', async () => {
+    // ancestors: 2 up-direction queries (one per BFS level), descendants: 2 down-direction queries
+    const sqlFn = vi.fn()
+      .mockResolvedValueOnce([{ depends_on_entity_id: 'parent-1', relationship_type: 'derived_from' }])
+      .mockResolvedValueOnce([])  // parent-1 has no parents
+      .mockResolvedValueOnce([])  // descendants of root
+      .mockResolvedValue([]);
+    const service = new DataLineageService(sqlFn as never);
+    const result = await service.getLineageGraph('e-root', 'ws-1', 2);
+    expect(result.isOk()).toBe(true);
+    const graph = result._unsafeUnwrap();
+    expect(graph.ancestors).toHaveLength(1);
+    expect(graph.ancestors[0]?.entityId).toBe('parent-1');
+    expect(graph.ancestors[0]?.relationshipType).toBe('derived_from');
+  });
+
+  it('returns err on DB failure', async () => {
+    const sqlFn = vi.fn().mockRejectedValue(new Error('DB fail'));
+    const service = new DataLineageService(sqlFn as never);
+    const result = await service.getLineageGraph('e-root', 'ws-1');
+    expect(result.isErr()).toBe(true);
+  });
+});
