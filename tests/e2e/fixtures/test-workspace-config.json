@@ -1,0 +1,35 @@
+{
+  "workspaceId": "ws-test",
+  "name": "Test Workspace",
+  "plan": "pro",
+  "connectorCount": 3,
+  "entityCount": 1200,
+  "retentionDays": 90,
+  "billingEmail": "billing@example.com",
+  "features": {
+    "sso": true,
+    "scim": true,
+    "dataExport": true,
+    "advancedAnalytics": true
+  },
+  "apiKeys": [
+    {
+      "id": "key-1",
+      "name": "Production MCP Key",
+      "prefix": "iris_prod",
+      "suffix": "key1",
+      "createdAt": "2024-01-01T00:00:00.000Z",
+      "lastUsedAt": "2024-03-01T00:00:00.000Z"
+    }
+  ],
+  "ssoConfigs": [
+    {
+      "id": "sso-1",
+      "provider": "saml",
+      "providerName": "Okta",
+      "enabled": true,
+      "metadataUrl": "https://dev-okta.example.com/metadata",
+      "entityId": "iris-dev"
+    }
+  ]
+}

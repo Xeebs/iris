@@ -1,0 +1,12 @@
+{
+  "userId": "user-admin-1",
+  "email": "admin@example.com",
+  "role": "admin",
+  "workspaceId": "ws-test",
+  "apiKey": "iris_test_admin_key",
+  "authHeaders": {
+    "x-api-key": "iris_test_admin_key",
+    "x-workspace-id": "ws-test",
+    "x-user-id": "user-admin-1"
+  }
+}

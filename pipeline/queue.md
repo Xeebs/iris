@@ -3509,7 +3509,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Dashboard E2E Test Coverage for Admin & Settings Pages
 - **Layer**: 59 — Quality Assurance & Test Coverage Closure
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: Medium
 - **Description**: Extend the existing Playwright E2E test suite to cover the dashboard's 25+ admin and settings pages that manage critical system configuration. Create tests/e2e/dashboard-admin-pages.spec.ts covering: (1) admin console (view system status, start/stop sync jobs, inspect logs), (2) connector settings (add/remove connectors, configure OAuth, test connectivity), (3) role-based access control (create/modify/delete roles, assign permissions), (4) workspace config (edit name, billing info, retention policy), (5) API key management (generate/rotate/revoke keys), (6) SSO/SCIM setup (configure provider, test sync), (7) data export/import (trigger backup, restore from snapshot), (8) cost analytics (view spending trends, set budget alerts), (9) PII configuration (mask/redact sensitive fields, validate). Each test should: login as appropriate admin user, navigate to page, perform action, validate success message and database state, logout. Use test fixtures with preloaded workspace. Target 60+ test cases.
 - **Files**:
