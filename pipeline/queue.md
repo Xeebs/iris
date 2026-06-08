@@ -2475,7 +2475,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Compliance & Audit Reporting Suite for Regulated Industries
 - **Layer**: 47 — Enterprise Search & Advanced AI Integration
-- **Status**: IN_PROGRESS
+- **Status**: COMMITTED
 - **Priority**: Medium
 - **Description**: Build compliance and audit reporting for regulated industries (HIPAA, SOC2, GDPR, CCPA). Create packages/semantic-core/src/compliance-reporter.ts with ComplianceReporter class: (1) track all data access via audit logs (who, what, when, from which tool, what context), (2) detect anomalous patterns (unusual access time, geographic anomaly, bulk exports), (3) generate compliance reports per framework (HIPAA access logs for PII, GDPR data subject access requests, SOC2 change logs, CCPA deletion verification), (4) support data retention policies (auto-purge old data per regulation), (5) PII field tagging and access tracking. Create apps/api/migrations/065_add_compliance_tracking.sql with: compliance_events table (workspace_id, event_type: access|export|delete, entity_id, accessed_fields, user, timestamp, ip_address, device_info), anomaly_alerts table. Expose: GET /api/v1/compliance/report/{framework} (generate report), POST /api/v1/compliance/dsr (data subject request), GET /api/v1/compliance/audit-log (searchable audit trail). Build admin page at apps/dashboard/app/admin/compliance/page.tsx with: compliance status, audit log viewer, anomaly alerts, report generator. Add 16+ unit tests for compliance logic and reporting, integration tests with GDPR sample data. Reference code-style.md for logging.
 - **Files**:
