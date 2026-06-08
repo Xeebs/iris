@@ -2406,7 +2406,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Hybrid Semantic + Full-Text Search Engine with Advanced Filtering
 - **Layer**: 47 — Enterprise Search & Advanced AI Integration
-- **Status**: IN_PROGRESS
+- **Status**: COMMITTED
 - **Priority**: High
 - **Description**: Build an enterprise-grade search engine combining semantic vector search, BM25 full-text search, and structured filtering for power users and integrations. Create packages/semantic-core/src/hybrid-search-engine.ts with HybridSearchEngine class implementing: (1) reciprocal rank fusion (RRF) combining BM25 and cosine similarity scores with configurable weights, (2) structured faceted filters (entity_type, source_connector, date_range, status, custom attributes), (3) advanced query syntax (quoted phrases, field-specific "field:value" searches, boolean operators), (4) query spell-checking and suggestions using Levenshtein distance, (5) search result clustering by entity type/source. Expose POST /api/v1/search endpoint accepting: {query, filters, limit, offset, include_suggestions, explain_scoring} returning ranked results with relevance explanations. Update MCP tool query-context to use hybrid search for better precision. Build dashboard search interface at apps/dashboard/app/search/page.tsx with: query builder UI, faceted filters, result highlighting, search history, saved searches. Add 25+ unit tests for RRF scoring, filter logic, and query parsing. Reference embedding-patterns.md for threshold patterns.
 - **Files**:
@@ -2424,7 +2424,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Streaming Context Response API for Real-Time Agent Integration
 - **Layer**: 47 — Enterprise Search & Advanced AI Integration
-- **Status**: UNWORKED
+- **Status**: IN_PROGRESS
 - **Priority**: High
 - **Description**: Implement streaming context responses via Server-Sent Events (SSE) and WebSocket to support real-time AI agent integrations where context is progressively retrieved and prioritized. Create apps/api/src/routes/streaming-context.ts with: (1) POST /api/v1/context/stream endpoint accepting a query and streaming JSON chunks (one entity per line, with relevance rank and token count), (2) progressive refinement where high-confidence results stream first, followed by lower-confidence suggestions, (3) client-side cancellation via request abort signal, (4) per-result token budget enforcement. Implement WebSocket version at /ws/context-stream for long-lived agent connections. Update MCP server to support streaming responses for multi-turn conversations. Build dashboard page at apps/dashboard/app/context-monitor/page.tsx showing: live streaming context previews, streaming latency metrics (time to first result, full context time), token efficiency analytics. Add 15+ unit tests for streaming logic, integration tests with real queries, E2E tests simulating agent consumption. Reference api-conventions.md for request patterns.
 - **Files**:
