@@ -62,6 +62,7 @@ export default defineConfig({
       '@iris/semantic-core/context-summarizer': path.resolve(__dirname, '../../packages/semantic-core/src/context-summarizer.ts'),
       '@iris/semantic-core/relationship-inference': path.resolve(__dirname, '../../packages/semantic-core/src/relationship-inference.ts'),
       '@iris/semantic-core/query-cluster-engine': path.resolve(__dirname, '../../packages/semantic-core/src/query-cluster-engine.ts'),
+      '@iris/semantic-core/mcp-tool-generator': path.resolve(__dirname, '../../packages/semantic-core/src/mcp-tool-generator.ts'),
       '@iris/semantic-core': path.resolve(__dirname, '../../packages/semantic-core/src/index.ts'),
       '@iris/cache/response-cache': path.resolve(__dirname, '../../packages/cache/src/response-cache.ts'),
       '@iris/compression': path.resolve(__dirname, '../../packages/compression/src/index.ts'),
