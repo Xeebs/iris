@@ -65,7 +65,7 @@ export async function getEmbeddingMetadata(
   return { modelId: row.model_id, dimension: row.dimension, createdAt: row.created_at };
 }
 
-type ReindexOptions = {
+export type ReindexOptions = {
   batchSize?: number;
   dryRun?: boolean;
 };

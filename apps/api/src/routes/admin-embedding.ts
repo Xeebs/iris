@@ -4,7 +4,9 @@ import type postgres from 'postgres';
 
 import { logger } from '@iris/core/logger';
 import { createEmbeddingProvider } from '@iris/semantic-core/embedding-provider';
+import type { EmbeddingProviderConfig } from '@iris/semantic-core/embedding-provider';
 import { getEmbeddingMetadata, reindexWorkspace } from '@iris/semantic-core/reindex-utils';
+import type { ReindexOptions } from '@iris/semantic-core/reindex-utils';
 import { PgvectorStore } from '@iris/semantic-core';
 
 type SqlClient = ReturnType<typeof postgres>;
@@ -64,12 +66,11 @@ export function createAdminEmbeddingRoutes(sql: SqlClient): Hono {
 
     let embeddingProvider;
     try {
-      embeddingProvider = createEmbeddingProvider({
-        provider,
-        ...(modelId !== undefined && { modelId }),
-        ...(apiKey !== undefined && { apiKey }),
-        ...(endpoint !== undefined && { endpoint }),
-      });
+      const providerConfig: EmbeddingProviderConfig = { provider };
+      if (modelId !== undefined) providerConfig.modelId = modelId;
+      if (apiKey !== undefined) providerConfig.apiKey = apiKey;
+      if (endpoint !== undefined) providerConfig.endpoint = endpoint;
+      embeddingProvider = createEmbeddingProvider(providerConfig);
     } catch (e) {
       return c.json({
         error: {
@@ -87,9 +88,9 @@ export function createAdminEmbeddingRoutes(sql: SqlClient): Hono {
     const vectorStore = new PgvectorStore(pgUrl);
 
     try {
-      const result = await reindexWorkspace(sql, vectorStore, workspaceId, embeddingProvider, {
-        ...(dryRun !== undefined && { dryRun }),
-      });
+      const reindexOpts: ReindexOptions = {};
+      if (dryRun !== undefined) reindexOpts.dryRun = dryRun;
+      const result = await reindexWorkspace(sql, vectorStore, workspaceId, embeddingProvider, reindexOpts);
       return c.json({ data: result }, 200);
     } catch (e) {
       log.error('Reindex failed', { workspaceId, error: e });
