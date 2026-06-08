@@ -23,6 +23,7 @@ export default defineConfig({
       '@iris/semantic-core/workflow-templates': path.resolve(__dirname, '../../packages/semantic-core/src/workflow-templates.ts'),
       '@iris/semantic-core/index-optimizer': path.resolve(__dirname, '../../packages/semantic-core/src/index-optimizer.ts'),
       '@iris/semantic-core/benchmarking': path.resolve(__dirname, '../../packages/semantic-core/src/benchmarking.ts'),
+      '@iris/semantic-core/connector-marketplace': path.resolve(__dirname, '../../packages/semantic-core/src/connector-marketplace.ts'),
       '@iris/semantic-core': path.resolve(__dirname, '../../packages/semantic-core/src/index.ts'),
       '@iris/compression': path.resolve(__dirname, '../../packages/compression/src/index.ts'),
       '@iris/queue': path.resolve(__dirname, '../../packages/queue/src/sync-job-queue.ts'),

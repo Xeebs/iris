@@ -1799,7 +1799,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Connector Marketplace & Discovery Platform
 - **Layer**: 36 — Billing & Monetization
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: High
 - **Description**: Build a connector marketplace and discovery system allowing users to browse, install, and manage connectors. Create apps/api/migrations/043_add_connector_marketplace.sql with: connector_listings table (id, connector_id, name, description, icon_url, documentation_url, popularity_score, workspace_installs_count, published_at), connector_reviews table (listing_id, reviewer_id, rating: 1–5, comment, created_at). Create packages/semantic-core/src/connector-marketplace.ts with ConnectorMarketplaceService: (1) getListings(filters: category, rating, popularity) returning paginated connector listings, (2) installConnector(workspaceId, connectorId) adding to workspace (calls registry to instantiate), (3) submitConnector(definition, icon, docs) allowing users to publish custom connectors, (4) getRatings(connectorId) and rateConnector(connectorId, rating, comment). Expose GET /api/v1/marketplace/connectors (with filtering/sorting), POST /api/v1/marketplace/connectors/:id/install, POST /api/v1/marketplace/connectors/:id/rate. Build marketplace discovery page at apps/dashboard/app/marketplace/page.tsx with: searchable connector grid, ratings/reviews, install buttons, detail modals with docs. Build admin curation dashboard at apps/dashboard/app/admin/marketplace-curation/page.tsx for approving/promoting connectors. Include popularity scoring: (installs × 0.4 + avg_rating × 0.3 + recency × 0.3). Add 18+ tests covering marketplace queries, curation workflows, and rating aggregation.
 - **Files**:

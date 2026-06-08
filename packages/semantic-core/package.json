@@ -38,7 +38,8 @@
     "./index-snapshot": "./dist/index-snapshot.js",
     "./email-templates": "./dist/email-templates.js",
     "./performance-profiler": "./dist/performance-profiler.js",
-    "./billing-meter": "./dist/billing-meter.js"
+    "./billing-meter": "./dist/billing-meter.js",
+    "./connector-marketplace": "./dist/connector-marketplace.js"
   },
   "scripts": {
     "build": "tsc --build",
