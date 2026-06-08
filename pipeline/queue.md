@@ -3036,7 +3036,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: MCP Tool Versioning & Backwards Compatibility Manager
 - **Layer**: 54 — Connector Expansion & V1 Features
-- **Status**: IN_PROGRESS
+- **Status**: COMMITTED
 - **Priority**: Medium
 - **Description**: Implement version management for MCP tools to enable non-breaking feature additions and schema evolution. Create packages/semantic-core/src/mcp-tool-versioning.ts with ToolVersionManager: (1) registerToolVersion(toolName, version, schema, handler) allowing multiple handlers per tool, (2) resolveHandler(toolName, clientVersion) selecting appropriate handler based on client compatibility, (3) generateClientSdkStub(toolName, language) generating TypeScript/Python stub with type defs for each version, (4) deprecateVersion(toolName, version, sunsetDate) marking versions for removal with grace period. Create apps/api/migrations/088_add_mcp_tool_versions.sql with mcp_tool_versions, mcp_tool_deprecations tables. Update MCP server to negotiate versions in capabilities handshake. Add version headers to all MCP responses. Build admin dashboard page at apps/dashboard/app/admin/mcp-tools/page.tsx with tool browser: search, version selector, schema viewer, handler test console, usage metrics per version. Add 16+ tests for version resolution, deprecation handling, schema compatibility. Integration test: register v1 and v2 of query-context tool with schema changes, verify clients on each version get correct behavior. Reference api-conventions.md for MCP response structure.
 - **Files**:
@@ -3054,7 +3054,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: End-to-End Connector Monitoring & Health Scoring System
 - **Layer**: 54 — Connector Expansion & V1 Features
-- **Status**: UNWORKED
+- **Status**: IN_PROGRESS
 - **Priority**: Medium
 - **Description**: Build a comprehensive health monitoring system for all connectors with proactive alerting and automated recovery. Create packages/semantic-core/src/connector-health-scorer.ts with ConnectorHealthScorer class: (1) scoreConnector(connectorId) computing a 0-100 health score from sync success rate (40%), entity freshness (30%), error frequency (20%), auth validity (10%), (2) detectDegradation(connectorId) comparing current score to 7-day rolling baseline and alerting on >15% drop, (3) suggestRecovery(connectorId) recommending actions (re-auth, manual sync, pause, retry), (4) monitorAuthExpiry() proactively rotating OAuth tokens before expiry. Create apps/api/migrations/089_add_connector_health.sql with connector_health_scores, health_alerts, recovery_actions tables. Expose REST: GET /api/v1/connectors/:id/health (detailed score breakdown), GET /api/v1/connectors/:id/health-history (time series), POST /api/v1/connectors/:id/recovery-action (execute suggested action), GET /api/v1/health-alerts (active alerts across workspace). Build dashboard components: ConnectorHealthCard (showing score + mini chart) on connectors list, HealthDetailPanel with scoring breakdown and historical context, AlertsWidget with active alerts and manual action buttons. Add 14+ unit tests for scoring algorithms, degradation detection, recovery recommendations. Integration test: simulate connector failure (API down), verify health score drops, alert triggers, recovery suggestion appears. Reference code-style.md for structured logging of health events.
 - **Files**:
