@@ -55,7 +55,8 @@
     "./document-indexer": "./dist/document-indexer.js",
     "./relevance-tuner": "./dist/relevance-tuner.js",
     "./connector-recipes": "./dist/connector-recipes.js",
-    "./index-maintenance": "./dist/index-maintenance.js"
+    "./index-maintenance": "./dist/index-maintenance.js",
+    "./index-analytics": "./dist/index-analytics.js"
   },
   "scripts": {
     "build": "tsc --build",
