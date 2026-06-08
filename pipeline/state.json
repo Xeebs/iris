@@ -5,8 +5,8 @@
   "last_cycle": "2026-06-08",
   "last_research": "2026-06-08",
   "last_commit": "2026-06-08",
-  "cycle_count": 138,
+  "cycle_count": 139,
   "rate_limit_hit": false,
   "mode": "BUILD",
-  "notes": "Committed rule-based entity deduplication: EntityDeduplicator with exact/fuzzy/composite rules, admin API endpoints, 32 unit tests."
+  "notes": "Committed per-connector cost attribution: ConnectorCostAttributor service, billing route update, dashboard components (cost chart, ROI scatterplot, recommendation panel), 23 unit tests."
 }

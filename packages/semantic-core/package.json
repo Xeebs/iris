@@ -48,7 +48,8 @@
     "./data-import-export": "./dist/data-import-export.js",
     "./resource-builder": "./dist/resource-builder.js",
     "./sync-quality-monitor": "./dist/sync-quality-monitor.js",
-    "./entity-deduplicator": "./dist/entity-deduplicator.js"
+    "./entity-deduplicator": "./dist/entity-deduplicator.js",
+    "./connector-cost-attribution": "./dist/connector-cost-attribution.js"
   },
   "scripts": {
     "build": "tsc --build",
