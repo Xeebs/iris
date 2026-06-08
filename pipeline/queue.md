@@ -3200,7 +3200,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Enterprise Compliance & Fine-Grained Audit Export
 - **Layer**: 55 — Growth Phase V2 Features & Advanced Analytics
-- **Status**: IN_PROGRESS
+- **Status**: COMMITTED
 - **Priority**: Medium
 - **Description**: Enhance audit capabilities for enterprise compliance (SOC 2, HIPAA, GDPR) with structured export, signed timestamps, and detailed access tracking. Create packages/semantic-core/src/compliance-auditor.ts with ComplianceAuditor: (1) generateAuditReport(workspaceId, startDate, endDate, includeFieldAccessPatterns) exporting CSV/JSON with: user_id, entity_ids accessed, timestamp, ip_address, user_agent, query_text, result_count, pii_fields_accessed (yes/no), action (read/write/delete), (2) signAuditLog(report) using RSA-2048 to sign report, prevent tampering, (3) detectAnomalousAccess(workspaceId, days=30) flagging suspicious patterns (off-hours access, bulk entity downloads, repeated PII field access by non-authorized users), (4) exportToComplianceFormat(workspaceId, format) supporting SOC 2 template, GDPR access request format, HIPAA audit requirements. Create apps/api/migrations/094_add_compliance_audit.sql with: signed_audit_exports (workspace_id, export_id, date_range, signature, signed_at, requested_by_user_id, tamper_check_status), anomalous_access_alerts (workspace_id, alert_type: 'bulk_access'|'off_hours'|'pii_overaccess', user_id, entity_ids_involved, confidence, flagged_at). Expose REST: POST /api/v1/compliance/audit-export (generate report with signature), GET /api/v1/compliance/audit-exports (list historical exports), GET /api/v1/compliance/anomalies (suspicious access patterns), GET /api/v1/compliance/verify-export/:exportId (verify signature). Build dashboard page apps/dashboard/app/admin/compliance/page.tsx with: audit export wizard, signature verification UI, anomaly alerts list with investigation tools, GDPR data access report generator. Add 15+ unit tests for audit generation, signature verification, anomaly detection heuristics. Integration test: generate 1000 audit entries with seeded anomalies, verify detection catches 95%+ of synthetic anomalies, signature verification succeeds on authentic reports and fails on tampered. Reference code-style.md for crypto handling.
 - **Files**:
@@ -3214,4 +3214,94 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
   - apps/dashboard/components/audit-export-wizard.tsx
   - apps/dashboard/components/anomaly-alerts-list.tsx
 - **Depends on**: Audit Logger (completed), Role-Based Context Segmentation (completed)
+- **Added**: 2026-06-08
+
+---
+
+## Layer 56: Growth Phase V2 - Advanced Infrastructure & Enterprise Optimization
+
+### Task: GraphQL API Gateway & Schema Federation
+- **Layer**: 56 — Growth Phase V2 - Advanced Infrastructure & Enterprise Optimization
+- **Status**: COMMITTED
+- **Priority**: High
+- **Description**: Build a GraphQL API gateway alongside the existing REST API to enable efficient, query-optimized data fetching for advanced clients. Create packages/semantic-core/src/graphql-schema.ts with buildGraphQLSchema() generating a federated schema supporting: Query root (entity, entities, metrics, glossary, lineage), Mutation root (createEntity, updateEntity, deleteEntity, runQuery), Subscription root (onEntityChanged, onMetricUpdated, onSyncProgress) using GraphQL subscriptions. Implement packages/semantic-core/src/graphql-resolver.ts with resolvers delegating to existing semantic-core services (retrieval, indexer, metrics). Expose apps/api/src/routes/graphql.ts using apollo-server-hono with authentication, authorization (workspace/role-based), and token budget enforcement per query. Add GraphQL introspection debugging tools. Create apps/api/migrations/095_add_graphql_audit.sql with graphql_queries (workspace_id, query_hash, operation_name, query_cost_tokens, execution_time_ms, error, user_id, accessed_at). Build dashboard page apps/dashboard/app/admin/graphql-explorer/page.tsx with interactive GraphQL IDE (query editor, docs sidebar, results). Add 18+ unit tests covering: schema generation, resolver delegation, subscription filtering, complex nested queries, authorization enforcement, token budget limits. Integration test: 500 diverse GraphQL queries against 1000 indexed entities, verify subscription notifications fire correctly for entity changes. Reference api-conventions.md for GraphQL patterns.
+- **Files**:
+  - packages/semantic-core/src/graphql-schema.ts
+  - packages/semantic-core/src/graphql-resolver.ts
+  - packages/semantic-core/src/__tests__/graphql-schema.test.ts
+  - packages/semantic-core/src/__tests__/graphql-resolver.test.ts
+  - apps/api/src/routes/graphql.ts
+  - apps/api/src/__tests__/graphql.test.ts
+  - apps/api/migrations/095_add_graphql_audit.sql
+  - apps/dashboard/app/admin/graphql-explorer/page.tsx
+  - apps/dashboard/components/graphql-query-builder.tsx
+- **Depends on**: API Server Bootstrap (completed), Advanced Query Engine (completed)
+- **Added**: 2026-06-08
+
+### Task: SCIM 2.0 User Provisioning & Directory Sync
+- **Layer**: 56 — Growth Phase V2 - Advanced Infrastructure & Enterprise Optimization
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Implement System for Cross-domain Identity Management (SCIM 2.0) protocol for enterprise directory integration (Azure AD, Okta, Google Workspace). Create packages/semantic-core/src/scim-provisioner.ts with SCIMProvisionerService: (1) parseIncomingRequest(method, path, body) validating SCIM requests per RFC 7644, (2) provisionUser(scimUser) creating/updating workspace members from directory push events, (3) provisionGroup(scimGroup) mapping directory groups to Iris role groups, (4) handleDeprovision(userId) revoking access when user deleted from directory, (5) getFilteredUsers(filter) and getFilteredGroups(filter) for pull-based sync. Create apps/api/migrations/096_add_scim.sql with: scim_provisioned_users (user_id, external_user_id, directory_type, synced_at, last_updated), scim_group_mappings (group_name, iris_role, directory_type). Expose REST endpoints: /api/v1/scim/v2/Users (GET/POST), /api/v1/scim/v2/Users/:id (GET/PUT/DELETE), /api/v1/scim/v2/Groups (GET/POST), /api/v1/scim/v2/Groups/:id (GET/PUT/DELETE). Support filtering, pagination per SCIM spec. Emit audit events for all provisioning actions. Build admin UI: apps/dashboard/app/settings/[workspaceId]/directory/page.tsx showing: active directory type, sync status, last sync time, error logs, manual sync trigger. Add 16+ unit tests for: SCIM request parsing, user creation/update/delete workflows, group mappings, filter parsing, role assignment. Integration test: simulate Okta/Azure webhook events for 100 users, verify all create/update/delete operations succeed with correct Iris roles assigned. Reference code-style.md for SCIM RFC compliance.
+- **Files**:
+  - packages/semantic-core/src/scim-provisioner.ts
+  - packages/semantic-core/src/__tests__/scim-provisioner.test.ts
+  - packages/semantic-core/src/__tests__/scim-provisioner.integration.test.ts
+  - apps/api/src/routes/scim.ts
+  - apps/api/src/__tests__/scim.test.ts
+  - apps/api/migrations/096_add_scim.sql
+  - apps/dashboard/app/settings/[workspaceId]/directory/page.tsx
+  - apps/dashboard/components/scim-sync-status.tsx
+- **Depends on**: Role-Based Context Segmentation (completed), Session Management (completed)
+- **Added**: 2026-06-08
+
+### Task: Cache Prewarming & Predictive Context Loading Engine
+- **Layer**: 56 — Growth Phase V2 - Advanced Infrastructure & Enterprise Optimization
+- **Status**: UNWORKED
+- **Priority**: Medium
+- **Description**: Build an intelligent cache prewarming system that predicts which contexts will be needed and loads them proactively into the semantic cache and Redis. Create packages/semantic-core/src/cache-prewarmer.ts with CachePrewarmingEngine: (1) analyzeQueryPatterns(workspaceId, days=7) learning which entity types and metrics are queried together and at what times, (2) predictNextContext(currentQuery) predicting entities the user will ask about next based on co-occurrence patterns, (3) preloadToCache(entityIds, ttl) warming semantic cache for predicted entities, (4) measurePrefixCacheHits(workspaceId) tracking improvement from prewarming. Create apps/api/migrations/097_add_cache_warming.sql with: cache_prewarming_stats (workspace_id, predicted_entity_ids, loaded_count, actual_cache_hit_count, accuracy_ratio, measured_at). Integrate with indexer: on each sync completion, run prewarming predictions for top users. Expose REST: GET /api/v1/cache/prewarming-stats (show effectiveness), POST /api/v1/cache/preload (manual preload for specific entity types). Build dashboard widgets: apps/dashboard/components/cache-effectiveness-chart.tsx (showing cache hit ratio before/after prewarming), cache-warming-status.tsx (live status of warming jobs). Add 14+ unit tests for: pattern analysis, co-occurrence scoring, predictive accuracy, cache invalidation on data changes. Integration test: index 5000 entities, run 1000 queries with learned patterns, verify cache hit ratio improves by ≥25% and p95 latency improves by ≥30% when warming is active vs disabled. Reference embedding-patterns.md for similarity calculations.
+- **Files**:
+  - packages/semantic-core/src/cache-prewarmer.ts
+  - packages/semantic-core/src/__tests__/cache-prewarmer.test.ts
+  - packages/semantic-core/src/__tests__/cache-prewarmer.integration.test.ts
+  - apps/api/src/routes/cache-prewarming.ts
+  - apps/api/src/__tests__/cache-prewarming.test.ts
+  - apps/api/migrations/097_add_cache_warming.sql
+  - apps/dashboard/components/cache-effectiveness-chart.tsx
+  - apps/dashboard/components/cache-warming-status.tsx
+- **Depends on**: Semantic Cache (completed), Query Analytics Engine (completed)
+- **Added**: 2026-06-08
+
+### Task: Advanced Multi-LLM Cost Optimizer & Provider Router
+- **Layer**: 56 — Growth Phase V2 - Advanced Infrastructure & Enterprise Optimization
+- **Status**: UNWORKED
+- **Priority**: Medium
+- **Description**: Enhance the multi-LLM router to optimize cost across providers (Anthropic, OpenAI, Azure, Gemini) by analyzing query characteristics and selecting the cheapest provider that meets accuracy requirements. Create packages/semantic-core/src/llm-cost-optimizer.ts with LLMCostOptimizer: (1) classifyQueryComplexity(query, context) scoring complexity 1-10 based on entity count, relationship depth, required context size, (2) estimateTokenUsage(provider, query, context) calling provider APIs to predict token usage before committing, (3) rankProvidersByValue(complexity, requirements) scoring each provider on cost/speed/accuracy tradeoff, (4) selectOptimalProvider(query, workspace, budget) returning chosen provider with confidence score, (5) trackProviderAccuracy(provider, query, userFeedback) measuring actual accuracy for cost-optimization model improvement. Create apps/api/migrations/098_add_llm_cost_optimization.sql with: llm_cost_estimates (workspace_id, query_hash, provider, estimated_tokens, actual_tokens, cost_cents, execution_time_ms, user_satisfaction_score), provider_accuracy_baseline (provider, query_complexity_range, accuracy_score, confidence, measured_at). Integrate with query-context MCP tool: use optimizer to select provider for each query. Expose REST: POST /api/v1/llm-routing/estimate-cost (predict cost for query), GET /api/v1/llm-routing/recommendations (suggested providers for workspace), GET /api/v1/llm-routing/accuracy-baselines (show provider accuracy by complexity). Build dashboard: apps/dashboard/app/settings/[workspaceId]/llm-routing/page.tsx with: provider cost comparison, accuracy-by-complexity matrix, optimization recommendations, cost savings trend. Add 16+ unit tests for: complexity classification, token estimation accuracy, provider scoring, accuracy tracking. Integration test: run 500 queries across all 4 major providers, verify selected providers have ≥95% cost accuracy and maintain ≥98% user satisfaction.
+- **Files**:
+  - packages/semantic-core/src/llm-cost-optimizer.ts
+  - packages/semantic-core/src/__tests__/llm-cost-optimizer.test.ts
+  - packages/semantic-core/src/__tests__/llm-cost-optimizer.integration.test.ts
+  - apps/api/src/routes/llm-cost-optimization.ts
+  - apps/api/src/__tests__/llm-cost-optimization.test.ts
+  - apps/api/migrations/098_add_llm_cost_optimization.sql
+  - apps/dashboard/app/settings/[workspaceId]/llm-routing/page.tsx
+  - apps/dashboard/components/provider-cost-comparison.tsx
+- **Depends on**: Multi-LLM Router (completed), Query Analytics Engine (completed)
+- **Added**: 2026-06-08
+
+### Task: Workspace Federation & Cross-Tenant Data Sharing
+- **Layer**: 56 — Growth Phase V2 - Advanced Infrastructure & Enterprise Optimization
+- **Status**: UNWORKED
+- **Priority**: Medium
+- **Description**: Enable secure cross-workspace federation for agencies, holding companies, and partner networks that need to query related data from sibling workspaces with fine-grained access control. Create packages/semantic-core/src/federation-manager.ts with FederationManager: (1) registerFederatedWorkspace(sourceWorkspace, targetWorkspace, permissions) establishing trust relationship between workspaces, (2) queryFederatedContext(query, sourceworkspaceId, allowedTargetWorkspaces) executing queries across workspace boundaries with permission enforcement, (3) mergeFederatedResults(results, maxTokenBudget) combining results from multiple workspaces and applying compression to fit budget, (4) auditFederatedAccess(queryId, sourceWorkspace, queriedWorkspaces) logging all cross-workspace queries. Create apps/api/migrations/099_add_federation.sql with: federated_relationships (source_workspace_id, target_workspace_id, relationship_type: 'parent_child'|'sibling'|'partner', created_by_user_id, trusted_at), federation_permissions (relationship_id, entity_type_pattern, read|write, created_at). Add new MCP tool: query-federated-context (parameters: query, federatedWorkspaceIds, maxTokenBudget) returning merged, deduplicated, permission-filtered context from multiple workspaces. Build admin UI: apps/dashboard/app/settings/[workspaceId]/federation/page.tsx showing: federated relationships, per-workspace permissions, federation access audit log. Add 15+ unit tests for: permission enforcement, result merging, deduplication across workspaces, token budget enforcement. Integration test: create 5 federated workspaces, run queries with shared relationships, verify correct permission boundaries, token budgets respected, results properly merged. Reference api-conventions.md for MCP tool patterns, code-style.md for auth.
+- **Files**:
+  - packages/semantic-core/src/federation-manager.ts
+  - packages/semantic-core/src/__tests__/federation-manager.test.ts
+  - packages/semantic-core/src/__tests__/federation-manager.integration.test.ts
+  - apps/api/src/routes/federation.ts
+  - apps/api/src/__tests__/federation.test.ts
+  - apps/api/migrations/099_add_federation.sql
+  - apps/mcp-server/src/tools/query-federated-context.ts
+  - apps/dashboard/app/settings/[workspaceId]/federation/page.tsx
+- **Depends on**: Multi-tenant support (completed), Role-Based Context Segmentation (completed)
 - **Added**: 2026-06-08
