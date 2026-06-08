@@ -49,7 +49,8 @@
     "./resource-builder": "./dist/resource-builder.js",
     "./sync-quality-monitor": "./dist/sync-quality-monitor.js",
     "./entity-deduplicator": "./dist/entity-deduplicator.js",
-    "./connector-cost-attribution": "./dist/connector-cost-attribution.js"
+    "./connector-cost-attribution": "./dist/connector-cost-attribution.js",
+    "./onboarding-manager": "./dist/onboarding-manager.js"
   },
   "scripts": {
     "build": "tsc --build",
