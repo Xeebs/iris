@@ -1,0 +1,45 @@
+{
+  "responses": [
+    {
+      "path": "/v1/databases",
+      "method": "GET",
+      "status": 200,
+      "body": {
+        "results": [
+          {
+            "id": "db-001",
+            "title": [{ "plain_text": "Tasks" }],
+            "properties": {
+              "Name": { "type": "title" },
+              "Status": { "type": "select" },
+              "Assignee": { "type": "people" }
+            },
+            "last_edited_time": "2026-01-15T10:00:00.000Z"
+          }
+        ],
+        "next_cursor": null,
+        "has_more": false
+      }
+    },
+    {
+      "path": "/v1/databases/db-001/query",
+      "method": "POST",
+      "status": 200,
+      "body": {
+        "results": [
+          {
+            "id": "page-001",
+            "properties": {
+              "Name": { "title": [{ "plain_text": "Fix login bug" }] },
+              "Status": { "select": { "name": "In Progress" } }
+            },
+            "last_edited_time": "2026-01-16T08:00:00.000Z",
+            "created_time": "2026-01-10T00:00:00.000Z"
+          }
+        ],
+        "next_cursor": null,
+        "has_more": false
+      }
+    }
+  ]
+}

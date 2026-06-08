@@ -1,0 +1,55 @@
+{
+  "responses": [
+    {
+      "path": "/api/conversations.list",
+      "method": "GET",
+      "status": 200,
+      "body": {
+        "ok": true,
+        "channels": [
+          {
+            "id": "C001",
+            "name": "general",
+            "is_private": false,
+            "num_members": 42,
+            "topic": { "value": "Company-wide announcements" },
+            "purpose": { "value": "This is the general channel" },
+            "created": 1700000000
+          },
+          {
+            "id": "C002",
+            "name": "engineering",
+            "is_private": false,
+            "num_members": 18,
+            "topic": { "value": "Engineering discussions" },
+            "purpose": { "value": "Engineering team channel" },
+            "created": 1700000100
+          }
+        ],
+        "response_metadata": { "next_cursor": "" }
+      }
+    },
+    {
+      "path": "/api/users.list",
+      "method": "GET",
+      "status": 200,
+      "body": {
+        "ok": true,
+        "members": [
+          {
+            "id": "U001",
+            "name": "alice",
+            "real_name": "Alice Johnson",
+            "profile": {
+              "email": "alice@example.com",
+              "title": "Engineer",
+              "display_name": "alice"
+            },
+            "updated": 1700000000
+          }
+        ],
+        "response_metadata": { "next_cursor": "" }
+      }
+    }
+  ]
+}

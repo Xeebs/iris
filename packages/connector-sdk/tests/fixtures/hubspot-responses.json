@@ -1,0 +1,78 @@
+{
+  "responses": [
+    {
+      "path": "/crm/v3/objects/contacts",
+      "method": "GET",
+      "status": 200,
+      "body": {
+        "results": [
+          {
+            "id": "1001",
+            "properties": {
+              "firstname": "Alice",
+              "lastname": "Johnson",
+              "email": "alice@example.com",
+              "company": "Acme Corp",
+              "lifecyclestage": "customer",
+              "createdate": "2026-01-01T00:00:00.000Z",
+              "lastmodifieddate": "2026-01-15T12:00:00.000Z"
+            }
+          },
+          {
+            "id": "1002",
+            "properties": {
+              "firstname": "Bob",
+              "lastname": "Smith",
+              "email": "bob@example.com",
+              "company": "Globex",
+              "lifecyclestage": "lead",
+              "createdate": "2026-01-02T00:00:00.000Z",
+              "lastmodifieddate": "2026-01-16T08:00:00.000Z"
+            }
+          }
+        ],
+        "paging": { "next": null }
+      }
+    },
+    {
+      "path": "/crm/v3/objects/companies",
+      "method": "GET",
+      "status": 200,
+      "body": {
+        "results": [
+          {
+            "id": "2001",
+            "properties": {
+              "name": "Acme Corp",
+              "domain": "acme.example.com",
+              "industry": "Software",
+              "numberofemployees": "250",
+              "hs_lastmodifieddate": "2026-01-10T00:00:00.000Z"
+            }
+          }
+        ],
+        "paging": { "next": null }
+      }
+    },
+    {
+      "path": "/crm/v3/objects/deals",
+      "method": "GET",
+      "status": 200,
+      "body": {
+        "results": [
+          {
+            "id": "3001",
+            "properties": {
+              "dealname": "Enterprise Q1 Deal",
+              "amount": "50000",
+              "dealstage": "negotiation",
+              "closedate": "2026-03-31T00:00:00.000Z",
+              "hs_lastmodifieddate": "2026-01-20T00:00:00.000Z"
+            }
+          }
+        ],
+        "paging": { "next": null }
+      }
+    }
+  ]
+}

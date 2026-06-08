@@ -11,7 +11,8 @@
     "./registry": "./dist/registry.js",
     "./test-utils": "./dist/test-utils.js",
     "./user-connector-loader": "./dist/user-connector-loader.js",
-    "./webhook-validator": "./dist/webhook-validator.js"
+    "./webhook-validator": "./dist/webhook-validator.js",
+    "./testing": "./dist/testing/connector-test-harness.js"
   },
   "scripts": {
     "build": "tsc --build",
