@@ -2786,7 +2786,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Connector Performance Optimization & Batching Improvements
 - **Layer**: 51 — Post-MVP Hardening & Scale
-- **Status**: IN_PROGRESS
+- **Status**: COMMITTED
 - **Priority**: Medium
 - **Description**: Optimize connector sync performance for large-scale data sources through advanced batching, pagination tuning, and concurrency control. Create packages/connector-sdk/src/performance-optimizer.ts with: (1) adaptiveBatchSize(connectorType, recordsProcessedSoFar, avgRecordSize, maxMemory=512MB) — auto-tune batch size based on actual record size and available memory (start at 100, scale to 500 if records < 1KB), (2) identifyPaginationPattern(previousRequests) — detect if API uses offset/cursor/keyset pagination and recommend most efficient (cursor > keyset > offset), (3) computeOptimalConcurrency(connectorType, rateLimit, avgLatency, errorRate) — auto-scale parallel request concurrency (start at 3, scale to 10 if error_rate < 1%), (4) estimateSyncDuration(connectorId, totalRecords, currentThroughput) — predict when sync will complete and alert if > configured max_duration. Create apps/api/migrations/079_connector_performance_metrics.sql with: connector_sync_metrics table (connector_id, sync_run_id, metric_name: 'batch_size'|'concurrency'|'pagination_type'|'total_records'|'duration_ms'|'throughput_records_per_sec', value, recorded_at). Expose REST: GET /api/v1/connectors/:id/performance-stats (show trends in batch size, concurrency, throughput over last 30 syncs), POST /api/v1/connectors/:id/optimize (trigger analysis and recommend config changes). Build admin dashboard page at apps/dashboard/app/admin/connector-optimization/page.tsx with: performance leaderboard (fastest/slowest connectors by throughput), performance metrics over time (batch size evolution, concurrency ramp), optimization recommendations. Add 11 unit tests: batch size adaptation with varying record sizes, pagination pattern detection (offset vs cursor APIs), concurrency scaling logic, sync duration estimation accuracy. Integration tests: full sync with adaptive batching on HubSpot connector, concurrent sync of 3 connectors without resource contention.
 - **Files**:
@@ -2806,7 +2806,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: MCP Streaming Context Tool & Progressive Expansion
 - **Layer**: 52 — MCP Tool Enhancements & Streaming
-- **Status**: UNWORKED
+- **Status**: IN_PROGRESS
 - **Priority**: High
 - **Description**: Implement a streaming MCP tool that progressively expands context as needed, reducing initial response token cost while allowing the client to request deeper context. Create apps/mcp-server/src/tools/streaming-context.ts with: (1) streamingQueryContext(query, initialBudget=500, maxBudget=2000, expansionLevels=['summary', 'detailed', 'full']) — returns initial compressed context, emits additional chunks on client request, (2) contextExpansionHeuristics that predict which expansion layer the client will request based on entity type and query complexity, (3) partial response tracking (partial: true, expansionKey) so client can later call getContextExpansion(expansionKey) to fill in skipped layers. Update apps/mcp-server/src/server.ts to register the new tool. Create comprehensive test suite (15+ tests) covering: initial budget enforcement, progressive expansion chunks, client-side state management, timeout handling if expansion not consumed. Integration tests: real query with multi-level expansion, verify total token cost < full context approach by 40%.
 - **Files**:
@@ -2861,4 +2861,61 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
   - scripts/cli/__tests__/cli.test.ts
   - docs/CLI_GUIDE.md
 - **Depends on**: Local Infrastructure (completed), MCP Server Bootstrap (completed)
+- **Added**: 2026-06-08
+
+---
+
+## Layer 53: Data Quality & Resilience
+
+### Task: Entity Validation Engine with Data Quality Rules
+- **Layer**: 53 — Data Quality & Resilience
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Build a comprehensive entity validation system that enforces data quality rules defined by users, catching malformed or incomplete data before indexing. Create packages/semantic-core/src/entity-validator.ts with EntityValidationEngine class: (1) define validation rules (required fields, field type constraints, regex patterns, cross-field dependencies e.g., "if status=closed, closedAt must be set"), (2) support both built-in rules (non-null, email format, phone format) and user-custom rules, (3) validate entities at sync time (reject/quarantine invalid records), (4) bulk re-validate indexed entities on-demand, (5) generate validation reports (# valid, # invalid, # warnings per entity type). Create apps/api/migrations/081_add_entity_validation_rules.sql with: validation_rules table (workspace_id, rule_id, entity_type, rule_name, rule_definition_json, is_blocking: boolean, created_by_user_id), validation_failures table (workspace_id, entity_id, rule_id, failure_reason, occurred_at, acknowledged: boolean). Expose REST: POST /api/v1/validation/rules (create rule), GET /api/v1/validation/rules (list rules), POST /api/v1/validation/validate-entity (test rule on sample entity), GET /api/v1/validation/failures (paginated list). Build dashboard page at apps/dashboard/app/admin/data-quality/rules/page.tsx with: rule builder UI, test panel, failure explorer. Add 18+ unit tests for rule evaluation, edge cases, cross-field dependencies. Integration tests with real entities from multiple connectors. Reference code-style.md for validation patterns.
+- **Files**:
+  - packages/semantic-core/src/entity-validator.ts
+  - packages/semantic-core/src/__tests__/entity-validator.test.ts
+  - packages/semantic-core/src/__tests__/entity-validator.integration.test.ts
+  - apps/api/migrations/081_add_entity_validation_rules.sql
+  - apps/api/src/routes/entity-validation.ts
+  - apps/api/src/__tests__/entity-validation.test.ts
+  - apps/dashboard/app/admin/data-quality/rules/page.tsx
+  - apps/dashboard/components/validation-rule-builder.tsx
+  - apps/dashboard/components/validation-failure-explorer.tsx
+- **Depends on**: Indexer Implementation (completed), Entity Schema & Transformation (completed)
+- **Added**: 2026-06-08
+
+### Task: Index Rebuild & Corruption Recovery Tools
+- **Layer**: 53 — Data Quality & Resilience
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Build tools for detecting and repairing index corruption, handling edge cases like orphaned vectors, missing relationships, and stale cache entries. Create packages/semantic-core/src/index-repair-service.ts with IndexRepairService class: (1) scanIndexIntegrity(workspaceId, progressCallback) scanning for inconsistencies: orphaned vectors, missing vectors, broken relationships, (2) reportCorruption(workspaceId) generating detailed report, (3) rebuildIndex(workspaceId, entityTypeFilter) re-extracting vectors and recomputing relationships, (4) rollbackIndexSnapshot(workspaceId, snapshotId) restoring from backup. Create apps/api/migrations/082_add_index_repair_logs.sql with integrity_scans and rebuild_jobs tables. Expose REST for integrity check, rebuild trigger, snapshot rollback. Build admin page at apps/dashboard/app/admin/index-health/page.tsx with corruption detection status, rebuild trigger with dry-run mode, progress bar. Add 14+ unit tests for corruption detection, rebuild correctness, integrity verification. Integration tests: introduce corruption, detect/repair, verify consistency. Reference code-style.md for logging.
+- **Files**:
+  - packages/semantic-core/src/index-repair-service.ts
+  - packages/semantic-core/src/__tests__/index-repair-service.test.ts
+  - packages/semantic-core/src/__tests__/index-repair-service.integration.test.ts
+  - apps/api/migrations/082_add_index_repair_logs.sql
+  - apps/api/src/routes/index-repair.ts
+  - apps/api/src/__tests__/index-repair.test.ts
+  - apps/dashboard/app/admin/index-health/page.tsx
+  - apps/dashboard/components/index-corruption-detector.tsx
+  - apps/dashboard/components/rebuild-progress-panel.tsx
+- **Depends on**: Semantic Index (completed), Index Snapshot Export & Disaster Recovery
+- **Added**: 2026-06-08
+
+### Task: Custom Transformation Pipeline & Entity Mapping Language
+- **Layer**: 53 — Data Quality & Resilience
+- **Status**: UNWORKED
+- **Priority**: Medium
+- **Description**: Enable users to define custom transformation pipelines for entity mapping and field normalization without writing code. Create packages/semantic-core/src/transformation-dsl.ts with a DSL engine for chainable transformations: (1) mapping (rename fields), filtering (remove/include-only fields), normalization (case, trim, regex replace), computed fields (concatenate, extract substrings), date formatting, (2) build rule chains executing in sequence on ingested entities, (3) apply transformations at sync time before indexing, (4) test transformations on sample data before activation. Create apps/api/migrations/083_add_custom_transformations.sql with transformation_rules table. Expose REST for testing rules and activating rules. Build transformation builder UI at apps/dashboard/app/admin/transformations/page.tsx with rule chain editor, live preview, connector selector. Add 16+ unit tests for each transformation type, rule chaining, edge cases. Integration tests applying chains to real connector data. Reference code-style.md for validation.
+- **Files**:
+  - packages/semantic-core/src/transformation-dsl.ts
+  - packages/semantic-core/src/__tests__/transformation-dsl.test.ts
+  - apps/api/migrations/083_add_custom_transformations.sql
+  - apps/api/src/routes/transformations.ts
+  - apps/api/src/__tests__/transformations.test.ts
+  - apps/dashboard/app/admin/transformations/page.tsx
+  - apps/dashboard/components/transformation-rule-editor.tsx
+  - apps/dashboard/components/transformation-test-panel.tsx
+- **Depends on**: Entity Schema & Transformation (completed)
 - **Added**: 2026-06-08
