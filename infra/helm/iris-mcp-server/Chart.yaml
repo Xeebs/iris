@@ -1,0 +1,12 @@
+apiVersion: v2
+name: iris-mcp-server
+description: Iris MCP (Model Context Protocol) server
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+keywords:
+  - iris
+  - mcp
+maintainers:
+  - name: Iris Team
+    email: ops@iris.ai

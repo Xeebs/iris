@@ -1,0 +1,12 @@
+apiVersion: v2
+name: iris-dashboard
+description: Iris Next.js admin dashboard
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+keywords:
+  - iris
+  - dashboard
+maintainers:
+  - name: Iris Team
+    email: ops@iris.ai

@@ -1,0 +1,67 @@
+replicaCount: 2
+
+image:
+  repository: ghcr.io/xeebs/iris-api
+  pullPolicy: IfNotPresent
+  tag: ""
+
+service:
+  type: ClusterIP
+  port: 3001
+
+resources:
+  requests:
+    cpu: 250m
+    memory: 512Mi
+  limits:
+    cpu: 1000m
+    memory: 1Gi
+
+autoscaling:
+  enabled: false
+  minReplicas: 2
+  maxReplicas: 8
+  targetCPUUtilizationPercentage: 70
+
+ingress:
+  enabled: false
+  className: nginx
+  annotations: {}
+  hosts:
+    - host: api.iris.example.com
+      paths:
+        - path: /api
+          pathType: Prefix
+  tls: []
+
+env:
+  NODE_ENV: production
+  PORT: "3001"
+
+secrets:
+  # Reference an existing Kubernetes secret containing DATABASE_URL, REDIS_URL,
+  # OPENAI_API_KEY, CLERK_SECRET_KEY, etc.
+  existingSecret: iris-api-secrets
+
+livenessProbe:
+  httpGet:
+    path: /health
+    port: 3001
+  initialDelaySeconds: 15
+  periodSeconds: 20
+
+readinessProbe:
+  httpGet:
+    path: /ready
+    port: 3001
+  initialDelaySeconds: 5
+  periodSeconds: 10
+
+podAnnotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/port: "3001"
+  prometheus.io/path: "/metrics"
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
