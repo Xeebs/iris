@@ -2289,7 +2289,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Connector Template & Workflow Recipe System
 - **Layer**: 45 — Document Indexing & Search Tuning
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: Medium
 - **Description**: Build a system for creating and sharing reusable connector configuration templates and workflow recipes tailored to specific business use cases. Create packages/semantic-core/src/connector-recipes.ts with ConnectorRecipeManager class supporting: (1) predefined recipes (e.g., "Sales Operations Setup" = HubSpot + Salesforce + Stripe, with field mappings configured), (2) custom recipe creation by users (combine connectors, define glossary terms, set up workflows), (3) recipe versioning and sharing across workspaces. Create apps/api/migrations/060_add_connector_recipes.sql with: connector_recipes table (id, workspace_id, recipe_name, description, connectors_config_json, glossary_terms_json, workflows_json, author_user_id, shared: boolean, usage_count), recipe_reviews table (recipe_id, reviewer_id, rating, comment). Expose: POST /api/v1/recipes/templates (create template), GET /api/v1/recipes/shared (list community recipes), POST /api/v1/recipes/:id/apply-to-workspace (fork recipe and apply). Build marketplace-style discovery page at apps/dashboard/app/recipes/page.tsx showing: recipe gallery (category filters: sales, finance, ops, etc.), install buttons, ratings/reviews, preview (shows connectors + glossary snapshot). Enable recipe cloning: POST /api/v1/recipes/:id/clone creates copy in user's workspace with all configs applied. Store recipes as JSON-serializable YAML or JSON files enabling export/GitHub sharing. Add E2E test covering: recipe creation → sharing → installation in another workspace. Include 12+ unit tests for recipe application logic. Reference connector-patterns.md for connector configuration semantics.
 - **Files**:
@@ -2308,7 +2308,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Cost-Per-Context Analytics & Optimization Recommendations
 - **Layer**: 45 — Document Indexing & Search Tuning
-- **Status**: IN_PROGRESS
+- **Status**: COMMITTED
 - **Priority**: High
 - **Description**: Implement fine-grained cost attribution and automatic optimization recommendations to help teams reduce AI context costs. Extend packages/semantic-core/src/cost-optimizer.ts (already committed) with: (1) trackContextSize(query, entities, tokensSpent, tokensSaved) recording actual costs per query context, (2) attributeCosts(workspaceId, timeframe) breaking down costs by: source connector (which connectors contribute to context cost), entity type (which entity types consume tokens), query patterns (which question types are expensive). Create apps/api/migrations/061_add_context_cost_tracking.sql with: context_cost_events table (workspace_id, query_hash, entities_returned, tokens_spent, cache_hit, source_connectors, entity_types, timestamp). Implement CostOptimizer.recommend(workspaceId) analyzing patterns and returning: (1) "Disable connector X (1% of queries, 8% of cost)" — suggest archiving low-value connectors, (2) "Index only top 3 fields per entity instead of all" — suggest schema field pruning, (3) "Enable compression for query pattern Y" — suggest selective compression for verbose entity types. Expose GET /api/v1/cost-analytics/breakdown returning cost by connector/type/pattern with trend analysis (week-over-week cost changes). Build admin dashboard panel at apps/dashboard/components/cost-optimization-advisor.tsx showing: pie chart of cost by connector, ranked recommendations with estimated savings (cost reduction %), one-click "apply recommendation" action (e.g., disable connector, update schema). Add automated alerts: warn if week-over-week cost increases >20%. Include 18+ unit tests for cost calculations and recommendation logic, integration tests with real usage data. Reference embedding-patterns.md for cost control rules.
 - **Files**:
@@ -2321,4 +2321,173 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
   - apps/dashboard/components/recommendation-card.tsx
   - apps/api/src/__tests__/cost-analytics.test.ts
 - **Depends on**: Usage-Based Billing & Metering Infrastructure, Token Analytics Service & Dashboard
+- **Added**: 2026-06-08
+
+---
+
+## Layer 46: Connector Recipes & Index Maintenance
+
+### Task: Connector Recipe System Implementation
+- **Layer**: 46 — Connector Recipes & Index Maintenance
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Complete the Connector Recipe System started in Layer 45 (migration 060 already exists). Create packages/semantic-core/src/connector-recipes.ts with ConnectorRecipeManager class supporting: (1) loadPredefinedRecipes() returning curated templates (e.g., "Sales Operations Setup" = HubSpot + Salesforce + Stripe), (2) createRecipe(workspaceId, name, description, connectorsConfig, glossaryTerms, workflows) for user-created recipes, (3) shareRecipe(recipeId, isPublic) and listSharedRecipes(filters) for marketplace discovery, (4) applyRecipeToWorkspace(workspaceId, recipeId) cloning and installing all connectors/glossary/workflows. Implement versioning and fork semantics. Expose REST routes in apps/api/src/routes/connector-recipes.ts: POST /api/v1/recipes (create), GET /api/v1/recipes (list user recipes), GET /api/v1/recipes/templates (list public templates), POST /api/v1/recipes/:id/apply (apply to workspace), PUT /api/v1/recipes/:id (update), DELETE /api/v1/recipes/:id (delete). Build dashboard pages: apps/dashboard/app/recipes/page.tsx (discovery gallery with category filters, install buttons, ratings), apps/dashboard/app/recipes/[id]/preview/page.tsx (recipe details: connectors, glossary snapshot, workflow diagram), apps/dashboard/components/recipe-installer.tsx (multi-step installer). Implement recipe export as YAML for GitHub sharing. Add E2E test: recipe creation → sharing → installation in another workspace. Include 15+ unit tests for recipe application logic, connector config merging, glossary term application. Reference connector-patterns.md for connector configuration semantics and api-conventions.md for REST endpoints.
+- **Files**:
+  - packages/semantic-core/src/connector-recipes.ts
+  - packages/semantic-core/src/__tests__/connector-recipes.test.ts
+  - packages/semantic-core/src/__tests__/connector-recipes.integration.test.ts
+  - apps/api/src/routes/connector-recipes.ts
+  - apps/api/src/__tests__/connector-recipes.test.ts
+  - apps/dashboard/app/recipes/page.tsx
+  - apps/dashboard/app/recipes/[id]/preview/page.tsx
+  - apps/dashboard/components/recipe-installer.tsx
+  - apps/dashboard/components/recipe-gallery.tsx
+  - apps/dashboard/components/recipe-editor.tsx
+  - tests/e2e/connector-recipes.spec.ts
+- **Depends on**: Connector Instance Management API, Workflow Templates API Routes & Server Registration
+- **Added**: 2026-06-08
+
+### Task: Index Health & Automated Maintenance Jobs
+- **Layer**: 46 — Connector Recipes & Index Maintenance
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Implement automated background maintenance for the semantic index to ensure data quality and storage efficiency. Create packages/semantic-core/src/index-maintenance.ts with IndexMaintenanceService class supporting: (1) deduplicateIndex(workspaceId) running nightly to merge semantically similar entities (0.92 threshold) and consolidate duplicate entries, (2) pruneStaleEntities(workspaceId, maxAgeDays) removing indexed entities not updated in N days (default: 90), (3) rebalanceVectorIndex(workspaceId) triggering pgvector or Qdrant rebalancing for query performance, (4) validateIndexIntegrity(workspaceId) checking for orphaned entities, broken relationships, and corrupted embeddings. Create apps/api/migrations/062_add_index_maintenance_jobs.sql with: index_maintenance_jobs table (workspace_id, job_type, status, started_at, completed_at, duration_ms, records_affected, error_message) for audit trail. Implement job scheduling via BullMQ: daily dedup at 2am, weekly pruning at Sunday 3am, monthly rebalancing at first Saturday. Expose admin endpoints: GET /api/v1/admin/index/maintenance (list jobs), POST /api/v1/admin/index/maintenance/:jobType/trigger (manual run), GET /api/v1/admin/index/health (current index stats: entity count, vector store size, orphaned entities count). Build admin dashboard panel at apps/dashboard/components/index-optimizer-panel.tsx showing: job history (status badges, duration, records affected), manual trigger buttons, health summary. Add unit tests (18+) for dedup/prune logic with mock data, integration tests with real Postgres/Qdrant. Reference testing.md for integration test patterns.
+- **Files**:
+  - packages/semantic-core/src/index-maintenance.ts
+  - packages/semantic-core/src/__tests__/index-maintenance.test.ts
+  - packages/semantic-core/src/__tests__/index-maintenance.integration.test.ts
+  - apps/api/migrations/062_add_index_maintenance_jobs.sql
+  - apps/api/src/routes/admin-index.ts
+  - apps/api/src/__tests__/admin-index.test.ts
+  - apps/dashboard/components/index-optimizer-panel.tsx
+  - apps/dashboard/app/admin/index-health/page.tsx
+- **Depends on**: BullMQ Job Queue Infrastructure, Indexer Implementation, Vector Store Interface
+- **Added**: 2026-06-08
+
+### Task: Advanced MCP Notifications & Change Subscriptions
+- **Layer**: 46 — Connector Recipes & Index Maintenance
+- **Status**: UNWORKED
+- **Priority**: Medium
+- **Description**: Extend the MCP server to support real-time notifications and subscriptions so clients can subscribe to index changes (new entities, relationship updates, metric refreshes). Create packages/semantic-core/src/mcp-subscriptions.ts with MCPSubscriptionManager class: (1) subscribe(client_id, filters) where filters include entity_types, connectors, keywords to track, (2) unsubscribe(client_id, subscription_id), (3) notifyClients(change_event) broadcasting changes to all subscribed clients when entities are added/updated. Implement MCP resource notifications (RFC): define a new MCP message type: NotificationEvent { type: 'entity.created'|'entity.updated'|'entity.deleted', entity: SemanticEntity, timestamp, workspaceId }. Wire into the indexer: on flushBatch completion, emit notifications to all subscribed clients matching filters. Create apps/api/migrations/063_add_mcp_subscriptions.sql with: mcp_subscriptions table (id, workspace_id, client_id, filters_json, created_at, last_notified_at) and mcp_notification_events table (event_id, subscription_id, notification_type, entity_id, payload_json, delivered_at). Expose POST /api/v1/mcp/subscribe and DELETE /api/v1/mcp/subscriptions/:id endpoints for REST-based subscription management. Add support for webhook-style notifications: on subscription, clients can specify a callback_url to receive POST requests with change events. Include 12+ unit tests for subscription matching and event filtering, integration tests verifying notifications are delivered. Reference api-conventions.md for REST patterns and .claude/rules/code-style.md for async patterns.
+- **Files**:
+  - packages/semantic-core/src/mcp-subscriptions.ts
+  - packages/semantic-core/src/__tests__/mcp-subscriptions.test.ts
+  - packages/semantic-core/src/__tests__/mcp-subscriptions.integration.test.ts
+  - apps/api/migrations/063_add_mcp_subscriptions.sql
+  - apps/api/src/routes/mcp-subscriptions.ts
+  - apps/api/src/__tests__/mcp-subscriptions.test.ts
+  - apps/mcp-server/src/subscription-manager.ts
+  - apps/mcp-server/src/__tests__/subscription-manager.test.ts
+- **Depends on**: MCP Server Bootstrap, Semantic Cache, BullMQ Job Queue Infrastructure
+- **Added**: 2026-06-08
+
+### Task: Index Composition Analytics & Insights Dashboard
+- **Layer**: 46 — Connector Recipes & Index Maintenance
+- **Status**: UNWORKED
+- **Priority**: Medium
+- **Description**: Build comprehensive analytics showing index composition, data freshness, entity quality metrics, and optimization opportunities. Create packages/semantic-core/src/index-analytics.ts with IndexAnalyticsService class: (1) getCompositionMetrics(workspaceId) returning entity count/type breakdown, storage distribution (entities vs documents), top sources (which connectors contribute most), (2) getFreshnessMetrics(workspaceId) showing avg age per entity type, last sync time per connector, % of entities updated in last 7/30 days, (3) getQualityMetrics(workspaceId) including: % entities with relationships, avg relationship density, dedup ratios (duplicates found/merged), embedding coverage (% of entities embedded), (4) getOptimizationOpportunities(workspaceId) suggesting: "Entity type X has 5000 duplicates (cost $50/month)" or "Document connector Y unused for 60 days (archive to save storage)". Expose GET /api/v1/analytics/index returning time-series and breakdowns. Create apps/api/migrations/064_add_index_composition_tracking.sql with: index_composition_snapshots table (workspace_id, snapshot_date, entity_types_json, connector_contributions_json, freshness_metrics_json) for trend analysis. Build dashboard page at apps/dashboard/app/analytics/[workspaceId]/composition/page.tsx with: (1) Composition Charts — donut chart of entities by type, stacked bar of storage by source, (2) Freshness Timeline — line chart showing % entities updated over time, (3) Quality Scorecard — entity quality metrics with trend indicators, (4) Optimization Recommendations — ranked list with "archive connector" or "run dedup" actions. Add 14+ unit tests for analytics calculations, 8+ integration tests with synthetic data. Reference code-style.md for structured logging of analytics computations.
+- **Files**:
+  - packages/semantic-core/src/index-analytics.ts
+  - packages/semantic-core/src/__tests__/index-analytics.test.ts
+  - packages/semantic-core/src/__tests__/index-analytics.integration.test.ts
+  - apps/api/migrations/064_add_index_composition_tracking.sql
+  - apps/api/src/routes/index-composition.ts
+  - apps/api/src/__tests__/index-composition.test.ts
+  - apps/dashboard/app/analytics/[workspaceId]/composition/page.tsx
+  - apps/dashboard/components/composition-charts.tsx
+  - apps/dashboard/components/freshness-timeline.tsx
+  - apps/dashboard/components/quality-scorecard.tsx
+- **Depends on**: Index Status & Coverage Metrics, Token Analytics Service & Dashboard
+- **Added**: 2026-06-08
+
+---
+
+## Layer 47: Enterprise Search & Advanced AI Integration
+
+### Task: Hybrid Semantic + Full-Text Search Engine with Advanced Filtering
+- **Layer**: 47 — Enterprise Search & Advanced AI Integration
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Build an enterprise-grade search engine combining semantic vector search, BM25 full-text search, and structured filtering for power users and integrations. Create packages/semantic-core/src/hybrid-search-engine.ts with HybridSearchEngine class implementing: (1) reciprocal rank fusion (RRF) combining BM25 and cosine similarity scores with configurable weights, (2) structured faceted filters (entity_type, source_connector, date_range, status, custom attributes), (3) advanced query syntax (quoted phrases, field-specific "field:value" searches, boolean operators), (4) query spell-checking and suggestions using Levenshtein distance, (5) search result clustering by entity type/source. Expose POST /api/v1/search endpoint accepting: {query, filters, limit, offset, include_suggestions, explain_scoring} returning ranked results with relevance explanations. Update MCP tool query-context to use hybrid search for better precision. Build dashboard search interface at apps/dashboard/app/search/page.tsx with: query builder UI, faceted filters, result highlighting, search history, saved searches. Add 25+ unit tests for RRF scoring, filter logic, and query parsing. Reference embedding-patterns.md for threshold patterns.
+- **Files**:
+  - packages/semantic-core/src/hybrid-search-engine.ts
+  - packages/semantic-core/src/__tests__/hybrid-search-engine.test.ts
+  - packages/semantic-core/src/__tests__/hybrid-search-engine.integration.test.ts
+  - apps/api/src/routes/search.ts
+  - apps/dashboard/app/search/page.tsx
+  - apps/dashboard/components/search-query-builder.tsx
+  - apps/dashboard/components/faceted-filter-sidebar.tsx
+  - apps/dashboard/components/search-result-item.tsx
+  - apps/api/src/__tests__/search.test.ts
+- **Depends on**: Connector Template & Workflow Recipe System, Search Relevance Tuning & Scoring UI
+- **Added**: 2026-06-08
+
+### Task: Streaming Context Response API for Real-Time Agent Integration
+- **Layer**: 47 — Enterprise Search & Advanced AI Integration
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Implement streaming context responses via Server-Sent Events (SSE) and WebSocket to support real-time AI agent integrations where context is progressively retrieved and prioritized. Create apps/api/src/routes/streaming-context.ts with: (1) POST /api/v1/context/stream endpoint accepting a query and streaming JSON chunks (one entity per line, with relevance rank and token count), (2) progressive refinement where high-confidence results stream first, followed by lower-confidence suggestions, (3) client-side cancellation via request abort signal, (4) per-result token budget enforcement. Implement WebSocket version at /ws/context-stream for long-lived agent connections. Update MCP server to support streaming responses for multi-turn conversations. Build dashboard page at apps/dashboard/app/context-monitor/page.tsx showing: live streaming context previews, streaming latency metrics (time to first result, full context time), token efficiency analytics. Add 15+ unit tests for streaming logic, integration tests with real queries, E2E tests simulating agent consumption. Reference api-conventions.md for request patterns.
+- **Files**:
+  - apps/api/src/routes/streaming-context.ts
+  - apps/api/src/websocket/context-stream-handler.ts
+  - apps/api/src/__tests__/streaming-context.test.ts
+  - apps/api/src/__tests__/streaming-context.integration.test.ts
+  - apps/dashboard/app/context-monitor/page.tsx
+  - apps/dashboard/components/streaming-preview-panel.tsx
+  - apps/dashboard/components/streaming-metrics-chart.tsx
+  - tests/e2e/streaming-context.spec.ts
+- **Depends on**: Hybrid Semantic + Full-Text Search Engine with Advanced Filtering
+- **Added**: 2026-06-08
+
+### Task: AI-Assisted Index Auto-Tuning with Self-Learning Recommendations
+- **Layer**: 47 — Enterprise Search & Advanced AI Integration
+- **Status**: UNWORKED
+- **Priority**: Medium
+- **Description**: Implement an intelligent optimization engine that analyzes query patterns, entity usage, and search quality metrics to automatically generate performance tuning recommendations. Create packages/semantic-core/src/auto-tuning-optimizer.ts with AutoTuningOptimizer class: (1) analyze query logs to identify frequently-asked questions and rarely-used entity types, (2) detect search quality issues (zero-result queries, high bounce rates, low CTR), (3) generate recommendations: "split entity type X into subtypes A/B/C for precision", "merge rarely-used types to reduce noise", "boost freshness for time-sensitive types", "disable embedding indexing for high-cardinality fields to save cost", (4) apply via A/B test framework (10% of workspaces, measure quality/cost impact, auto-rollback if metrics degrade), (5) learn from user feedback (mark recommendations helpful/unhelpful to improve future suggestions). Expose GET /api/v1/optimization/recommendations (list pending recommendations with cost impact estimates), POST /api/v1/optimization/recommendations/:id/apply-test (activate A/B test). Build admin panel at apps/dashboard/components/auto-tuning-advisor.tsx showing: pending recommendations with estimated savings, active tests and outcomes, learning progress. Add 18+ unit tests for recommendation logic, integration tests with synthetic query logs. Reference code-style.md for error handling.
+- **Files**:
+  - packages/semantic-core/src/auto-tuning-optimizer.ts
+  - packages/semantic-core/src/__tests__/auto-tuning-optimizer.test.ts
+  - packages/semantic-core/src/__tests__/auto-tuning-optimizer.integration.test.ts
+  - apps/api/migrations/065_add_auto_tuning_config.sql
+  - apps/api/src/routes/auto-tuning.ts
+  - apps/dashboard/components/auto-tuning-advisor.tsx
+  - apps/dashboard/components/ab-test-results-panel.tsx
+  - apps/api/src/__tests__/auto-tuning.test.ts
+- **Depends on**: Search Relevance Tuning & Scoring UI, Cost-Per-Context Analytics & Optimization Recommendations
+- **Added**: 2026-06-08
+
+### Task: Multi-LLM Provider Support with Model-Specific Optimizations
+- **Layer**: 47 — Enterprise Search & Advanced AI Integration
+- **Status**: UNWORKED
+- **Priority**: Medium
+- **Description**: Extend Iris to support multiple LLM providers beyond OpenAI (Claude, Gemini, Llama, Mistral, etc.) with automatic context optimization per provider's capabilities. Create packages/semantic-core/src/multi-provider-optimizer.ts implementing: (1) provider registry with name, token limits, context window, pricing, serialization preference, streaming support, prefix cache support, (2) dynamically select embedding model per provider (OpenAI for OpenAI, Google models for Gemini, open-source for Ollama), (3) optimize context format per provider (Claude prefers specific JSON, Gemini prefers XML-like), (4) cost estimation per provider for a query/context, (5) provider-specific token counting. Update apps/api/src/routes/billing.ts to show cost breakdown by provider. Build admin panel at apps/dashboard/components/provider-config.tsx allowing: setup multiple providers, set fallback ordering, configure provider access per workspace, view cost comparisons for sample queries. Add 16+ unit tests for cost calculations and provider logic, 8+ integration tests with mock APIs. Reference embedding-patterns.md for multi-model best practices.
+- **Files**:
+  - packages/semantic-core/src/multi-provider-optimizer.ts
+  - packages/semantic-core/src/providers/provider-registry.ts
+  - packages/semantic-core/src/__tests__/multi-provider-optimizer.test.ts
+  - apps/api/migrations/065_add_provider_config.sql
+  - apps/api/src/routes/providers.ts
+  - apps/dashboard/components/provider-config.tsx
+  - apps/dashboard/components/provider-cost-comparison.tsx
+  - apps/api/src/__tests__/providers.test.ts
+- **Depends on**: Multi-Tenant Support & Workspace Isolation
+- **Added**: 2026-06-08
+
+### Task: Compliance & Audit Reporting Suite for Regulated Industries
+- **Layer**: 47 — Enterprise Search & Advanced AI Integration
+- **Status**: UNWORKED
+- **Priority**: Medium
+- **Description**: Build compliance and audit reporting for regulated industries (HIPAA, SOC2, GDPR, CCPA). Create packages/semantic-core/src/compliance-reporter.ts with ComplianceReporter class: (1) track all data access via audit logs (who, what, when, from which tool, what context), (2) detect anomalous patterns (unusual access time, geographic anomaly, bulk exports), (3) generate compliance reports per framework (HIPAA access logs for PII, GDPR data subject access requests, SOC2 change logs, CCPA deletion verification), (4) support data retention policies (auto-purge old data per regulation), (5) PII field tagging and access tracking. Create apps/api/migrations/065_add_compliance_tracking.sql with: compliance_events table (workspace_id, event_type: access|export|delete, entity_id, accessed_fields, user, timestamp, ip_address, device_info), anomaly_alerts table. Expose: GET /api/v1/compliance/report/{framework} (generate report), POST /api/v1/compliance/dsr (data subject request), GET /api/v1/compliance/audit-log (searchable audit trail). Build admin page at apps/dashboard/app/admin/compliance/page.tsx with: compliance status, audit log viewer, anomaly alerts, report generator. Add 16+ unit tests for compliance logic and reporting, integration tests with GDPR sample data. Reference code-style.md for logging.
+- **Files**:
+  - packages/semantic-core/src/compliance-reporter.ts
+  - packages/semantic-core/src/__tests__/compliance-reporter.test.ts
+  - packages/semantic-core/src/__tests__/compliance-reporter.integration.test.ts
+  - apps/api/migrations/065_add_compliance_tracking.sql
+  - apps/api/src/routes/compliance.ts
+  - apps/dashboard/app/admin/compliance/page.tsx
+  - apps/dashboard/components/compliance-status-panel.tsx
+  - apps/dashboard/components/audit-log-explorer.tsx
+  - apps/dashboard/components/anomaly-alert-dashboard.tsx
+  - apps/api/src/__tests__/compliance.test.ts
+- **Depends on**: MCP Server API Key Authentication & Workspace Isolation, Fine-Grained PII & Sensitive Field Masking
 - **Added**: 2026-06-08

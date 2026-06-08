@@ -63,6 +63,7 @@ import { createAdminSyncQualityRoutes } from './routes/admin-sync-quality.js';
 import { createDocumentIndexingRoutes } from './routes/document-indexing.js';
 import { createSearchTuningRoutes } from './routes/search-tuning.js';
 import { createCostAnalyticsRoutes } from './routes/cost-analytics.js';
+import { createConnectorRecipeRoutes } from './routes/connector-recipes.js';
 import { openApiSpec } from './openapi.js';
 
 export { createApp };
@@ -197,6 +198,7 @@ function createApp(
   authed.route('/document-indexing', createDocumentIndexingRoutes(sql));
   authed.route('/search-tuning', createSearchTuningRoutes(sql));
   authed.route('/cost-analytics', createCostAnalyticsRoutes(sql));
+  authed.route('/recipes', createConnectorRecipeRoutes(sql));
 
   // Webhook routes: inbound (unauthenticated) + events status (authenticated)
   app.route('/api/v1/webhooks', createWebhookRoutes(sql));
