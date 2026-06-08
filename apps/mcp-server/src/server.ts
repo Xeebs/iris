@@ -17,6 +17,10 @@ import { registerGetMetric } from './tools/get-metric.js';
 import { registerListGlossary } from './tools/list-glossary.js';
 import { registerSuggestContext } from './suggestions.js';
 import { registerAdvancedQueryContext } from './tools/advanced-query-context.js';
+import { registerStreamingContext } from './tools/streaming-context.js';
+import { aggregateEntitiesTool, aggregateEntitiesToolDefinition } from './tools/aggregate-entities.js';
+import { compareEntitiesTool, compareEntitiesToolDefinition } from './tools/compare-entities.js';
+import { detectAnomalyTool, detectAnomaliesToolDefinition } from './tools/detect-anomalies.js';
 import { registerEntityResource } from './resources/entity-resource.js';
 import { registerGraphResource } from './resources/graph-resource.js';
 import { registerDocumentResource } from './resources/document-resource.js';
@@ -38,6 +42,8 @@ const log = logger.child({ service: 'mcp-server' });
  * @param piiConfig          - Workspace PII masking config; null = no masking applied
  * @param responseCache      - Optional response-level cache; null = no response caching
  */
+type SqlFn = (strings: TemplateStringsArray, ...values: unknown[]) => Promise<unknown[]>;
+
 export function createMcpServer(
   vectorStore: VectorStore,
   semanticCache: SemanticCache,
@@ -48,6 +54,7 @@ export function createMcpServer(
   contextPermissions: ContextPermissions | null = null,
   piiConfig: WorkspacePiiConfig | null = null,
   responseCache: ResponseCache | null = null,
+  sql: SqlFn | null = null,
 ): McpServer {
   const server = new McpServer({ name: 'iris', version: '0.0.1' });
 
@@ -58,6 +65,46 @@ export function createMcpServer(
   registerListGlossary(server, glossaryService, authenticatedWorkspaceId, responseCache);
   registerSuggestContext(server, authenticatedWorkspaceId);
   registerAdvancedQueryContext(server, vectorStore, openAiKey, authenticatedWorkspaceId);
+  registerStreamingContext(server, vectorStore, openAiKey, authenticatedWorkspaceId);
+
+  if (sql) {
+    const sqlFn = sql;
+    server.tool(
+      aggregateEntitiesToolDefinition.name,
+      aggregateEntitiesToolDefinition.description,
+      aggregateEntitiesToolDefinition.inputSchema,
+      async (input) => {
+        const result = await aggregateEntitiesTool(
+          { ...input, workspaceId: authenticatedWorkspaceId ?? (input as { workspaceId: string }).workspaceId } as Parameters<typeof aggregateEntitiesTool>[0],
+          sqlFn
+        );
+        return result.isOk() ? result.value : { content: [{ type: 'text' as const, text: 'Aggregation error' }] };
+      }
+    );
+
+    server.tool(
+      compareEntitiesToolDefinition.name,
+      compareEntitiesToolDefinition.description,
+      compareEntitiesToolDefinition.inputSchema,
+      async (input) => {
+        const result = await compareEntitiesTool(
+          { ...input, workspaceId: authenticatedWorkspaceId ?? (input as { workspaceId: string }).workspaceId } as Parameters<typeof compareEntitiesTool>[0],
+          sqlFn
+        );
+        return result.isOk() ? result.value : { content: [{ type: 'text' as const, text: 'Comparison error' }] };
+      }
+    );
+
+    server.tool(
+      detectAnomaliesToolDefinition.name,
+      detectAnomaliesToolDefinition.description,
+      detectAnomaliesToolDefinition.inputSchema,
+      async (input) => {
+        const result = await detectAnomalyTool(input as Parameters<typeof detectAnomalyTool>[0], sqlFn);
+        return result.isOk() ? result.value : { content: [{ type: 'text' as const, text: 'Detection error' }] };
+      }
+    );
+  }
 
   registerEntityResource(server, vectorStore);
   registerGraphResource(server, vectorStore);
@@ -137,6 +184,7 @@ async function main(): Promise<void> {
     contextPermissions,
     piiConfig,
     responseCache,
+    sql as unknown as SqlFn,
   );
 
   const sessionId = await recordSessionStart(sql, keyId, authenticatedWorkspaceId ?? 'unauthenticated');
