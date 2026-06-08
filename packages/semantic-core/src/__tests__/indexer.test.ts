@@ -8,8 +8,12 @@ import { ok, err } from 'neverthrow';
 vi.mock('../embedding.js', () => ({
   generateEmbeddings: vi.fn(),
 }));
+vi.mock('../entity-enricher.js', () => ({
+  EntityEnricher: vi.fn(),
+}));
 
 import { generateEmbeddings } from '../embedding.js';
+import { EntityEnricher } from '../entity-enricher.js';
 
 function makeEntity(id: string, type = 'contact', relationships: SemanticEntity['relationships'] = []): SemanticEntity {
   return {
@@ -235,6 +239,175 @@ describe('indexEntities', () => {
     expect(result.deduplicated).toBe(1);
     expect(graphStore.addEntity).not.toHaveBeenCalled();
     expect(result.relationshipsIndexed).toBe(0);
+  });
+
+  // ─── Entity enrichment ────────────────────────────────────────────────
+
+  it('calls enrichEntity for each entity when enrichEntities is enabled', async () => {
+    const e1 = makeEntity('id:1');
+    const e2 = makeEntity('id:2');
+    const store = makeMockVectorStore();
+
+    const mockEnricher = {
+      enrichEntity: vi.fn().mockResolvedValue(['term-a', 'term-b']),
+    };
+    vi.mocked(EntityEnricher).mockImplementation(() => mockEnricher as unknown as EntityEnricher);
+
+    vi.mocked(generateEmbeddings).mockResolvedValue([
+      { entityId: e1.id, vector: makeVector(0) },
+      { entityId: e2.id, vector: makeVector(1) },
+    ]);
+    vi.mocked(store.search).mockResolvedValue([]);
+
+    await indexEntities(makeEntityGen([e1, e2]), store, {
+      enrichEntities: true,
+      entityEnricher: new EntityEnricher('sk-test') as unknown as InstanceType<typeof EntityEnricher>,
+      workspaceId: 'ws-1',
+    });
+
+    expect(mockEnricher.enrichEntity).toHaveBeenCalledTimes(2);
+    expect(mockEnricher.enrichEntity).toHaveBeenCalledWith(e1, 'ws-1');
+    expect(mockEnricher.enrichEntity).toHaveBeenCalledWith(e2, 'ws-1');
+  });
+
+  it('passes enrichedTermsMap to generateEmbeddings', async () => {
+    const entity = makeEntity('id:1');
+    const store = makeMockVectorStore();
+
+    const mockEnricher = { enrichEntity: vi.fn().mockResolvedValue(['sprint', 'backlog']) };
+    vi.mocked(EntityEnricher).mockImplementation(() => mockEnricher as unknown as EntityEnricher);
+
+    vi.mocked(generateEmbeddings).mockResolvedValue([
+      { entityId: entity.id, vector: makeVector(0) },
+    ]);
+    vi.mocked(store.search).mockResolvedValue([]);
+
+    await indexEntities(makeEntityGen([entity]), store, {
+      enrichEntities: true,
+      entityEnricher: new EntityEnricher('sk-test') as unknown as InstanceType<typeof EntityEnricher>,
+      workspaceId: 'ws-1',
+    });
+
+    expect(vi.mocked(generateEmbeddings)).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        enrichedTermsMap: new Map([['id:1', ['sprint', 'backlog']]]),
+      }),
+    );
+  });
+
+  it('restricts enrichment to allowlisted entity types', async () => {
+    const contact = makeEntity('id:1', 'contact');
+    const issue = makeEntity('id:2', 'issue');
+    const store = makeMockVectorStore();
+
+    const mockEnricher = { enrichEntity: vi.fn().mockResolvedValue(['term']) };
+    vi.mocked(EntityEnricher).mockImplementation(() => mockEnricher as unknown as EntityEnricher);
+
+    vi.mocked(generateEmbeddings).mockResolvedValue([
+      { entityId: contact.id, vector: makeVector(0) },
+      { entityId: issue.id, vector: makeVector(1) },
+    ]);
+    vi.mocked(store.search).mockResolvedValue([]);
+
+    await indexEntities(makeEntityGen([contact, issue]), store, {
+      enrichEntities: true,
+      entityEnricher: new EntityEnricher('sk-test') as unknown as InstanceType<typeof EntityEnricher>,
+      workspaceId: 'ws-1',
+      enrichEntityTypes: ['issue'],
+    });
+
+    expect(mockEnricher.enrichEntity).toHaveBeenCalledTimes(1);
+    expect(mockEnricher.enrichEntity).toHaveBeenCalledWith(issue, 'ws-1');
+  });
+
+  it('omits enrichedTermsMap when all enrichment returns empty', async () => {
+    const entity = makeEntity('id:1');
+    const store = makeMockVectorStore();
+
+    const mockEnricher = { enrichEntity: vi.fn().mockResolvedValue([]) };
+    vi.mocked(EntityEnricher).mockImplementation(() => mockEnricher as unknown as EntityEnricher);
+
+    vi.mocked(generateEmbeddings).mockResolvedValue([
+      { entityId: entity.id, vector: makeVector(0) },
+    ]);
+    vi.mocked(store.search).mockResolvedValue([]);
+
+    await indexEntities(makeEntityGen([entity]), store, {
+      enrichEntities: true,
+      entityEnricher: new EntityEnricher('sk-test') as unknown as InstanceType<typeof EntityEnricher>,
+      workspaceId: 'ws-1',
+    });
+
+    const callArgs = vi.mocked(generateEmbeddings).mock.calls[0]?.[1];
+    expect(callArgs?.enrichedTermsMap).toBeUndefined();
+  });
+
+  it('does not call enrichEntity when enrichEntities is false', async () => {
+    const entity = makeEntity('id:1');
+    const store = makeMockVectorStore();
+
+    const mockEnricher = { enrichEntity: vi.fn().mockResolvedValue(['term']) };
+    vi.mocked(EntityEnricher).mockImplementation(() => mockEnricher as unknown as EntityEnricher);
+
+    vi.mocked(generateEmbeddings).mockResolvedValue([
+      { entityId: entity.id, vector: makeVector(0) },
+    ]);
+    vi.mocked(store.search).mockResolvedValue([]);
+
+    await indexEntities(makeEntityGen([entity]), store, {
+      enrichEntities: false,
+      entityEnricher: new EntityEnricher('sk-test') as unknown as InstanceType<typeof EntityEnricher>,
+      workspaceId: 'ws-1',
+    });
+
+    expect(mockEnricher.enrichEntity).not.toHaveBeenCalled();
+  });
+
+  it('continues indexing when enrichEntity rejects (via Promise.allSettled)', async () => {
+    const e1 = makeEntity('id:1');
+    const e2 = makeEntity('id:2');
+    const store = makeMockVectorStore();
+
+    const mockEnricher = {
+      enrichEntity: vi.fn()
+        .mockRejectedValueOnce(new Error('LLM timeout'))
+        .mockResolvedValueOnce(['good-term']),
+    };
+    vi.mocked(EntityEnricher).mockImplementation(() => mockEnricher as unknown as EntityEnricher);
+
+    vi.mocked(generateEmbeddings).mockResolvedValue([
+      { entityId: e1.id, vector: makeVector(0) },
+      { entityId: e2.id, vector: makeVector(1) },
+    ]);
+    vi.mocked(store.search).mockResolvedValue([]);
+
+    const result = await indexEntities(makeEntityGen([e1, e2]), store, {
+      enrichEntities: true,
+      entityEnricher: new EntityEnricher('sk-test') as unknown as InstanceType<typeof EntityEnricher>,
+      workspaceId: 'ws-1',
+    });
+
+    expect(result.created).toBe(2);
+  });
+
+  it('continues indexing when enrichEntities=true but no entityEnricher provided', async () => {
+    const entity = makeEntity('id:1');
+    const store = makeMockVectorStore();
+
+    vi.mocked(generateEmbeddings).mockResolvedValue([
+      { entityId: entity.id, vector: makeVector(0) },
+    ]);
+    vi.mocked(store.search).mockResolvedValue([]);
+
+    const result = await indexEntities(makeEntityGen([entity]), store, {
+      enrichEntities: true,
+      workspaceId: 'ws-1',
+    });
+
+    expect(result.created).toBe(1);
+    const callArgs = vi.mocked(generateEmbeddings).mock.calls[0]?.[1];
+    expect(callArgs?.enrichedTermsMap).toBeUndefined();
   });
 
   it('continues indexing when graphStore.addEntity fails', async () => {
