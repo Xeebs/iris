@@ -3590,7 +3590,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Comprehensive Connector Integration Test Suite (V1 Connectors)
 - **Layer**: 60 — Advanced Quality & Observability Features
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: High
 - **Description**: Write comprehensive MSW-based integration test suites for the five V1 connectors (Jira, Confluence, Linear, NetSuite, QuickBooks) that currently lack test coverage. For each connector, create a test file (e.g., packages/connectors/jira/src/__tests__/jira-connector.test.ts) that validates: (1) connect() with valid OAuth credentials (mock 200) and invalid credentials (mock 401), (2) getSchema() returns correct entity types and fields for the connector, (3) sync() pagination using API cursor to fetch all pages, (4) sync() relationship extraction (e.g., Jira issue → linked PRs), (5) sync() error handling on rate limits (429) with retry behavior, (6) healthCheck() returns healthy status on successful API call and degraded on timeout. Use MSW to mock all HTTP requests with realistic API response fixtures from each vendor's docs. Each test suite should include: 12–16 test cases, ≥80% code coverage of connector methods, fixtures in tests/fixtures/<connector>/ for different entity types and edge cases (empty results, missing fields, pagination). Reference connector-patterns.md for entity transformation and testing.md for test structure. Add fixture generation script to help create realistic mock responses. Goals: all V1 connectors reach 80%+ coverage, all tests pass in CI with MSW setup.
 - **Files**:
@@ -3609,7 +3609,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: MCP Resources Implementation for Documents & Entities
 - **Layer**: 60 — Advanced Quality & Observability Features
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: Medium
 - **Description**: Extend the MCP server to expose indexed documents and entities as MCP resources (in addition to the existing tools), allowing Claude and other AI tools to read context directly via resource URIs without tool invocation. Implement apps/mcp-server/src/resources/ with resource handlers: (1) EntityResource (entity:///:workspaceId/:entityType/:entityId → returns full entity JSON with attributes, relationships, metadata), (2) DocumentResource (document:///:workspaceId/:docId → returns document content with pagination support for large files), (3) RelationshipGraphResource (graph:///:workspaceId/:entityId?depth=N → returns entity + N-hop related entities as JSON graph), (4) GlossaryResource (glossary:///:workspaceId → returns business glossary terms + definitions). Update apps/mcp-server/src/server.ts to register resources via MCP ResourceListResponse and ResourceReadResponse handlers. Implement permission checks (respects role-based context permissions). Support resource discovery: GET /api/v1/mcp/resources endpoint listing available resource types and sample URIs. Build dashboard documentation page at apps/dashboard/app/mcp/resources/page.tsx showing: available resource types, example URIs, how to use in Claude/ChatGPT prompts, rate limits per resource. Add 16+ tests for resource schemas, permission enforcement, pagination of large documents, and error handling. Reference MCP spec for resource format and api-conventions.md for REST discovery patterns.
 - **Files**:
@@ -3637,4 +3637,76 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
   - apps/dashboard/components/query-explanation-panel.tsx
   - apps/dashboard/components/scoring-breakdown-chart.tsx
 - **Depends on**: Retrieval Engine (completed), Context Compression (completed)
+- **Added**: 2026-06-09
+
+---
+
+## Layer 61: Production Maturity & Missing Core Features
+
+### Task: Native Document Indexing from Connector Sources
+- **Layer**: 61 — Production Maturity & Missing Core Features
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Implement native support for indexing unstructured documents from connectors (Google Drive PDFs, Notion pages, Confluence docs, Slack message threads) as searchable context entities. Create packages/semantic-core/src/document-indexer.ts with DocumentIndexer: (1) extractDocumentContent(source, sourceId) handling multiple formats (PDF text extraction via pdf-parse, HTML/Markdown parsing, binary office formats via LibreOffice), (2) chunkDocument(content, maxChunkTokens) splitting large documents into semantic chunks (sentence/paragraph boundaries, not mid-word), (3) indexDocumentChunks(workspace, chunks) storing chunks as document entities with metadata (source, page number, chunk index, extract_time). Create document_entities table (workspace_id, document_id, source_connector_id, source_document_id, title, content_hash, chunk_index, content_text, extracted_at) with FTS index on content_text. Extend connectors (Google Drive, Notion, Confluence) to export document content alongside structured data during sync. Add POST /api/v1/documents/import/bulk endpoint for batch document upload. Integrate retrieval engine to search documents alongside entities. Add 18+ tests for content extraction (various formats), chunking strategy, FTS search accuracy. Reference embedding-patterns.md for what to embed and semantic-core indexer patterns for batch processing.
+- **Files**:
+  - packages/semantic-core/src/document-indexer.ts
+  - packages/semantic-core/src/__tests__/document-indexer.test.ts
+  - packages/semantic-core/src/__tests__/document-indexer.integration.test.ts
+  - apps/api/migrations/113_add_document_entities.sql
+  - apps/api/src/routes/documents.ts
+  - apps/api/src/__tests__/documents.test.ts
+  - packages/connectors/google-drive/src/document-handler.ts (update)
+  - packages/connectors/notion/src/document-handler.ts (update)
+  - packages/connectors/confluence/src/document-handler.ts (update)
+- **Depends on**: Indexer Implementation, Google Drive Connector, Notion Connector, Confluence Connector
+- **Added**: 2026-06-09
+
+### Task: Search Relevance Tuning & Ranking Improvements
+- **Layer**: 61 — Production Maturity & Missing Core Features
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Implement configurable search relevance tuning and advanced ranking to improve query result quality across diverse entity types and query patterns. Create packages/semantic-core/src/relevance-tuner.ts with RelevanceTuner: (1) extractRankingFactors(query, entity) computing: vector similarity score, entity type match penalty (boost/penalize based on query intent), entity recency bonus (newer entities ranked higher), relationship proximity score (entities closer to query entity in graph ranked higher), field match score (entity attributes matching query terms), domain-specific weights (user can boost certain entity types). (2) tuneWeights(workspaceId, feedbackData) using supervised learning: collect user feedback (liked/disliked results), adjust weights to improve future ranking via gradient descent or Bayesian optimization. (3) rankEntities(entities, query, weights) applying weighted combination of factors. Store tuning state in relevance_tuning_models table (workspace_id, iteration, weights_json, feedback_count, auc_score, created_at). Expose admin API: GET /api/v1/admin/relevance/weights (current weights), POST /api/v1/admin/relevance/feedback (log user feedback), GET /api/v1/admin/relevance/metrics (ranking quality metrics: MRR, NDCG). Build admin tuning UI at apps/dashboard/components/relevance-tuner-panel.tsx showing: weight sliders per factor, feedback/quality chart over time, A/B test results (control vs. tuned weights). Add 20+ unit tests for factor extraction, weight application, feedback incorporation. Add integration tests with synthetic query/feedback datasets to validate learning. Reference embedding-patterns.md for similarity threshold guidance.
+- **Files**:
+  - packages/semantic-core/src/relevance-tuner.ts
+  - packages/semantic-core/src/__tests__/relevance-tuner.test.ts
+  - packages/semantic-core/src/__tests__/relevance-tuner.integration.test.ts
+  - apps/api/migrations/114_add_relevance_tuning.sql
+  - apps/api/src/routes/relevance.ts
+  - apps/api/src/__tests__/relevance.test.ts
+  - apps/dashboard/components/relevance-tuner-panel.tsx
+- **Depends on**: Retrieval Engine, Query Decomposition & Entity Type Detection
+- **Added**: 2026-06-09
+
+### Task: Streaming Context for Large Result Sets
+- **Layer**: 61 — Production Maturity & Missing Core Features
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Implement streaming context delivery for MCP tools to support large result sets without hitting token budget limits or causing timeout. Extend apps/mcp-server/src/tools/query-context.ts and list-entities.ts to support streaming mode: client provides optional ?stream=true query param, server returns Server-Sent Events (SSE) stream instead of JSON array. Create packages/semantic-core/src/streaming-context.ts with StreamingContextServer: (1) streamEntities(query, workspace, chunkSize) yielding entities in token-bounded chunks, (2) generateStreamChunk(entities, maxTokens) converting entity batch to compact JSON (use compression pipeline), (3) encodeChunkMetadata(chunkIndex, moreChunks, totalCount) including pagination info. Update MCP tool schema: add "stream" boolean input parameter. Integrate into query-context and list-entities tools: if stream=true, return SSE stream instead of single response. Add HTTP streaming endpoint POST /api/v1/mcp/stream/{toolName} accepting tool input and returning SSE stream. Build dashboard test page at apps/dashboard/app/mcp/stream-tester/page.tsx to test streaming queries (show chunk arrival timeline, total time, token estimate). Add 12+ tests for streaming logic, chunk boundaries, token counting accuracy, connection handling. Reference compression/pipeline.ts for serialization patterns and embedding-patterns.md for token budgeting.
+- **Files**:
+  - packages/semantic-core/src/streaming-context.ts
+  - packages/semantic-core/src/__tests__/streaming-context.test.ts
+  - apps/mcp-server/src/tools/query-context.ts (update)
+  - apps/mcp-server/src/tools/list-entities.ts (update)
+  - apps/api/src/routes/mcp-streaming.ts
+  - apps/dashboard/app/mcp/stream-tester/page.tsx
+  - apps/mcp-server/src/__tests__/server.integration.test.ts (update)
+- **Depends on**: MCP Server Bootstrap, Compression Pipeline
+- **Added**: 2026-06-09
+
+### Task: Batch Entity Operations & Bulk Import/Export
+- **Layer**: 61 — Production Maturity & Missing Core Features
+- **Status**: UNWORKED
+- **Priority**: Medium
+- **Description**: Implement efficient batch operations for entity management, including bulk import from CSV/JSON files and bulk export with filtering. Create packages/semantic-core/src/batch-operations.ts with BatchOperations: (1) parseImportFile(file, format: 'csv'|'json'|'parquet') validating schema and returning parsed records, (2) validateBatch(records, schema) checking required fields and data types, (3) importBatch(workspaceId, records) bulk inserting into vector store with deduplication, (4) exportBatch(workspaceId, filters, format) querying entities and serializing to requested format with streaming for large exports. Add POST /api/v1/entities/import endpoint accepting multipart form with CSV/JSON file, returning import job ID and status, with async processing via BullMQ queue. Add GET /api/v1/entities/export?format=csv&filter=type:contact endpoint returning streamed response. Create import_jobs table (workspace_id, job_id, file_name, record_count, imported_count, error_count, status, created_at). Build dashboard import/export wizard at apps/dashboard/app/entities/import-export/page.tsx with file uploader, schema mapper, preview before import, and export filter builder. Add 16+ tests for file parsing, schema validation, bulk operations, error recovery. Reference connector-patterns.md for entity transformation and testing.md for file fixture patterns.
+- **Files**:
+  - packages/semantic-core/src/batch-operations.ts
+  - packages/semantic-core/src/__tests__/batch-operations.test.ts
+  - packages/semantic-core/src/__tests__/batch-operations.integration.test.ts
+  - apps/api/migrations/115_add_import_jobs.sql
+  - apps/api/src/routes/bulk-operations.ts
+  - apps/api/src/__tests__/bulk-operations.test.ts
+  - apps/dashboard/app/entities/import-export/page.tsx
+  - apps/dashboard/components/import-wizard.tsx
+  - apps/dashboard/components/export-builder.tsx
+- **Depends on**: Indexer Implementation, Connector Instance Management API
 - **Added**: 2026-06-09

@@ -43,6 +43,13 @@ describe('MCP Resource Registration', () => {
     expect(() => registerDocumentResource(server)).not.toThrow();
     expect(() => registerGraphResource(server, vs)).not.toThrow();
   });
+
+  it('glossary resource registers without throwing', async () => {
+    const { registerGlossaryResource } = await import('../resources/glossary-resource.js');
+    const server = new McpServer({ name: 'test-glossary', version: '0.0.1' });
+    const mockSql = vi.fn().mockResolvedValue([]);
+    expect(() => registerGlossaryResource(server, mockSql as never)).not.toThrow();
+  });
 });
 
 describe('buildEntityResource', () => {
