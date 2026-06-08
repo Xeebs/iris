@@ -67,6 +67,7 @@ export default defineConfig({
       '@iris/semantic-core/proactive-context-engine': path.resolve(__dirname, '../../packages/semantic-core/src/proactive-context-engine.ts'),
       '@iris/semantic-core/metric-formula-engine': path.resolve(__dirname, '../../packages/semantic-core/src/metric-formula-engine.ts'),
       '@iris/semantic-core/nlp-config-engine': path.resolve(__dirname, '../../packages/semantic-core/src/nlp-config-engine.ts'),
+      '@iris/semantic-core/query-optimizer': path.resolve(__dirname, '../../packages/semantic-core/src/query-optimizer.ts'),
     },
   },
   test: {
