@@ -2977,7 +2977,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Batch Sync Optimization & Performance Tuning
 - **Layer**: 54 — Connector Expansion & V1 Features
-- **Status**: IN_PROGRESS
+- **Status**: COMMITTED
 - **Priority**: Medium
 - **Description**: Build a performance optimization suite for connector syncs, reducing latency and token costs for large-scale ingestion. Create packages/semantic-core/src/sync-optimizer.ts with SyncOptimizer class: (1) analyzeHistoricalSyncMetrics(connectorId, days=30) calculating P50/P95/P99 latencies, entity/token throughput, failure rates, (2) recommendOptimalBatchSize(connectorId, targetDurationMs=300_000) using linear regression to predict optimal batch size (default 100), (3) recommendParallelism(connectorId, cpuCount) computing safe concurrency given connector rate limits, (4) getOptimizationReport(connectorId) showing bottlenecks (API rate limit vs. processing time). Create apps/api/migrations/085_add_sync_metrics.sql with sync_metrics table (connector_id, sync_id, batch_size, entity_count, token_count, durationMs, entity_throughput). Expose REST: GET /api/v1/connectors/:id/sync-metrics, POST /api/v1/connectors/:id/optimize (triggers analyzer). Build dashboard panel at apps/dashboard/components/sync-optimization-panel.tsx with metric charts (throughput over time), optimization recommendations. Update SyncWorker to log metrics to new table. Add 14+ unit tests for regression analysis, batch size tuning, parallelism calculation. Integration test: simulate 1000+ entity sync, verify metrics logged, run optimizer, confirm recommendation improves throughput by ≥10%. Reference code-style.md for structured logging.
 - **Files**:
@@ -2990,4 +2990,82 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
   - apps/api/src/workers/sync-worker.ts (update to log metrics)
   - apps/dashboard/components/sync-optimization-panel.tsx
 - **Depends on**: Sync Scheduling & Frequency Configuration (completed), Indexer Implementation (completed)
+- **Added**: 2026-06-08
+
+### Task: Multi-LLM Router & Provider Abstraction Layer
+- **Layer**: 54 — Connector Expansion & V1 Features
+- **Status**: IN_PROGRESS
+- **Priority**: High
+- **Description**: Build an extensible LLM provider abstraction layer to support Claude, GPT-4, Gemini, and local models (via Ollama) with unified token counting and cost tracking. Create packages/semantic-core/src/llm-router.ts with LlmProvider interface (embed, complete, countTokens), concrete implementations for OpenAI, Anthropic, Google, and Ollama. Add provider-specific prompt optimization (e.g., Claude system prompts vs. OpenAI instructions). Create apps/api/migrations/086_add_llm_provider_config.sql with llm_providers table (workspace_id, provider_name, model_id, api_key_encrypted, cost_per_1m_tokens, default_for_use_case). Expose REST: GET /api/v1/llm-providers (list configured), POST /api/v1/llm-providers (register), DELETE /api/v1/llm-providers/:id (deregister), POST /api/v1/llm-providers/:id/test (verify connection). Update MCP server's embedding and completion calls to route through the new abstraction. Build dashboard page at apps/dashboard/app/admin/llm-configuration/page.tsx with provider selector, cost projections, auto-routing rules. Add 20+ unit tests for each provider implementation, token counting accuracy, cost calculation. Integration test: embed same input via three providers, verify consistent rankings. Reference code-style.md for error handling and logging.
+- **Files**:
+  - packages/semantic-core/src/llm-router.ts
+  - packages/semantic-core/src/llm-providers/openai-provider.ts
+  - packages/semantic-core/src/llm-providers/anthropic-provider.ts
+  - packages/semantic-core/src/llm-providers/google-provider.ts
+  - packages/semantic-core/src/llm-providers/ollama-provider.ts
+  - packages/semantic-core/src/__tests__/llm-router.test.ts
+  - packages/semantic-core/src/llm-providers/__tests__/openai-provider.test.ts
+  - packages/semantic-core/src/llm-providers/__tests__/anthropic-provider.test.ts
+  - apps/api/migrations/086_add_llm_provider_config.sql
+  - apps/api/src/routes/llm-providers.ts
+  - apps/api/src/__tests__/llm-providers.test.ts
+  - apps/dashboard/app/admin/llm-configuration/page.tsx
+  - apps/dashboard/components/llm-provider-selector.tsx
+  - apps/dashboard/components/cost-projection-calculator.tsx
+- **Depends on**: Multi-LLM Provider Support (completed)
+- **Added**: 2026-06-08
+
+### Task: Advanced Entity Linking & Normalization Engine
+- **Layer**: 54 — Connector Expansion & V1 Features
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Build intelligent cross-connector entity linking to merge duplicate entities across different data sources (e.g., same customer in HubSpot and Salesforce). Create packages/semantic-core/src/entity-linker.ts with EntityLinker class: (1) detectPotentialMatches(entityId) using fuzzy name matching (Levenshtein), domain-based email matching, semantic similarity > 0.92 on embeddings, (2) scoreMatch(entityA, entityB) combining multiple signals (name similarity, attribute overlap, relationship graph distance), (3) suggestMerges(workspaceId) batching all potential cross-connector matches with confidence scores, (4) confirmMerge(sourceId, targetId) merging entities, updating relationships, logging merge history. Create apps/api/migrations/087_add_entity_linking.sql with entity_link_suggestions, entity_merges, merge_history tables. Expose REST: GET /api/v1/entity-linking/suggestions (paginated suggestions with scores), POST /api/v1/entity-linking/merge/:id (confirm and execute merge), GET /api/v1/entity-linking/history (audit trail). Build dashboard page at apps/dashboard/app/admin/entity-linking/page.tsx with merge preview (side-by-side entity comparison), confidence scores, relationship impact visualization, undo capability. Add 18+ unit tests for matching algorithms, score combination, edge cases (null attributes, timezone-aware dates). Integration test: index 100 contacts across 3 sources with intentional duplicates, verify detection rate ≥95%, confirm merge correctness. Reference embedding-patterns.md for semantic similarity thresholds.
+- **Files**:
+  - packages/semantic-core/src/entity-linker.ts
+  - packages/semantic-core/src/__tests__/entity-linker.test.ts
+  - packages/semantic-core/src/__tests__/entity-linker.integration.test.ts
+  - apps/api/migrations/087_add_entity_linking.sql
+  - apps/api/src/routes/entity-linking.ts
+  - apps/api/src/__tests__/entity-linking.test.ts
+  - apps/dashboard/app/admin/entity-linking/page.tsx
+  - apps/dashboard/components/entity-merge-preview.tsx
+  - apps/dashboard/components/entity-linking-suggestions-table.tsx
+  - apps/dashboard/components/merge-impact-visualizer.tsx
+- **Depends on**: Entity Schema & Transformation (completed), Semantic Index (completed)
+- **Added**: 2026-06-08
+
+### Task: MCP Tool Versioning & Backwards Compatibility Manager
+- **Layer**: 54 — Connector Expansion & V1 Features
+- **Status**: UNWORKED
+- **Priority**: Medium
+- **Description**: Implement version management for MCP tools to enable non-breaking feature additions and schema evolution. Create packages/semantic-core/src/mcp-tool-versioning.ts with ToolVersionManager: (1) registerToolVersion(toolName, version, schema, handler) allowing multiple handlers per tool, (2) resolveHandler(toolName, clientVersion) selecting appropriate handler based on client compatibility, (3) generateClientSdkStub(toolName, language) generating TypeScript/Python stub with type defs for each version, (4) deprecateVersion(toolName, version, sunsetDate) marking versions for removal with grace period. Create apps/api/migrations/088_add_mcp_tool_versions.sql with mcp_tool_versions, mcp_tool_deprecations tables. Update MCP server to negotiate versions in capabilities handshake. Add version headers to all MCP responses. Build admin dashboard page at apps/dashboard/app/admin/mcp-tools/page.tsx with tool browser: search, version selector, schema viewer, handler test console, usage metrics per version. Add 16+ tests for version resolution, deprecation handling, schema compatibility. Integration test: register v1 and v2 of query-context tool with schema changes, verify clients on each version get correct behavior. Reference api-conventions.md for MCP response structure.
+- **Files**:
+  - packages/semantic-core/src/mcp-tool-versioning.ts
+  - packages/semantic-core/src/__tests__/mcp-tool-versioning.test.ts
+  - apps/api/migrations/088_add_mcp_tool_versions.sql
+  - apps/api/src/routes/mcp-tools.ts
+  - apps/api/src/__tests__/mcp-tools.test.ts
+  - apps/dashboard/app/admin/mcp-tools/page.tsx
+  - apps/dashboard/components/mcp-tool-browser.tsx
+  - apps/dashboard/components/tool-version-selector.tsx
+  - apps/dashboard/components/schema-viewer.tsx
+- **Depends on**: MCP Server Bootstrap (completed), Prefix Cache Manager (completed)
+- **Added**: 2026-06-08
+
+### Task: End-to-End Connector Monitoring & Health Scoring System
+- **Layer**: 54 — Connector Expansion & V1 Features
+- **Status**: UNWORKED
+- **Priority**: Medium
+- **Description**: Build a comprehensive health monitoring system for all connectors with proactive alerting and automated recovery. Create packages/semantic-core/src/connector-health-scorer.ts with ConnectorHealthScorer class: (1) scoreConnector(connectorId) computing a 0-100 health score from sync success rate (40%), entity freshness (30%), error frequency (20%), auth validity (10%), (2) detectDegradation(connectorId) comparing current score to 7-day rolling baseline and alerting on >15% drop, (3) suggestRecovery(connectorId) recommending actions (re-auth, manual sync, pause, retry), (4) monitorAuthExpiry() proactively rotating OAuth tokens before expiry. Create apps/api/migrations/089_add_connector_health.sql with connector_health_scores, health_alerts, recovery_actions tables. Expose REST: GET /api/v1/connectors/:id/health (detailed score breakdown), GET /api/v1/connectors/:id/health-history (time series), POST /api/v1/connectors/:id/recovery-action (execute suggested action), GET /api/v1/health-alerts (active alerts across workspace). Build dashboard components: ConnectorHealthCard (showing score + mini chart) on connectors list, HealthDetailPanel with scoring breakdown and historical context, AlertsWidget with active alerts and manual action buttons. Add 14+ unit tests for scoring algorithms, degradation detection, recovery recommendations. Integration test: simulate connector failure (API down), verify health score drops, alert triggers, recovery suggestion appears. Reference code-style.md for structured logging of health events.
+- **Files**:
+  - packages/semantic-core/src/connector-health-scorer.ts
+  - packages/semantic-core/src/__tests__/connector-health-scorer.test.ts
+  - packages/semantic-core/src/__tests__/connector-health-scorer.integration.test.ts
+  - apps/api/migrations/089_add_connector_health.sql
+  - apps/api/src/routes/connector-health.ts
+  - apps/api/src/__tests__/connector-health.test.ts
+  - apps/dashboard/components/connector-health-card.tsx
+  - apps/dashboard/components/health-detail-panel.tsx
+  - apps/dashboard/components/health-alerts-widget.tsx
+- **Depends on**: Connector Registry (completed), Indexer Implementation (completed)
 - **Added**: 2026-06-08

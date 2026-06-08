@@ -44,6 +44,7 @@ export default defineConfig({
       '@iris/semantic-core/metrics-anomaly-detector': path.resolve(__dirname, '../../packages/semantic-core/src/metrics-anomaly-detector.ts'),
       '@iris/semantic-core/schema-discovery': path.resolve(__dirname, '../../packages/semantic-core/src/schema-discovery.ts'),
       '@iris/semantic-core/sync-optimizer': path.resolve(__dirname, '../../packages/semantic-core/src/sync-optimizer.ts'),
+      '@iris/semantic-core/llm-router': path.resolve(__dirname, '../../packages/semantic-core/src/llm-router.ts'),
       '@iris/semantic-core': path.resolve(__dirname, '../../packages/semantic-core/src/index.ts'),
       '@iris/cache/response-cache': path.resolve(__dirname, '../../packages/cache/src/response-cache.ts'),
       '@iris/compression': path.resolve(__dirname, '../../packages/compression/src/index.ts'),
