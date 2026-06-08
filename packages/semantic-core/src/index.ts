@@ -67,3 +67,15 @@ export {
   detectNewAttributes,
   computeZScore,
 } from './sync-quality-monitor.js';
+export type {
+  CostEventType,
+  ConnectorCostSummary,
+  CostBreakdownReport,
+  CostRecommendation,
+} from './connector-cost-attribution.js';
+export {
+  ConnectorCostAttributor,
+  computeIndexCostCents,
+  computeQueryCostCents,
+  computeRoiScore,
+} from './connector-cost-attribution.js';
