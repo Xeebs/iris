@@ -68,7 +68,8 @@
     "./workflow-service": "./dist/workflow-service.js",
     "./enrichment-engine": "./dist/enrichment-engine.js",
     "./schema-evolution": "./dist/schema-evolution.js",
-    "./query-analytics-engine": "./dist/query-analytics-engine.js"
+    "./query-analytics-engine": "./dist/query-analytics-engine.js",
+    "./multi-tenant-manager": "./dist/multi-tenant-manager.js"
   },
   "scripts": {
     "build": "tsc --build",
