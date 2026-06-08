@@ -49,6 +49,7 @@ export default defineConfig({
       '@iris/semantic-core/mcp-tool-versioning': path.resolve(__dirname, '../../packages/semantic-core/src/mcp-tool-versioning.ts'),
       '@iris/semantic-core/connector-health-scorer': path.resolve(__dirname, '../../packages/semantic-core/src/connector-health-scorer.ts'),
       '@iris/semantic-core/rate-limiter': path.resolve(__dirname, '../../packages/semantic-core/src/rate-limiter.ts'),
+      '@iris/semantic-core/entity-search': path.resolve(__dirname, '../../packages/semantic-core/src/entity-search.ts'),
       '@iris/semantic-core': path.resolve(__dirname, '../../packages/semantic-core/src/index.ts'),
       '@iris/cache/response-cache': path.resolve(__dirname, '../../packages/cache/src/response-cache.ts'),
       '@iris/compression': path.resolve(__dirname, '../../packages/compression/src/index.ts'),

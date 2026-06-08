@@ -3072,7 +3072,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: API Rate Limiting & Quota Management System
 - **Layer**: 54 — Connector Expansion & V1 Features
-- **Status**: IN_PROGRESS
+- **Status**: COMMITTED
 - **Priority**: High
 - **Description**: Implement comprehensive rate limiting and quota management for the REST API and MCP server to prevent abuse and enforce fair usage. Create packages/semantic-core/src/rate-limiter.ts with RateLimitService: (1) enforceRateLimit(workspaceId, endpoint, limit, windowMs) tracking requests per workspace per endpoint with sliding window algorithm, (2) getQuotaStatus(workspaceId) returning current usage vs. tier limits (free/pro/enterprise), (3) handleQuotaExhausted() returning 429 with retry-after header. Create apps/api/migrations/090_add_rate_limiting.sql with rate_limit_configs, quota_usage, quota_reset_events tables. Integrate middleware into Hono app for all /api/v1/* routes. MCP server enforces limits per API key. Expose REST: GET /api/v1/usage (current usage), GET /api/v1/limits (tier limits), POST /api/v1/limits/increase-request (request quota increase). Build dashboard page apps/dashboard/app/settings/[workspaceId]/usage-limits/page.tsx with usage charts, tier selector, quota upgrade flow. Add 16+ unit tests for sliding window, quota calculation, tier enforcement. Integration test: simulate 1000+ requests, verify rate limit kicks in at threshold, 429s returned. Reference api-conventions.md for status codes.
 - **Files**:
@@ -3090,7 +3090,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Advanced Entity Search & Filtering Engine
 - **Layer**: 54 — Connector Expansion & V1 Features
-- **Status**: UNWORKED
+- **Status**: IN_PROGRESS
 - **Priority**: High
 - **Description**: Build a sophisticated entity search and filtering system enabling users to query entities by attribute values, relationships, and metadata. Create packages/semantic-core/src/entity-search.ts with EntitySearchEngine: (1) parseFilterQuery(filterString) supporting filters like "type:contact email:*@acme.com status:active", (2) buildSqlQuery(filters) generating safe parameterized SQL for Postgres, (3) searchEntities(workspaceId, query, filters, limit, cursor) combining full-text search and attribute filtering, (4) suggestFilters(query) returning applicable filters based on query context. Expose REST: POST /api/v1/entities/search with json body {query, filters, limit, cursor}, GET /api/v1/entities/search-suggestions (auto-complete filters). Build dashboard search page apps/dashboard/app/search/advanced/page.tsx with filter builder UI, multi-filter AND/OR logic, result counts, saved search ability. Support faceted search with counts per attribute value. Add 18+ unit tests for filter parsing, SQL generation safety (injection), complex filter combinations. Integration test: search 5000+ indexed entities with 10-filter combinations, verify accuracy and <500ms response. Reference code-style.md for SQL escaping patterns.
 - **Files**:
