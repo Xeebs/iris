@@ -3908,7 +3908,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Connector Performance Optimization Dashboard & Auto-Tuning
 - **Layer**: 64 — Production Readiness & API Polish
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: Medium
 - **Description**: Build a comprehensive connector performance dashboard with observability for throughput, latency, and resource utilization, plus an auto-tuning engine that recommends and applies optimizations. Create packages/connector-sdk/src/performance-optimizer.ts with ConnectorPerformanceOptimizer: (1) analyzeConnectorMetrics(connectorId, window) computing throughput (records/sec), latency (API call p50/p95/p99), error rate, batch efficiency, (2) identifyPaginationPattern(connectorId) detecting cursor vs offset vs keyset pagination, (3) adaptiveBatchSize(currentBatchSize, errorRate, latency) recommending optimal batch size (50-500 range), (4) computeOptimalConcurrency(connectorId, throughput, errorRate) suggesting concurrency level (1-10), (5) suggestRateLimitAdjustment(apiLimitExceeded, currentDelay) recommending request delay, (6) predictConnectorCapacity(metrics, scalingFactor) estimating max sustainable throughput. Create migration 131 (connector_performance_metrics) storing batch/concurrency/rateLimit recommendations. Add REST routes: GET /api/v1/connectors/:id/performance-stats (throughput chart, latency p-tile distribution, error rate timeline), GET /api/v1/connectors/:id/optimization-recs (array of { recommendation, expectedBenefit, risk }), POST /api/v1/connectors/:id/apply-optimization (apply a recommended optimization). Add dashboard page /connectors/:id/performance with: throughput sparkline, latency heatmap, batch/concurrency gauges, optimization panel with before/after comparison. Include 30+ tests (18 unit optimizer logic + 12 route integration with perf data).
 - **Files**:
@@ -3926,7 +3926,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: MCP Tool Coverage Expansion & Discovery
 - **Layer**: 64 — Production Readiness & API Polish
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: Medium
 - **Description**: Expand MCP tool coverage with additional utility tools for common AI agent patterns (bulk operations, temporal queries, multi-entity analysis) and implement a tool discovery endpoint that dynamically advertises available tools based on workspace configuration. Create apps/mcp-server/src/tools/bulk-entity-update.ts (update multiple entities by filter), apps/mcp-server/src/tools/entity-trend-analysis.ts (analyze metric trends over time windows), apps/mcp-server/src/tools/entity-dependency-graph.ts (discover all entities dependent on a given entity). Add MCP resource discovery endpoint POST /api/v1/mcp/tools/discover returning schema + usage examples for all registered tools filtered by workspace context (respects role-based tool filtering). Create apps/api/src/routes/mcp-tool-discovery.ts with: GET /api/v1/mcp/tools (all available tools with schemas), GET /api/v1/mcp/tools/:name/usage-stats (tool invocation count, avg latency, error rate), GET /api/v1/mcp/tools/:name/examples (curated usage examples per tool). Add dashboard page /mcp-tools with searchable tool catalog, tool schemas with field descriptions, usage examples, popularity metrics. Include 26+ tests (14 new tool logic + 12 discovery endpoint coverage).
 - **Files**:
