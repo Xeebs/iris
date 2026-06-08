@@ -54,6 +54,7 @@ export default defineConfig({
       '@iris/semantic-core/compliance-auditor': path.resolve(__dirname, '../../packages/semantic-core/src/compliance-auditor.ts'),
       '@iris/semantic-core/graphql-schema': path.resolve(__dirname, '../../packages/semantic-core/src/graphql-schema.ts'),
       '@iris/semantic-core/graphql-resolver': path.resolve(__dirname, '../../packages/semantic-core/src/graphql-resolver.ts'),
+      '@iris/semantic-core/scim-provisioner': path.resolve(__dirname, '../../packages/semantic-core/src/scim-provisioner.ts'),
       '@iris/semantic-core': path.resolve(__dirname, '../../packages/semantic-core/src/index.ts'),
       '@iris/cache/response-cache': path.resolve(__dirname, '../../packages/cache/src/response-cache.ts'),
       '@iris/compression': path.resolve(__dirname, '../../packages/compression/src/index.ts'),
