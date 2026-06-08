@@ -5,6 +5,90 @@ import { logger } from '@iris/core/logger';
 
 const log = logger.child({ service: 'entity-linker' });
 
+// ─── Additional exported types ─────────────────────────────────────────────────
+
+export type MergeRecord = {
+  mergeId: string;
+  workspaceId: string;
+  sourceEntityId: string;
+  targetEntityId: string;
+  mergedBy: string;
+  mergedAt: Date;
+  undoneAt: Date | undefined;
+};
+
+// ─── Exported pure utilities ───────────────────────────────────────────────────
+
+/**
+ * Computes Levenshtein edit distance between two strings.
+ * @param a - First string
+ * @param b - Second string
+ * @returns Edit distance
+ */
+export function levenshteinDistance(a: string, b: string): number {
+  if (a === b) return 0;
+  if (a.length === 0) return b.length;
+  if (b.length === 0) return a.length;
+  const dp: number[][] = Array.from({ length: a.length + 1 }, (_, i) =>
+    Array.from({ length: b.length + 1 }, (_, j) => (i === 0 ? j : j === 0 ? i : 0)),
+  );
+  for (let i = 1; i <= a.length; i++) {
+    for (let j = 1; j <= b.length; j++) {
+      dp[i]![j] = a[i - 1] === b[j - 1]
+        ? dp[i - 1]![j - 1]!
+        : 1 + Math.min(dp[i - 1]![j]!, dp[i]![j - 1]!, dp[i - 1]![j - 1]!);
+    }
+  }
+  return dp[a.length]![b.length]!;
+}
+
+/**
+ * Scores a candidate match between two entities.
+ * Weights: name similarity (50%), email domain match (20%), attribute overlap (30%).
+ * @param entityA - Source entity
+ * @param entityB - Target entity
+ * @returns Composite score 0–1 and signal breakdown
+ */
+export function scoreMatch(
+  entityA: { label: string; email?: string | null; attributes?: Record<string, unknown> },
+  entityB: { label: string; email?: string | null; attributes?: Record<string, unknown> },
+): { score: number; nameScore: number; emailDomainMatch: boolean; attributeOverlap: number } {
+  const normalize = (s: string) => s.toLowerCase().replace(/[^a-z0-9 ]/g, '').trim();
+  const na = normalize(entityA.label);
+  const nb = normalize(entityB.label);
+  let nameScore = 0;
+  if (na === nb) {
+    nameScore = 1;
+  } else {
+    const maxLen = Math.max(na.length, nb.length);
+    nameScore = maxLen === 0 ? 0 : 1 - levenshteinDistance(na, nb) / maxLen;
+  }
+
+  let emailDomainMatch = false;
+  const domainOf = (e?: string | null) => {
+    if (!e) return null;
+    const idx = e.indexOf('@');
+    return idx >= 0 ? e.slice(idx + 1).toLowerCase() : null;
+  };
+  const dA = domainOf(entityA.email);
+  const dB = domainOf(entityB.email);
+  if (dA && dB && dA === dB) emailDomainMatch = true;
+
+  const attrsA = entityA.attributes ?? {};
+  const attrsB = entityB.attributes ?? {};
+  const keysA = Object.keys(attrsA).filter(k => attrsA[k] != null);
+  const keysB = Object.keys(attrsB).filter(k => attrsB[k] != null);
+  let attributeOverlap = 0;
+  if (keysA.length > 0 || keysB.length > 0) {
+    const intersection = keysA.filter(k => keysB.includes(k) && attrsA[k] === attrsB[k]).length;
+    const union = new Set([...keysA, ...keysB]).size;
+    attributeOverlap = union === 0 ? 0 : intersection / union;
+  }
+
+  const score = Math.min(nameScore * 0.5 + (emailDomainMatch ? 0.2 : 0) + attributeOverlap * 0.3, 1);
+  return { score, nameScore, emailDomainMatch, attributeOverlap };
+}
+
 export type LinkStatus = 'proposed' | 'confirmed' | 'rejected';
 
 export type EntityLink = {
@@ -310,6 +394,100 @@ export class EntityLinker {
 
       log.info('Entity linking analysis complete', { workspaceId, entityType, proposals: proposals.length, created });
       return ok(created);
+    } catch (e) {
+      return err(e instanceof Error ? e : new Error(String(e)));
+    }
+  }
+
+  /**
+   * Confirms a merge between two entities, recording audit trail in entity_merges.
+   * Also updates the link status to 'confirmed' if a link record exists.
+   *
+   * @param sourceEntityId - Entity to merge from
+   * @param targetEntityId - Entity to merge into
+   * @param workspaceId - Tenant workspace
+   * @param mergedBy - Actor identifier
+   * @returns Created merge record ID
+   */
+  async confirmMerge(
+    sourceEntityId: string,
+    targetEntityId: string,
+    workspaceId: string,
+    mergedBy: string,
+  ): Promise<Result<string, Error>> {
+    try {
+      const rows = await this.sql`
+        INSERT INTO entity_merges (source_entity_id, target_entity_id, workspace_id, merged_by)
+        VALUES (${sourceEntityId}, ${targetEntityId}, ${workspaceId}, ${mergedBy})
+        RETURNING merge_id
+      ` as unknown as { merge_id: string }[];
+
+      if (rows.length === 0) return err(new Error('Merge insert returned no rows'));
+
+      await this.sql`
+        UPDATE entity_cross_connector_links
+        SET status = 'confirmed', updated_at = now()
+        WHERE workspace_id = ${workspaceId}
+          AND ((entity_id_a = ${sourceEntityId} AND entity_id_b = ${targetEntityId})
+            OR (entity_id_a = ${targetEntityId} AND entity_id_b = ${sourceEntityId}))
+      `;
+
+      log.info('Entity merge confirmed', { sourceEntityId, targetEntityId, workspaceId, mergedBy });
+      return ok(rows[0]!.merge_id);
+    } catch (e) {
+      return err(e instanceof Error ? e : new Error(String(e)));
+    }
+  }
+
+  /**
+   * Undoes a confirmed merge by recording the undo timestamp.
+   *
+   * @param mergeId - Merge record to undo
+   * @param workspaceId - Tenant workspace
+   */
+  async undoMerge(mergeId: string, workspaceId: string): Promise<Result<void, Error>> {
+    try {
+      await this.sql`
+        UPDATE entity_merges
+        SET undone_at = now()
+        WHERE merge_id = ${mergeId} AND workspace_id = ${workspaceId} AND undone_at IS NULL
+      `;
+      log.info('Merge undone', { mergeId, workspaceId });
+      return ok(undefined);
+    } catch (e) {
+      return err(e instanceof Error ? e : new Error(String(e)));
+    }
+  }
+
+  /**
+   * Returns the merge audit trail for a workspace.
+   *
+   * @param workspaceId - Tenant workspace
+   * @param limit - Maximum records to return
+   */
+  async getMergeHistory(workspaceId: string, limit = 50): Promise<Result<MergeRecord[], Error>> {
+    try {
+      const rows = await this.sql`
+        SELECT merge_id, workspace_id, source_entity_id, target_entity_id,
+               merged_by, merged_at, undone_at
+        FROM entity_merges
+        WHERE workspace_id = ${workspaceId}
+        ORDER BY merged_at DESC
+        LIMIT ${limit}
+      ` as unknown as {
+        merge_id: string; workspace_id: string; source_entity_id: string;
+        target_entity_id: string; merged_by: string; merged_at: string; undone_at: string | null;
+      }[];
+
+      return ok(rows.map(r => ({
+        mergeId: r.merge_id,
+        workspaceId: r.workspace_id,
+        sourceEntityId: r.source_entity_id,
+        targetEntityId: r.target_entity_id,
+        mergedBy: r.merged_by,
+        mergedAt: new Date(r.merged_at),
+        undoneAt: r.undone_at ? new Date(r.undone_at) : undefined,
+      })));
     } catch (e) {
       return err(e instanceof Error ? e : new Error(String(e)));
     }

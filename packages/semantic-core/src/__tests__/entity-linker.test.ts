@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { EntityLinker } from '../entity-linker.js';
+import { EntityLinker, levenshteinDistance, scoreMatch } from '../entity-linker.js';
 import type { EntityRecord } from '../entity-linker.js';
 
 vi.mock('@iris/core/logger', () => ({
@@ -207,5 +207,167 @@ describe('EntityLinker', () => {
       const result = await linker.analyzeEntityConnections('ws-1');
       expect(result.isErr()).toBe(true);
     });
+  });
+});
+
+// ─── levenshteinDistance ───────────────────────────────────────────────────────
+
+describe('levenshteinDistance', () => {
+  it('returns 0 for identical strings', () => {
+    expect(levenshteinDistance('hello', 'hello')).toBe(0);
+  });
+
+  it('returns string length when other is empty', () => {
+    expect(levenshteinDistance('abc', '')).toBe(3);
+    expect(levenshteinDistance('', 'xyz')).toBe(3);
+  });
+
+  it('computes edit distance for single substitution', () => {
+    expect(levenshteinDistance('cat', 'bat')).toBe(1);
+  });
+
+  it('computes edit distance for insertion+deletion', () => {
+    expect(levenshteinDistance('kitten', 'sitting')).toBe(3);
+  });
+});
+
+// ─── scoreMatch ────────────────────────────────────────────────────────────────
+
+describe('scoreMatch', () => {
+  it('returns max name score for identical labels (no email or attrs)', () => {
+    const result = scoreMatch({ label: 'Alice Johnson' }, { label: 'Alice Johnson' });
+    // nameScore=1, emailDomainMatch=false, overlap=0 → 1*0.5+0+0=0.5
+    expect(result.score).toBeCloseTo(0.5, 2);
+    expect(result.nameScore).toBe(1);
+  });
+
+  it('detects email domain match and boosts score', () => {
+    const result = scoreMatch(
+      { label: 'Alice J', email: 'alice@acme.com' },
+      { label: 'Alice Johnson', email: 'alice2@acme.com' },
+    );
+    expect(result.emailDomainMatch).toBe(true);
+    expect(result.score).toBeGreaterThan(0.4);
+  });
+
+  it('returns 0 score for completely different entities', () => {
+    const result = scoreMatch({ label: 'Alice' }, { label: 'zzzzzzzzz' });
+    expect(result.nameScore).toBeLessThan(0.3);
+  });
+
+  it('computes attribute overlap correctly', () => {
+    // Same label (nameScore=1) + 2/3 attr overlap → score = 0.5 + 0.667*0.3 ≈ 0.7
+    const result = scoreMatch(
+      { label: 'same', attributes: { company: 'Acme', role: 'eng' } },
+      { label: 'same', attributes: { company: 'Acme', role: 'eng', extra: 'x' } },
+    );
+    expect(result.attributeOverlap).toBeGreaterThan(0.5);
+    expect(result.score).toBeGreaterThan(0.65);
+  });
+
+  it('caps score at 1.0', () => {
+    const result = scoreMatch(
+      { label: 'Bob', email: 'bob@co.com', attributes: { x: 'y' } },
+      { label: 'Bob', email: 'bob@co.com', attributes: { x: 'y' } },
+    );
+    expect(result.score).toBeLessThanOrEqual(1);
+  });
+});
+
+// ─── EntityLinker new methods ─────────────────────────────────────────────────
+
+describe('EntityLinker.confirmMerge', () => {
+  let sql: ReturnType<typeof makeSql>;
+  let linker: EntityLinker;
+
+  beforeEach(() => {
+    sql = makeSql();
+    linker = new EntityLinker(sql);
+  });
+
+  it('inserts merge record and returns merge_id', async () => {
+    sql.mockResolvedValueOnce([{ merge_id: 'm-1' }]);
+    sql.mockResolvedValueOnce([]);
+    const result = await linker.confirmMerge('e-a', 'e-b', 'ws-1', 'user-1');
+    expect(result.isOk()).toBe(true);
+    expect(result._unsafeUnwrap()).toBe('m-1');
+  });
+
+  it('returns err when insert fails', async () => {
+    sql.mockRejectedValueOnce(new Error('DB down'));
+    const result = await linker.confirmMerge('e-a', 'e-b', 'ws-1', 'user-1');
+    expect(result.isErr()).toBe(true);
+  });
+
+  it('returns err when insert returns no rows', async () => {
+    sql.mockResolvedValueOnce([]);
+    const result = await linker.confirmMerge('e-a', 'e-b', 'ws-1', 'user-1');
+    expect(result.isErr()).toBe(true);
+  });
+});
+
+describe('EntityLinker.undoMerge', () => {
+  let sql: ReturnType<typeof makeSql>;
+  let linker: EntityLinker;
+
+  beforeEach(() => {
+    sql = makeSql();
+    linker = new EntityLinker(sql);
+  });
+
+  it('returns ok on successful undo', async () => {
+    sql.mockResolvedValueOnce([]);
+    const result = await linker.undoMerge('m-1', 'ws-1');
+    expect(result.isOk()).toBe(true);
+  });
+
+  it('returns err on DB failure', async () => {
+    sql.mockRejectedValueOnce(new Error('DB down'));
+    const result = await linker.undoMerge('m-1', 'ws-1');
+    expect(result.isErr()).toBe(true);
+  });
+});
+
+describe('EntityLinker.getMergeHistory', () => {
+  let sql: ReturnType<typeof makeSql>;
+  let linker: EntityLinker;
+
+  beforeEach(() => {
+    sql = makeSql();
+    linker = new EntityLinker(sql);
+  });
+
+  it('returns empty list when no merges', async () => {
+    sql.mockResolvedValueOnce([]);
+    const result = await linker.getMergeHistory('ws-1');
+    expect(result.isOk()).toBe(true);
+    expect(result._unsafeUnwrap()).toEqual([]);
+  });
+
+  it('maps merge rows to MergeRecord objects', async () => {
+    const now = new Date().toISOString();
+    sql.mockResolvedValueOnce([{
+      merge_id: 'm-1', workspace_id: 'ws-1',
+      source_entity_id: 'e-a', target_entity_id: 'e-b',
+      merged_by: 'user-1', merged_at: now, undone_at: null,
+    }]);
+    const result = await linker.getMergeHistory('ws-1');
+    expect(result.isOk()).toBe(true);
+    const records = result._unsafeUnwrap();
+    expect(records).toHaveLength(1);
+    expect(records[0]?.mergeId).toBe('m-1');
+    expect(records[0]?.undoneAt).toBeUndefined();
+  });
+
+  it('includes undoneAt when present', async () => {
+    const now = new Date().toISOString();
+    sql.mockResolvedValueOnce([{
+      merge_id: 'm-2', workspace_id: 'ws-1',
+      source_entity_id: 'e-a', target_entity_id: 'e-b',
+      merged_by: 'user-1', merged_at: now, undone_at: now,
+    }]);
+    const result = await linker.getMergeHistory('ws-1');
+    const record = result._unsafeUnwrap()[0];
+    expect(record?.undoneAt).toBeInstanceOf(Date);
   });
 });
