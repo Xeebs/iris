@@ -46,6 +46,8 @@ export default defineConfig({
       '@iris/connector-slack/webhook-handler': path.resolve(__dirname, '../../packages/connectors/slack/src/webhook-handler.ts'),
       '@iris/semantic-core/index-analytics': path.resolve(__dirname, '../../packages/semantic-core/src/index-analytics.ts'),
       '@iris/semantic-core/auto-tuning-optimizer': path.resolve(__dirname, '../../packages/semantic-core/src/auto-tuning-optimizer.ts'),
+      '@iris/semantic-core/multi-provider-optimizer': path.resolve(__dirname, '../../packages/semantic-core/src/multi-provider-optimizer.ts'),
+      '@iris/semantic-core/provider-registry': path.resolve(__dirname, '../../packages/semantic-core/src/providers/provider-registry.ts'),
     },
   },
   test: {
