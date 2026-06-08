@@ -28,7 +28,7 @@ jobs:
           cache: 'pnpm'
       - run: pnpm install --frozen-lockfile
       - name: Run load test unit tests
-        run: pnpm exec vitest run tests/load/__tests__/load-test-results.test.ts --reporter=verbose
+        run: pnpm --filter @iris/load-tests run test
 
   integration-load-tests:
     name: Integration Load Tests
