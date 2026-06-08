@@ -3054,7 +3054,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: End-to-End Connector Monitoring & Health Scoring System
 - **Layer**: 54 — Connector Expansion & V1 Features
-- **Status**: IN_PROGRESS
+- **Status**: COMMITTED
 - **Priority**: Medium
 - **Description**: Build a comprehensive health monitoring system for all connectors with proactive alerting and automated recovery. Create packages/semantic-core/src/connector-health-scorer.ts with ConnectorHealthScorer class: (1) scoreConnector(connectorId) computing a 0-100 health score from sync success rate (40%), entity freshness (30%), error frequency (20%), auth validity (10%), (2) detectDegradation(connectorId) comparing current score to 7-day rolling baseline and alerting on >15% drop, (3) suggestRecovery(connectorId) recommending actions (re-auth, manual sync, pause, retry), (4) monitorAuthExpiry() proactively rotating OAuth tokens before expiry. Create apps/api/migrations/089_add_connector_health.sql with connector_health_scores, health_alerts, recovery_actions tables. Expose REST: GET /api/v1/connectors/:id/health (detailed score breakdown), GET /api/v1/connectors/:id/health-history (time series), POST /api/v1/connectors/:id/recovery-action (execute suggested action), GET /api/v1/health-alerts (active alerts across workspace). Build dashboard components: ConnectorHealthCard (showing score + mini chart) on connectors list, HealthDetailPanel with scoring breakdown and historical context, AlertsWidget with active alerts and manual action buttons. Add 14+ unit tests for scoring algorithms, degradation detection, recovery recommendations. Integration test: simulate connector failure (API down), verify health score drops, alert triggers, recovery suggestion appears. Reference code-style.md for structured logging of health events.
 - **Files**:
@@ -3072,7 +3072,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: API Rate Limiting & Quota Management System
 - **Layer**: 54 — Connector Expansion & V1 Features
-- **Status**: UNWORKED
+- **Status**: IN_PROGRESS
 - **Priority**: High
 - **Description**: Implement comprehensive rate limiting and quota management for the REST API and MCP server to prevent abuse and enforce fair usage. Create packages/semantic-core/src/rate-limiter.ts with RateLimitService: (1) enforceRateLimit(workspaceId, endpoint, limit, windowMs) tracking requests per workspace per endpoint with sliding window algorithm, (2) getQuotaStatus(workspaceId) returning current usage vs. tier limits (free/pro/enterprise), (3) handleQuotaExhausted() returning 429 with retry-after header. Create apps/api/migrations/090_add_rate_limiting.sql with rate_limit_configs, quota_usage, quota_reset_events tables. Integrate middleware into Hono app for all /api/v1/* routes. MCP server enforces limits per API key. Expose REST: GET /api/v1/usage (current usage), GET /api/v1/limits (tier limits), POST /api/v1/limits/increase-request (request quota increase). Build dashboard page apps/dashboard/app/settings/[workspaceId]/usage-limits/page.tsx with usage charts, tier selector, quota upgrade flow. Add 16+ unit tests for sliding window, quota calculation, tier enforcement. Integration test: simulate 1000+ requests, verify rate limit kicks in at threshold, 429s returned. Reference api-conventions.md for status codes.
 - **Files**:

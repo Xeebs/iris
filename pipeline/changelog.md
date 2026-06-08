@@ -76,3 +76,5 @@ Custom Transformation Pipeline & Entity Mapping Language — TransformationDSLEn
 - feat(semantic-core,api,dashboard): batch sync optimization & performance tuning — 1b429f8
 - feat(semantic-core,api,dashboard): multi-LLM router & provider abstraction layer — 6e6c729
 - feat(semantic-core,api,dashboard): advanced entity linking & normalization engine — 762f03c
+- feat(semantic-core,api,dashboard): MCP tool versioning & backwards compatibility manager — 2ca8651
+- feat(semantic-core,api,dashboard): end-to-end connector monitoring & health scoring system — 382e02d
