@@ -64,6 +64,7 @@ export default defineConfig({
       '@iris/semantic-core/query-cluster-engine': path.resolve(__dirname, '../../packages/semantic-core/src/query-cluster-engine.ts'),
       '@iris/semantic-core/mcp-tool-generator': path.resolve(__dirname, '../../packages/semantic-core/src/mcp-tool-generator.ts'),
       '@iris/semantic-core/event-driven-sync-engine': path.resolve(__dirname, '../../packages/semantic-core/src/event-driven-sync-engine.ts'),
+      '@iris/semantic-core/agent-feedback-engine': path.resolve(__dirname, '../../packages/semantic-core/src/agent-feedback-engine.ts'),
       '@iris/semantic-core': path.resolve(__dirname, '../../packages/semantic-core/src/index.ts'),
       '@iris/cache/response-cache': path.resolve(__dirname, '../../packages/cache/src/response-cache.ts'),
       '@iris/compression': path.resolve(__dirname, '../../packages/compression/src/index.ts'),
