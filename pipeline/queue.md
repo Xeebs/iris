@@ -3679,7 +3679,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Streaming Context for Large Result Sets
 - **Layer**: 61 — Production Maturity & Missing Core Features
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: High
 - **Description**: Implement streaming context delivery for MCP tools to support large result sets without hitting token budget limits or causing timeout. Extend apps/mcp-server/src/tools/query-context.ts and list-entities.ts to support streaming mode: client provides optional ?stream=true query param, server returns Server-Sent Events (SSE) stream instead of JSON array. Create packages/semantic-core/src/streaming-context.ts with StreamingContextServer: (1) streamEntities(query, workspace, chunkSize) yielding entities in token-bounded chunks, (2) generateStreamChunk(entities, maxTokens) converting entity batch to compact JSON (use compression pipeline), (3) encodeChunkMetadata(chunkIndex, moreChunks, totalCount) including pagination info. Update MCP tool schema: add "stream" boolean input parameter. Integrate into query-context and list-entities tools: if stream=true, return SSE stream instead of single response. Add HTTP streaming endpoint POST /api/v1/mcp/stream/{toolName} accepting tool input and returning SSE stream. Build dashboard test page at apps/dashboard/app/mcp/stream-tester/page.tsx to test streaming queries (show chunk arrival timeline, total time, token estimate). Add 12+ tests for streaming logic, chunk boundaries, token counting accuracy, connection handling. Reference compression/pipeline.ts for serialization patterns and embedding-patterns.md for token budgeting.
 - **Files**:

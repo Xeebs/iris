@@ -67,6 +67,7 @@ export default defineConfig({
       '@iris/semantic-core/agent-feedback-engine': path.resolve(__dirname, '../../packages/semantic-core/src/agent-feedback-engine.ts'),
       '@iris/semantic-core/smart-field-mapper': path.resolve(__dirname, '../../packages/semantic-core/src/smart-field-mapper.ts'),
       '@iris/semantic-core/context-delta-streamer': path.resolve(__dirname, '../../packages/semantic-core/src/context-delta-streamer.ts'),
+      '@iris/semantic-core/streaming-context': path.resolve(__dirname, '../../packages/semantic-core/src/streaming-context.ts'),
       '@iris/semantic-core': path.resolve(__dirname, '../../packages/semantic-core/src/index.ts'),
       '@iris/cache/response-cache': path.resolve(__dirname, '../../packages/cache/src/response-cache.ts'),
       '@iris/compression': path.resolve(__dirname, '../../packages/compression/src/index.ts'),
