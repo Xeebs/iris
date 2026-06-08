@@ -2441,7 +2441,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: AI-Assisted Index Auto-Tuning with Self-Learning Recommendations
 - **Layer**: 47 — Enterprise Search & Advanced AI Integration
-- **Status**: IN_PROGRESS
+- **Status**: COMMITTED
 - **Priority**: Medium
 - **Description**: Implement an intelligent optimization engine that analyzes query patterns, entity usage, and search quality metrics to automatically generate performance tuning recommendations. Create packages/semantic-core/src/auto-tuning-optimizer.ts with AutoTuningOptimizer class: (1) analyze query logs to identify frequently-asked questions and rarely-used entity types, (2) detect search quality issues (zero-result queries, high bounce rates, low CTR), (3) generate recommendations: "split entity type X into subtypes A/B/C for precision", "merge rarely-used types to reduce noise", "boost freshness for time-sensitive types", "disable embedding indexing for high-cardinality fields to save cost", (4) apply via A/B test framework (10% of workspaces, measure quality/cost impact, auto-rollback if metrics degrade), (5) learn from user feedback (mark recommendations helpful/unhelpful to improve future suggestions). Expose GET /api/v1/optimization/recommendations (list pending recommendations with cost impact estimates), POST /api/v1/optimization/recommendations/:id/apply-test (activate A/B test). Build admin panel at apps/dashboard/components/auto-tuning-advisor.tsx showing: pending recommendations with estimated savings, active tests and outcomes, learning progress. Add 18+ unit tests for recommendation logic, integration tests with synthetic query logs. Reference code-style.md for error handling.
 - **Files**:
