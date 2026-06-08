@@ -3762,7 +3762,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Industry Benchmarking & Cross-Company Insights (Anonymized, Opt-In)
 - **Layer**: 62 — Advanced Features & Polish
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: Medium
 - **Description**: Complete the benchmarking system (BenchmarkingService stub exists) with anonymized peer comparison. Implement: (1) metrics collection (entity count, query latency p95, token savings %, cache hit rate) from opt-in workspaces, (2) anonymization pipeline (hash workspace ID, remove names/emails, aggregate by industry+company-size), (3) percentile calculation (p25, p50, p75, p90 per cohort), (4) comparative API endpoint GET /api/v1/benchmarks/peer-comparison returning workspace metrics vs. peers with percentile ranks. Add dashboard page /analytics/[workspaceId]/benchmarks with charts showing percentile position, peer count, and opt-in toggle. Ensure GDPR/CCPA compliance via consent management. Include 36+ tests (22 unit + 14 integration covering aggregation logic + consent).
 - **Files**:
@@ -3778,7 +3778,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Fine-Grained PII Field Masking UI & Audit Dashboard
 - **Layer**: 62 — Advanced Features & Polish
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: Medium
 - **Description**: Enhance the existing PII masking system (pii-masker.ts exists with redact/hash/tokenize strategies) with a comprehensive admin dashboard. Implement: (1) field-level masking strategy selector (redact, hash, tokenize, keep-last-4), (2) audit trail of PII access attempts (which user/agent accessed which PII field when), (3) bulk masking rules editor (apply mask to all email fields across connectors), (4) test mode showing before/after masked output. Create REST GET /api/v1/admin/pii-access-audit (cursor-paginated) and PUT /api/v1/admin/pii-fields/:workspaceId/:connectorId/:fieldName/mask-strategy. Add dashboard page /admin/pii-config with 3 tabs: field strategies, access audit log, bulk rule editor. Include 28+ tests (16 unit + 12 route + audit compliance).
 - **Files**:
