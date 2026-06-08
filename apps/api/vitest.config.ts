@@ -73,6 +73,7 @@ export default defineConfig({
       '@iris/semantic-core/pii-masking-audit': path.resolve(__dirname, '../../packages/semantic-core/src/pii-masking-audit.ts'),
       '@iris/semantic-core/circuit-breaker': path.resolve(__dirname, '../../packages/semantic-core/src/circuit-breaker.ts'),
       '@iris/semantic-core/slo-monitor': path.resolve(__dirname, '../../packages/semantic-core/src/slo-monitor.ts'),
+      '@iris/semantic-core/backup-manager': path.resolve(__dirname, '../../packages/semantic-core/src/backup-manager.ts'),
       '@iris/semantic-core': path.resolve(__dirname, '../../packages/semantic-core/src/index.ts'),
       '@iris/cache/response-cache': path.resolve(__dirname, '../../packages/cache/src/response-cache.ts'),
       '@iris/compression': path.resolve(__dirname, '../../packages/compression/src/index.ts'),

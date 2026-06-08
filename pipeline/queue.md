@@ -3872,7 +3872,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Intelligent Backup & Point-in-Time Recovery with RTO/RPO Guarantees
 - **Layer**: 63 — Hardening & Integration Completeness
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: Medium
 - **Description**: Enhance the existing backup system (IndexSnapshotService exists) with incremental backups, continuous transaction logs, and point-in-time recovery (PITR) capability with defined RTO/RPO SLAs. Create packages/semantic-core/src/backup-manager.ts with BackupService: (1) createFullBackup(timestamp) capturing entity graph + vector embeddings + metrics as gzip (baseline), (2) createIncrementalBackup(since_timestamp) capturing only changed entities via transaction log, (3) restoreToPoint(target_timestamp) performing PITR from full backup + replay incremental logs, (4) calculateBackupSize(), (5) pruneOldBackups(retention_days), (6) validateBackupIntegrity() via checksum verification. Create migration 127 (backup_manifests, transaction_log, backup_integrity_checks). Add REST POST /api/v1/admin/backups/full, POST /api/v1/admin/backups/incremental, POST /api/v1/admin/backups/:id/restore-to-point?timestamp=..., GET /api/v1/admin/backups (cursor-paginated with size/status/duration). Add dashboard /admin/backup-recovery page with: backup calendar heatmap, restore wizard (select timestamp → preview entities → confirm), RTO/RPO metrics (last_backup_age, recovery_time_estimate, data_loss_estimate). Add automated daily full backup + hourly incremental backups via BullMQ. Include 32+ tests (18 unit backup logic + 14 integration covering PITR accuracy + integrity checks).
 - **Files**:
