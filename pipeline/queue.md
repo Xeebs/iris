@@ -3645,7 +3645,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Native Document Indexing from Connector Sources
 - **Layer**: 61 — Production Maturity & Missing Core Features
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: High
 - **Description**: Implement native support for indexing unstructured documents from connectors (Google Drive PDFs, Notion pages, Confluence docs, Slack message threads) as searchable context entities. Create packages/semantic-core/src/document-indexer.ts with DocumentIndexer: (1) extractDocumentContent(source, sourceId) handling multiple formats (PDF text extraction via pdf-parse, HTML/Markdown parsing, binary office formats via LibreOffice), (2) chunkDocument(content, maxChunkTokens) splitting large documents into semantic chunks (sentence/paragraph boundaries, not mid-word), (3) indexDocumentChunks(workspace, chunks) storing chunks as document entities with metadata (source, page number, chunk index, extract_time). Create document_entities table (workspace_id, document_id, source_connector_id, source_document_id, title, content_hash, chunk_index, content_text, extracted_at) with FTS index on content_text. Extend connectors (Google Drive, Notion, Confluence) to export document content alongside structured data during sync. Add POST /api/v1/documents/import/bulk endpoint for batch document upload. Integrate retrieval engine to search documents alongside entities. Add 18+ tests for content extraction (various formats), chunking strategy, FTS search accuracy. Reference embedding-patterns.md for what to embed and semantic-core indexer patterns for batch processing.
 - **Files**:

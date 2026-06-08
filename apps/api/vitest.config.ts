@@ -90,6 +90,8 @@ export default defineConfig({
       '@iris/semantic-core/budget-monitor': path.resolve(__dirname, '../../packages/semantic-core/src/budget-monitor.ts'),
       '@iris/semantic-core/query-explainer': path.resolve(__dirname, '../../packages/semantic-core/src/query-explainer.ts'),
       '@iris/semantic-core/vector-store': path.resolve(__dirname, '../../packages/semantic-core/src/vector-store.ts'),
+      '@iris/semantic-core/document-indexer': path.resolve(__dirname, '../../packages/semantic-core/src/document-indexer.ts'),
+      '@iris/semantic-core/relevance-tuner': path.resolve(__dirname, '../../packages/semantic-core/src/relevance-tuner.ts'),
     },
   },
   test: {
