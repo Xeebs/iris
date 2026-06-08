@@ -15,5 +15,3 @@ CREATE TABLE IF NOT EXISTS token_events (
 CREATE INDEX IF NOT EXISTS idx_token_events_workspace_ts
   ON token_events(workspace_id, timestamp DESC);
 
-CREATE INDEX IF NOT EXISTS idx_token_events_workspace_date
-  ON token_events(workspace_id, DATE(timestamp));
