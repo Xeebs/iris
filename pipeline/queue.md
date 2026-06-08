@@ -3695,7 +3695,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Batch Entity Operations & Bulk Import/Export
 - **Layer**: 61 — Production Maturity & Missing Core Features
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: Medium
 - **Description**: Implement efficient batch operations for entity management, including bulk import from CSV/JSON files and bulk export with filtering. Create packages/semantic-core/src/batch-operations.ts with BatchOperations: (1) parseImportFile(file, format: 'csv'|'json'|'parquet') validating schema and returning parsed records, (2) validateBatch(records, schema) checking required fields and data types, (3) importBatch(workspaceId, records) bulk inserting into vector store with deduplication, (4) exportBatch(workspaceId, filters, format) querying entities and serializing to requested format with streaming for large exports. Add POST /api/v1/entities/import endpoint accepting multipart form with CSV/JSON file, returning import job ID and status, with async processing via BullMQ queue. Add GET /api/v1/entities/export?format=csv&filter=type:contact endpoint returning streamed response. Create import_jobs table (workspace_id, job_id, file_name, record_count, imported_count, error_count, status, created_at). Build dashboard import/export wizard at apps/dashboard/app/entities/import-export/page.tsx with file uploader, schema mapper, preview before import, and export filter builder. Add 16+ tests for file parsing, schema validation, bulk operations, error recovery. Reference connector-patterns.md for entity transformation and testing.md for file fixture patterns.
 - **Files**:
