@@ -1,12 +1,12 @@
 {
   "current_phase": "COMMITTED",
   "active_task": null,
-  "active_layer": 59,
+  "active_layer": 60,
   "last_cycle": "2026-06-08",
-  "last_research": "2026-06-08",
+  "last_research": "2026-06-09",
   "last_commit": "2026-06-08",
-  "cycle_count": 231,
+  "cycle_count": 232,
   "rate_limit_hit": false,
   "mode": "BUILD",
-  "notes": "Task 5 (Query Cost Estimator) COMMITTED. Queue exhausted — spawning task-researcher."
+  "notes": "Layer 60 Task 1 (Semantic Dedup Verification) COMMITTED. 3 UNWORKED tasks remain."
 }

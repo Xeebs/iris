@@ -3549,3 +3549,92 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
   - apps/dashboard/components/query-cost-breakdown.tsx
 - **Depends on**: Query Optimizer (completed), Multi-LLM Cost Optimizer (completed)
 - **Added**: 2026-06-08
+
+## Layer 60: Advanced Quality & Observability Features
+
+### Task: Semantic Deduplication Verification & Dashboard
+- **Layer**: 60 — Advanced Quality & Observability Features
+- **Status**: COMMITTED
+- **Priority**: High
+- **Description**: Build a verification system and dashboard UI to inspect, analyze, and manage semantic deduplication results across indexed entities. Create packages/semantic-core/src/dedup-inspector.ts with DedupInspector: (1) analyzeDedupClusters(workspaceId, entityType) returning clusters of similar entities above 0.85 cosine similarity threshold with cluster members, similarity scores, and canonical entity designation, (2) compareEntities(entity1Id, entity2Id) showing side-by-side comparison of attributes, relationships, and source connectors, (3) suggestMerge(cluster) recommending which entity in cluster should be canonical based on data completeness and recency, (4) approveMerge(entity1Id, entity2Id, canonicalId) merging records and invalidating related caches, (5) explainDedupDecision(entity1Id, entity2Id) returning which attributes/embeddings drove similarity score. Create apps/api/migrations/111_add_dedup_analytics.sql with: dedup_clusters (workspace_id, cluster_id, entity_type, member_count, similarity_scores_json, canonical_entity_id, created_at, merged_at), dedup_decisions (workspace_id, source_entity_id, target_entity_id, confidence_score, attributes_compared_json, merge_status: 'pending'|'approved'|'rejected', reviewed_by_user_id). Expose REST: GET /api/v1/admin/dedup/clusters (list clusters), GET /api/v1/admin/dedup/clusters/:id/members (cluster members with scores), POST /api/v1/admin/dedup/merge (approve merge), GET /api/v1/entities/:id/dedup-status (show if entity is part of cluster). Build dashboard page at apps/dashboard/app/admin/dedup-analysis/page.tsx showing: cluster explorer (sortable by similarity score, member count), side-by-side entity comparison (attributes highlighted), merge approval workflow with undo history. Add 18+ tests for cluster analysis, deduplication decision logging, merge approval workflows, and cache invalidation.
+- **Files**:
+  - packages/semantic-core/src/dedup-inspector.ts
+  - packages/semantic-core/src/__tests__/dedup-inspector.test.ts
+  - packages/semantic-core/src/__tests__/dedup-inspector.integration.test.ts
+  - apps/api/src/routes/dedup-admin.ts
+  - apps/api/src/__tests__/dedup-admin.test.ts
+  - apps/api/migrations/111_add_dedup_analytics.sql
+  - apps/dashboard/app/admin/dedup-analysis/page.tsx
+  - apps/dashboard/components/entity-comparison-panel.tsx
+  - apps/dashboard/components/dedup-cluster-explorer.tsx
+- **Depends on**: Semantic deduplication (completed), Entity Indexing (completed)
+- **Added**: 2026-06-09
+
+### Task: Context Budget Real-Time Monitoring & Alerting System
+- **Layer**: 60 — Advanced Quality & Observability Features
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Build a real-time monitoring system that tracks context budget consumption across queries and surfaces alerts when approaching or exceeding configured budgets. Create packages/semantic-core/src/budget-monitor.ts with BudgetMonitor: (1) trackQueryBudget(query, contextSize, tokens, provider) logging each query's token consumption against workspace budget, (2) computeBudgetUtilization(workspaceId, timeWindow) returning total tokens used vs. configured budget as percentage, (3) detectBudgetAnomalies(workspaceId) using Z-score analysis to flag abnormal query patterns (sudden spike in avg context size, unusual entity type distribution), (4) suggestBudgetAdjustments(workspaceId) recommending new budget levels based on 7-day average + 20% headroom, (5) emitBudgetAlert(workspaceId, severity, trigger) triggering email/Slack/in-app notifications at 75%, 90%, 100% utilization. Create apps/api/migrations/112_add_budget_monitoring.sql with: workspace_budgets (workspace_id, monthly_token_budget, rolling_window_days, alert_thresholds: [75, 90, 100], auto_limit_mode: true|false), budget_usage_events (workspace_id, query_id, tokens_consumed, context_size, provider, timestamp), budget_alerts (workspace_id, threshold_pct, triggered_at, acknowledged_at, notification_channels_used). Integrate: intercept query-context MCP calls to track budget consumption, enforce hard limit if auto_limit_mode is enabled (truncate context if approaching limit). Expose REST: GET /api/v1/workspace/budget-status (current usage + trends), PUT /api/v1/workspace/budget-config (update limits + alert thresholds), GET /api/v1/workspace/budget-history (time-series chart data). Build dashboard widgets: apps/dashboard/components/budget-status-gauge.tsx (circular gauge showing utilization %), budget-usage-timeline.tsx (7-day rolling chart), budget-alerts-panel.tsx (active alerts with acknowledgement). Add 20+ tests for budget tracking, anomaly detection, alert triggers, and limit enforcement.
+- **Files**:
+  - packages/semantic-core/src/budget-monitor.ts
+  - packages/semantic-core/src/__tests__/budget-monitor.test.ts
+  - packages/semantic-core/src/__tests__/budget-monitor.integration.test.ts
+  - apps/api/src/routes/budget-management.ts
+  - apps/api/src/__tests__/budget-management.test.ts
+  - apps/api/migrations/112_add_budget_monitoring.sql
+  - apps/dashboard/components/budget-status-gauge.tsx
+  - apps/dashboard/components/budget-usage-timeline.tsx
+  - apps/dashboard/components/budget-alerts-panel.tsx
+- **Depends on**: Query Cost Estimation (completed), MCP Server (completed)
+- **Added**: 2026-06-09
+
+### Task: Comprehensive Connector Integration Test Suite (V1 Connectors)
+- **Layer**: 60 — Advanced Quality & Observability Features
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Write comprehensive MSW-based integration test suites for the five V1 connectors (Jira, Confluence, Linear, NetSuite, QuickBooks) that currently lack test coverage. For each connector, create a test file (e.g., packages/connectors/jira/src/__tests__/jira-connector.test.ts) that validates: (1) connect() with valid OAuth credentials (mock 200) and invalid credentials (mock 401), (2) getSchema() returns correct entity types and fields for the connector, (3) sync() pagination using API cursor to fetch all pages, (4) sync() relationship extraction (e.g., Jira issue → linked PRs), (5) sync() error handling on rate limits (429) with retry behavior, (6) healthCheck() returns healthy status on successful API call and degraded on timeout. Use MSW to mock all HTTP requests with realistic API response fixtures from each vendor's docs. Each test suite should include: 12–16 test cases, ≥80% code coverage of connector methods, fixtures in tests/fixtures/<connector>/ for different entity types and edge cases (empty results, missing fields, pagination). Reference connector-patterns.md for entity transformation and testing.md for test structure. Add fixture generation script to help create realistic mock responses. Goals: all V1 connectors reach 80%+ coverage, all tests pass in CI with MSW setup.
+- **Files**:
+  - packages/connectors/jira/src/__tests__/jira-connector.test.ts
+  - packages/connectors/confluence/src/__tests__/confluence-connector.test.ts
+  - packages/connectors/linear/src/__tests__/linear-connector.test.ts
+  - packages/connectors/netsuite/src/__tests__/netsuite-connector.test.ts
+  - packages/connectors/quickbooks/src/__tests__/quickbooks-connector.test.ts
+  - tests/fixtures/jira/
+  - tests/fixtures/confluence/
+  - tests/fixtures/linear/
+  - tests/fixtures/netsuite/
+  - tests/fixtures/quickbooks/
+- **Depends on**: Jira Connector (completed), Confluence Connector (completed), Linear Connector (completed), NetSuite Connector (completed), QuickBooks Connector (completed)
+- **Added**: 2026-06-09
+
+### Task: MCP Resources Implementation for Documents & Entities
+- **Layer**: 60 — Advanced Quality & Observability Features
+- **Status**: UNWORKED
+- **Priority**: Medium
+- **Description**: Extend the MCP server to expose indexed documents and entities as MCP resources (in addition to the existing tools), allowing Claude and other AI tools to read context directly via resource URIs without tool invocation. Implement apps/mcp-server/src/resources/ with resource handlers: (1) EntityResource (entity:///:workspaceId/:entityType/:entityId → returns full entity JSON with attributes, relationships, metadata), (2) DocumentResource (document:///:workspaceId/:docId → returns document content with pagination support for large files), (3) RelationshipGraphResource (graph:///:workspaceId/:entityId?depth=N → returns entity + N-hop related entities as JSON graph), (4) GlossaryResource (glossary:///:workspaceId → returns business glossary terms + definitions). Update apps/mcp-server/src/server.ts to register resources via MCP ResourceListResponse and ResourceReadResponse handlers. Implement permission checks (respects role-based context permissions). Support resource discovery: GET /api/v1/mcp/resources endpoint listing available resource types and sample URIs. Build dashboard documentation page at apps/dashboard/app/mcp/resources/page.tsx showing: available resource types, example URIs, how to use in Claude/ChatGPT prompts, rate limits per resource. Add 16+ tests for resource schemas, permission enforcement, pagination of large documents, and error handling. Reference MCP spec for resource format and api-conventions.md for REST discovery patterns.
+- **Files**:
+  - apps/mcp-server/src/resources/entity-resource.ts
+  - apps/mcp-server/src/resources/document-resource.ts
+  - apps/mcp-server/src/resources/graph-resource.ts
+  - apps/mcp-server/src/resources/glossary-resource.ts
+  - apps/mcp-server/src/__tests__/resources.test.ts
+  - apps/api/src/routes/mcp-resource-discovery.ts
+  - apps/api/src/__tests__/mcp-resource-discovery.test.ts
+  - apps/dashboard/app/mcp/resources/page.tsx
+- **Depends on**: MCP Server Bootstrap (completed), Role-Based Context Segmentation (completed)
+- **Added**: 2026-06-09
+
+### Task: Query Explanation Engine & Context Relevance Debugging
+- **Layer**: 60 — Advanced Quality & Observability Features
+- **Status**: UNWORKED
+- **Priority**: Medium
+- **Description**: Build an explanation engine that helps users understand why specific entities and context chunks are retrieved for a given query, enabling debugging of unexpectedly poor or irrelevant context. Create packages/semantic-core/src/query-explainer.ts with QueryExplainer: (1) explainRetrieval(query, results) analyzing which entities were retrieved and scoring the relevance reasoning (semantic similarity score, relationship path depth, entity recency, type match), (2) breakdownScoring(entity, query) showing the contribution of each scoring factor (vector similarity to query embedding, entity freshness bonus, relationship expansion bonus), (3) suggestContextExpansion(query, currentResults) identifying related entities not retrieved that might improve context quality, (4) detectRetrievalAnomaly(query, results) flagging unexpected patterns (only one entity type returned when query is multi-domain, very low similarity scores despite match). Expose POST /api/v1/queries/:id/explain endpoint returning detailed JSON with: retrieved entities (with per-entity breakdown), scoring component breakdown, alternative retrieval paths considered, anomaly flags. Build dashboard component at apps/dashboard/components/query-explanation-panel.tsx showing: (1) retrieved entities list with expandable relevance breakdown, (2) scoring component chart (vector similarity, freshness, relationships), (3) entity relationship visualization showing why related entities were/weren't included, (4) suggestions for context improvement. Integrate into query editor: when user runs a test query, show explanation sidebar automatically. Add 14+ tests for explanation generation, scoring breakdown accuracy, anomaly detection with synthetic query/result datasets.
+- **Files**:
+  - packages/semantic-core/src/query-explainer.ts
+  - packages/semantic-core/src/__tests__/query-explainer.test.ts
+  - apps/api/src/routes/query-explanation.ts
+  - apps/api/src/__tests__/query-explanation.test.ts
+  - apps/dashboard/components/query-explanation-panel.tsx
+  - apps/dashboard/components/scoring-breakdown-chart.tsx
+- **Depends on**: Retrieval Engine (completed), Context Compression (completed)
+- **Added**: 2026-06-09
