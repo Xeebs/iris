@@ -3,6 +3,7 @@ import { logger } from '@iris/core/logger';
 import { generateEmbeddings } from './embedding.js';
 import type { VectorStore } from './vector-store.js';
 import type { AttributeFrequencyTracker } from './attribute-frequency.js';
+import type { EntityEnricher } from './entity-enricher.js';
 import type { Result } from 'neverthrow';
 
 // Minimal graph interface — Neo4jGraphStore satisfies this via structural typing
@@ -39,6 +40,22 @@ export interface IndexerConfig {
    * Requires workspaceId to be set.
    */
   attributeFrequencyTracker?: AttributeFrequencyTracker;
+  /**
+   * When provided with enrichEntities=true, appends LLM-predicted search vocabulary
+   * to embedding inputs for entity types in the enrichEntityTypes allowlist.
+   * Requires workspaceId to be set.
+   */
+  entityEnricher?: EntityEnricher;
+  /**
+   * When true, entity enrichment is applied via entityEnricher (if provided).
+   * Default: false.
+   */
+  enrichEntities?: boolean;
+  /**
+   * Allowlist of entity types that should be enriched. When undefined/empty, all types
+   * are enriched. Typically restricted to sparse types (issue, document, transaction).
+   */
+  enrichEntityTypes?: string[];
 }
 
 export interface IndexResult {
@@ -165,10 +182,37 @@ async function flushBatch(
     }
   }
 
+  // Offline entity enrichment: append LLM-predicted search vocabulary to embedding inputs
+  let enrichedTermsMap: Map<string, string[]> | undefined;
+  if (config.enrichEntities && config.entityEnricher && config.workspaceId) {
+    const enricher = config.entityEnricher;
+    const ws = config.workspaceId;
+    const allowlist = config.enrichEntityTypes;
+    const toEnrich = allowlist && allowlist.length > 0
+      ? batch.filter((e) => allowlist.includes(e.type))
+      : batch;
+
+    const enrichResults = await Promise.allSettled(
+      toEnrich.map(async (e) => {
+        const terms = await enricher.enrichEntity(e, ws);
+        return { id: e.id, terms };
+      }),
+    );
+
+    enrichedTermsMap = new Map();
+    for (const r of enrichResults) {
+      if (r.status === 'fulfilled' && r.value.terms.length > 0) {
+        enrichedTermsMap.set(r.value.id, r.value.terms);
+      }
+    }
+    if (enrichedTermsMap.size === 0) enrichedTermsMap = undefined;
+  }
+
   const embeddingResults = await generateEmbeddings(batch, {
     model: config.embeddingModel,
     ...(config.openAiApiKey !== undefined ? { apiKey: config.openAiApiKey } : {}),
     ...(isDiscriminativeAttr !== undefined ? { isDiscriminativeAttr } : {}),
+    ...(enrichedTermsMap !== undefined ? { enrichedTermsMap } : {}),
   });
 
   const vectors = embeddingResults.map((r) => r.vector);

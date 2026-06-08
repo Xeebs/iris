@@ -110,6 +110,11 @@ export interface EmbeddingServiceOptions {
    * Warm AttributeFrequencyTracker.warmCache() before each batch for correct results.
    */
   isDiscriminativeAttr?: (entityType: string, key: string, value: string) => boolean;
+  /**
+   * LLM-predicted search vocabulary keyed by entity ID (SIRA offline enrichment).
+   * When provided, predicted terms are appended to each entity's embedding input.
+   */
+  enrichedTermsMap?: Map<string, string[]>;
 }
 
 /**
@@ -128,8 +133,12 @@ export async function generateEmbeddings(
   if (entities.length === 0) return [];
 
   const piiFields = options.piiFields ?? new Set<string>();
-  const { isDiscriminativeAttr } = options;
-  const inputs = entities.map((e) => buildEmbeddingInput(e, piiFields, isDiscriminativeAttr));
+  const { isDiscriminativeAttr, enrichedTermsMap } = options;
+  const inputs = entities.map((e) => {
+    const base = buildEmbeddingInput(e, piiFields, isDiscriminativeAttr);
+    const extraTerms = enrichedTermsMap?.get(e.id);
+    return extraTerms && extraTerms.length > 0 ? `${base} ${extraTerms.join(' ')}` : base;
+  });
 
   if (options.provider) {
     const start = Date.now();
