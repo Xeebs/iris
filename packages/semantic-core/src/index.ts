@@ -79,3 +79,16 @@ export {
   computeQueryCostCents,
   computeRoiScore,
 } from './connector-cost-attribution.js';
+export type {
+  WorkspaceRole,
+  ResourceType,
+  ResourcePermission,
+  WorkspaceMember,
+  ResourceShare,
+  TeamGroup,
+} from './collaboration-manager.js';
+export {
+  CollaborationManager,
+  roleHasPermission,
+  permissionsForRole,
+} from './collaboration-manager.js';

@@ -33,6 +33,8 @@ export default defineConfig({
       '@iris/semantic-core/sync-quality-monitor': path.resolve(__dirname, '../../packages/semantic-core/src/sync-quality-monitor.ts'),
       '@iris/semantic-core/entity-deduplicator': path.resolve(__dirname, '../../packages/semantic-core/src/entity-deduplicator.ts'),
       '@iris/semantic-core/connector-cost-attribution': path.resolve(__dirname, '../../packages/semantic-core/src/connector-cost-attribution.ts'),
+      '@iris/semantic-core/collaboration-manager': path.resolve(__dirname, '../../packages/semantic-core/src/collaboration-manager.ts'),
+      '@iris/semantic-core/onboarding-manager': path.resolve(__dirname, '../../packages/semantic-core/src/onboarding-manager.ts'),
       '@iris/semantic-core': path.resolve(__dirname, '../../packages/semantic-core/src/index.ts'),
       '@iris/cache/response-cache': path.resolve(__dirname, '../../packages/cache/src/response-cache.ts'),
       '@iris/compression': path.resolve(__dirname, '../../packages/compression/src/index.ts'),

@@ -2158,3 +2158,90 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
   - apps/api/src/__tests__/cost-optimizer.test.ts
 - **Depends on**: Per-Connector Cost Attribution & Billing Breakdown, Token Analytics Service & Dashboard
 - **Added**: 2026-06-08
+
+---
+
+## Layer 44: Workspace Onboarding & Initial Setup
+
+### Task: Workspace Onboarding Flow & First-Sync Guided Experience
+- **Layer**: 44 — Workspace Onboarding & Initial Setup
+- **Status**: COMMITTED
+- **Priority**: High
+- **Description**: Build an interactive onboarding wizard to guide new workspaces through their first connector setup and initial sync to reach "first meaningful context" rapidly. Create apps/dashboard/app/onboarding/page.tsx with a multi-step wizard: (1) Welcome screen (workspace name, company info), (2) Connector picker (show top 5 recommended connectors with ROI callouts, allow custom selection), (3) OAuth flow manager (handle OAuth redirects for selected connectors, display progress), (4) Schema review (auto-discovery preview, allow users to approve/customize field mappings before sync), (5) Initial sync trigger & monitoring (show real-time progress bar, entity count, preview of indexed entities), (6) Completion screen (show "X entities indexed, Y hours time saved vs manual context", link to advanced setup). Implement as guided tour with skip-to-section navigation. Create packages/semantic-core/src/onboarding-manager.ts with: trackOnboardingStage(workspaceId), getRecommendedConnectors(companySize, industry), and recordCompletionMetrics(workspaceId, connectorsAdded, entitiesIndexed, timeToFirstSync). Store onboarding progress in onboarding_sessions table (workspace_id, stage, completed_at, metrics_json). Expose GET /api/v1/onboarding/status (current stage) and POST /api/v1/onboarding/skip endpoint. Wire schema auto-discovery (from schema-discoverer.ts) to the wizard. Add email invite after completion linking to dashboard. Full unit tests with mocked API responses, E2E Playwright test covering full onboarding flow (5+ scenario tests: with/without OAuth, schema customization, sync cancellation). Reference api-conventions.md for API response patterns and code-style.md for state management.
+- **Files**:
+  - apps/dashboard/app/onboarding/page.tsx
+  - apps/dashboard/components/onboarding-wizard.tsx
+  - apps/dashboard/components/connector-picker.tsx
+  - apps/dashboard/components/schema-review-step.tsx
+  - apps/dashboard/components/sync-progress-monitor.tsx
+  - packages/semantic-core/src/onboarding-manager.ts
+  - packages/semantic-core/src/__tests__/onboarding-manager.test.ts
+  - apps/api/migrations/055_add_onboarding_tracking.sql
+  - apps/api/src/routes/onboarding.ts
+  - apps/api/src/__tests__/onboarding.test.ts
+  - tests/e2e/onboarding.spec.ts
+- **Depends on**: Connector Instance Management API, Schema Auto-Discovery with Human-in-the-Loop Confirmation
+- **Added**: 2026-06-08
+
+### Task: Workspace Collaboration & Sharing Features
+- **Layer**: 44 — Workspace Onboarding & Initial Setup
+- **Status**: IN_PROGRESS
+- **Priority**: High
+- **Description**: Implement team collaboration features allowing multiple users to work together in a workspace with granular permission controls. Create apps/api/migrations/056_add_workspace_collaboration.sql with tables: workspace_members (id, workspace_id, user_id, role: 'admin'|'editor'|'viewer', invited_at, accepted_at), resource_shares (id, workspace_id, resource_type: 'connector'|'glossary'|'metric'|'workflow', resource_id, shared_with_user_id, permission: 'read'|'write'), and team_groups (id, workspace_id, group_name, member_ids_json). Create packages/semantic-core/src/collaboration-manager.ts with: inviteUser(workspaceId, email, role), updateUserRole(workspaceId, userId, newRole), shareResource(workspaceId, resourceType, resourceId, targetUserId, permission), and checkPermission(userId, resourceType, resourceId, action). Implement role-based access control (RBAC): admin can view all + manage members; editor can sync connectors + edit glossary/metrics; viewer can only read/query context. Wire permission checks into all API routes (enforce via auth middleware). Update all MCP tools to filter results by user's assigned role-based permissions. Expose GET /api/v1/workspace/members, POST /api/v1/workspace/members/invite, PUT /api/v1/workspace/members/:userId/role endpoints. Build dashboard pages: apps/dashboard/app/settings/[workspaceId]/members/page.tsx (member list, invite form, role editor), apps/dashboard/app/settings/[workspaceId]/resource-sharing/page.tsx (share controls per resource). Send invite emails with workspace setup links. Add 20+ unit tests for permission checking, role transitions, and edge cases. Integration tests verifying cross-user isolation and permission enforcement in API/MCP responses. Reference api-conventions.md for auth patterns and code-style.md for error handling.
+- **Files**:
+  - apps/api/migrations/056_add_workspace_collaboration.sql
+  - packages/semantic-core/src/collaboration-manager.ts
+  - packages/semantic-core/src/__tests__/collaboration-manager.test.ts
+  - packages/semantic-core/src/__tests__/collaboration-manager.integration.test.ts
+  - apps/api/src/middleware/auth.ts (update: role checking)
+  - apps/api/src/routes/workspace-members.ts
+  - apps/api/src/__tests__/workspace-members.test.ts
+  - apps/dashboard/app/settings/[workspaceId]/members/page.tsx
+  - apps/dashboard/components/member-management.tsx
+  - apps/dashboard/components/invite-form.tsx
+  - apps/dashboard/components/role-editor.tsx
+- **Depends on**: Multi-Tenant Support & Workspace Isolation, Role-Based Context Segmentation
+- **Added**: 2026-06-08
+
+### Task: Local Development & Self-Hosted Deployment Documentation
+- **Layer**: 44 — Workspace Onboarding & Initial Setup
+- **Status**: UNWORKED
+- **Priority**: Medium
+- **Description**: Create comprehensive documentation and Docker/Helm configurations enabling developers and on-prem customers to self-host Iris. Create infra/docker/docker-compose-full.yml extending the existing docker-compose.yml to include: Iris API container, MCP server container, dashboard container, Postgres, Redis, Qdrant, Jaeger (tracing), and optional external services (Stripe webhook simulator, Slack app local server). Create Helm charts in infra/helm/ for Kubernetes deployments: iris-api, iris-mcp-server, iris-dashboard charts with: configurable replicas, resource limits, health check probes, PVC for data persistence, Ingress for external access, and ConfigMap/Secret management for environment variables. Write docs/SELF_HOSTED.md covering: system requirements (CPU, RAM, disk), installation steps (clone, .env config, docker-compose/kubectl up), initial admin setup (create first workspace, configure billing if needed), monitoring setup (Prometheus scraping), SSL/TLS configuration, database backup strategy, and upgrade procedures. Create script infra/scripts/deploy.sh automating docker-compose and Helm deployments with pre-flight checks. Document troubleshooting common issues (Redis connection, Postgres migrations, DNS resolution). Add diagram explaining architecture: 3-tier app (LB → API replicas → Postgres/Redis/Qdrant), MCP server as sidecar or separate workload, dashboard as static + reverse-proxy. Include example configs for: small deployment (1 API + 1 worker, shared Redis), medium deployment (3 API replicas, separate worker, managed Postgres), and high-availability deployment (API/worker/MCP auto-scaling, external DB, object storage). Write deployment tests: shell script that spins up docker-compose, runs health checks, and validates API/MCP are operational. Add migration from cloud to self-hosted guide. Reference code-style.md for secrets handling (never commit .env files). No tests required — documentation-focused task.
+- **Files**:
+  - infra/docker/docker-compose-full.yml
+  - infra/helm/iris-api/Chart.yaml
+  - infra/helm/iris-api/values.yaml
+  - infra/helm/iris-api/templates/deployment.yaml
+  - infra/helm/iris-mcp-server/Chart.yaml
+  - infra/helm/iris-mcp-server/values.yaml
+  - infra/helm/iris-mcp-server/templates/deployment.yaml
+  - infra/helm/iris-dashboard/Chart.yaml
+  - infra/scripts/deploy.sh
+  - docs/SELF_HOSTED.md
+  - docs/DEPLOYMENT_ARCHITECTURE.md
+  - docs/TROUBLESHOOTING.md
+- **Depends on**: Health & Readiness Endpoints + Graceful Shutdown, Observability & Distributed Tracing Infrastructure
+- **Added**: 2026-06-08
+
+### Task: Admin Dashboard Pages & System Monitoring Suite
+- **Layer**: 44 — Workspace Onboarding & Initial Setup
+- **Status**: UNWORKED
+- **Priority**: Medium
+- **Description**: Build comprehensive admin dashboard pages for system-level monitoring and workspace management. Create new dashboard pages under apps/dashboard/app/admin/: (1) /admin/overview - system health dashboard (API uptime, DB health, Redis status, queue depth, error rate sparklines), (2) /admin/workspaces - workspace management (list all workspaces, search by name/owner, bulk actions, disable/delete with confirmation), (3) /admin/users - user management (list users, search, disable accounts, view last login), (4) /admin/performance - performance profiling (query latency distribution, connector sync timing, cache hit rates by endpoint), (5) /admin/logs - real-time log viewer (filter by service/level/keyword, search correlation IDs), (6) /admin/billing - billing dashboard (MRR, customer breakdown, failed payment alerts, refund form). Create supporting components: WorkspaceManagementPanel, UserManagementPanel, PerformanceProfiler (charts via Recharts), LogViewer (virtualized list for 100K+ logs), BillingMetrics. Implement backend: GET /api/v1/admin/system-health (health check aggregator), GET /api/v1/admin/workspaces (workspace list with stats), GET /api/v1/admin/logs (paginated log search), GET /api/v1/admin/performance/summary (aggregated metrics). Use Redis for rate limiting queries (prevent log queries from overloading DB). Add audit logging for all admin actions (workspace suspension, user disable, etc.). Full unit tests for components and API endpoints (mocked data), integration tests verifying admin-only access (non-admin gets 403). Reference api-conventions.md for REST patterns and code-style.md for error handling.
+- **Files**:
+  - apps/dashboard/app/admin/overview/page.tsx
+  - apps/dashboard/app/admin/workspaces/page.tsx
+  - apps/dashboard/app/admin/users/page.tsx
+  - apps/dashboard/app/admin/performance/page.tsx
+  - apps/dashboard/app/admin/logs/page.tsx
+  - apps/dashboard/app/admin/billing/page.tsx
+  - apps/dashboard/components/workspace-management-panel.tsx
+  - apps/dashboard/components/user-management-panel.tsx
+  - apps/dashboard/components/real-time-log-viewer.tsx
+  - apps/dashboard/components/performance-summary-charts.tsx
+  - apps/api/src/routes/admin-system.ts
+  - apps/api/src/__tests__/admin-system.test.ts
+  - apps/dashboard/app/admin/__tests__/overview.test.tsx
+- **Depends on**: Comprehensive Audit Trail & Log Viewer, Token Analytics Service & Dashboard, Health & Readiness Endpoints + Graceful Shutdown
+- **Added**: 2026-06-08
