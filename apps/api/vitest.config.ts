@@ -24,6 +24,8 @@ export default defineConfig({
       '@iris/semantic-core/index-optimizer': path.resolve(__dirname, '../../packages/semantic-core/src/index-optimizer.ts'),
       '@iris/semantic-core/benchmarking': path.resolve(__dirname, '../../packages/semantic-core/src/benchmarking.ts'),
       '@iris/semantic-core/connector-marketplace': path.resolve(__dirname, '../../packages/semantic-core/src/connector-marketplace.ts'),
+      '@iris/semantic-core/embedding-provider': path.resolve(__dirname, '../../packages/semantic-core/src/embedding-provider.ts'),
+      '@iris/semantic-core/reindex-utils': path.resolve(__dirname, '../../packages/semantic-core/src/reindex-utils.ts'),
       '@iris/semantic-core': path.resolve(__dirname, '../../packages/semantic-core/src/index.ts'),
       '@iris/cache/response-cache': path.resolve(__dirname, '../../packages/cache/src/response-cache.ts'),
       '@iris/compression': path.resolve(__dirname, '../../packages/compression/src/index.ts'),

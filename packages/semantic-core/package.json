@@ -39,7 +39,9 @@
     "./email-templates": "./dist/email-templates.js",
     "./performance-profiler": "./dist/performance-profiler.js",
     "./billing-meter": "./dist/billing-meter.js",
-    "./connector-marketplace": "./dist/connector-marketplace.js"
+    "./connector-marketplace": "./dist/connector-marketplace.js",
+    "./embedding-provider": "./dist/embedding-provider.js",
+    "./reindex-utils": "./dist/reindex-utils.js"
   },
   "scripts": {
     "build": "tsc --build",

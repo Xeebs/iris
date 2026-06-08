@@ -3,6 +3,8 @@ import type { SemanticEntity, AttributeValue } from '@iris/connector-sdk';
 import { logger } from '@iris/core/logger';
 import { IndexerError } from '@iris/core/errors';
 
+import type { EmbeddingProvider } from './embedding-provider.js';
+
 export const EMBEDDING_MODEL_SMALL = 'text-embedding-3-small' as const;
 export const EMBEDDING_MODEL_LARGE = 'text-embedding-3-large' as const;
 export type EmbeddingModel = typeof EMBEDDING_MODEL_SMALL | typeof EMBEDDING_MODEL_LARGE;
@@ -83,14 +85,17 @@ export interface EmbeddingResult {
 export interface EmbeddingServiceOptions {
   model?: EmbeddingModel;
   piiFields?: Set<string>;
+  /** Optionally supply an EmbeddingProvider to override the default Azure OpenAI path. */
+  provider?: EmbeddingProvider;
 }
 
 /**
- * Generate embeddings for a batch of SemanticEntity objects via Azure AI Foundry.
- * Calls Azure OpenAI in batches of BATCH_SIZE (100) per embedding-patterns.md.
+ * Generate embeddings for a batch of SemanticEntity objects.
+ * When a provider is supplied in options, delegates to it; otherwise falls back to Azure OpenAI.
+ * Calls the API in batches of BATCH_SIZE (100) per embedding-patterns.md.
  *
  * @param entities - Entities to embed
- * @param options  - Model and PII config
+ * @param options  - Model, PII config, and optional provider override
  * @returns        - Array of {entityId, vector} in the same order as input
  */
 export async function generateEmbeddings(
@@ -99,21 +104,35 @@ export async function generateEmbeddings(
 ): Promise<EmbeddingResult[]> {
   if (entities.length === 0) return [];
 
-  const model = options.model ?? EMBEDDING_MODEL_SMALL;
   const piiFields = options.piiFields ?? new Set<string>();
+  const inputs = entities.map((e) => buildEmbeddingInput(e, piiFields));
+
+  if (options.provider) {
+    const start = Date.now();
+    const vectors = await options.provider.batchEmbeddings(inputs);
+    log.info('Embedding batch complete (provider)', {
+      provider: options.provider.getModelId(),
+      entityCount: entities.length,
+      durationMs: Date.now() - start,
+    });
+    return entities.map((e, i) => ({ entityId: e.id, vector: vectors[i]! }));
+  }
+
+  // Legacy Azure OpenAI path
+  const model = options.model ?? EMBEDDING_MODEL_SMALL;
   const deploymentName = resolveDeploymentName(model);
   const client = buildAzureClient(deploymentName);
   const results: EmbeddingResult[] = [];
 
   for (let i = 0; i < entities.length; i += BATCH_SIZE) {
     const batch = entities.slice(i, i + BATCH_SIZE);
-    const inputs = batch.map((e) => buildEmbeddingInput(e, piiFields));
+    const batchInputs = inputs.slice(i, i + BATCH_SIZE);
 
     const start = Date.now();
     let response;
     try {
       // Azure OpenAI: model field must match the deployment name
-      response = await client.embeddings.create({ model: deploymentName, input: inputs });
+      response = await client.embeddings.create({ model: deploymentName, input: batchInputs });
     } catch (e) {
       throw new IndexerError(
         `Azure OpenAI embedding call failed (deployment: ${deploymentName}): ${e instanceof Error ? e.message : String(e)}`,
