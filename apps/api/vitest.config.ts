@@ -77,6 +77,7 @@ export default defineConfig({
       '@iris/semantic-core/tracing': path.resolve(__dirname, '../../packages/semantic-core/src/tracing.ts'),
       '@iris/semantic-core/ha-manager': path.resolve(__dirname, '../../packages/semantic-core/src/ha-manager.ts'),
       '@iris/semantic-core/api-versioning': path.resolve(__dirname, '../../packages/semantic-core/src/api-versioning.ts'),
+      '@iris/semantic-core/response-serializer': path.resolve(__dirname, '../../packages/semantic-core/src/response-serializer.ts'),
       '@iris/semantic-core': path.resolve(__dirname, '../../packages/semantic-core/src/index.ts'),
       '@iris/cache/response-cache': path.resolve(__dirname, '../../packages/cache/src/response-cache.ts'),
       '@iris/compression': path.resolve(__dirname, '../../packages/compression/src/index.ts'),

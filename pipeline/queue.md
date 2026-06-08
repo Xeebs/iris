@@ -3875,7 +3875,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Content Negotiation & Response Format Support (JSON/CSV/Parquet)
 - **Layer**: 64 — Production Readiness & API Polish
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: High
 - **Description**: Implement HTTP content negotiation to serve context and entity data in multiple formats (JSON, CSV, Parquet) based on Accept headers, enabling downstream BI tools and data warehouses to consume Iris data efficiently. Create packages/semantic-core/src/response-serializer.ts with ResponseSerializer: (1) parseAcceptHeader(header) extracting preferred format + quality, (2) serializeAsJson(entities) standard JSON envelope, (3) serializeAsCsv(entities, schema) flat CSV with proper quoting/escaping, (4) serializeAsParquet(entities, schema) columnar Parquet with gzip compression for data warehouse compatibility, (5) selectFormat(acceptHeader, available=[json, csv, parquet]) choosing best match. Add Hono middleware apps/api/src/middleware/content-negotiation.ts that: intercepts response, checks Accept header, calls appropriate serializer, sets Content-Type + Content-Disposition headers. Extend entity/query/metric endpoints to support ?format=json|csv|parquet query param as override. Create migration 129 (response_format_audit) to track format usage. Add dashboard analytics widget showing format distribution by endpoint and client type. Include 32+ tests (18 serialization format accuracy + 14 middleware content-type validation).
 - **Files**:
