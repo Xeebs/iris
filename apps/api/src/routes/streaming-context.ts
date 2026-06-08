@@ -158,6 +158,10 @@ export function createStreamingContextRoutes(sql: SqlClient) {
 
     c.req.raw.signal?.addEventListener('abort', () => controller.abort());
 
+    c.header('Content-Type', 'text/event-stream');
+    c.header('Cache-Control', 'no-cache');
+    c.header('X-Accel-Buffering', 'no');
+
     log.info('Streaming context request', { workspaceId, query: query.slice(0, 60), tokenBudget });
 
     return stream(c, async (s) => {

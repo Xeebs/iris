@@ -65,6 +65,7 @@ import { createSearchTuningRoutes } from './routes/search-tuning.js';
 import { createCostAnalyticsRoutes } from './routes/cost-analytics.js';
 import { createConnectorRecipeRoutes } from './routes/connector-recipes.js';
 import { createAdminIndexRoutes } from './routes/admin-index.js';
+import { createStreamingContextRoutes } from './routes/streaming-context.js';
 import { openApiSpec } from './openapi.js';
 
 export { createApp };
@@ -201,6 +202,7 @@ function createApp(
   authed.route('/cost-analytics', createCostAnalyticsRoutes(sql));
   authed.route('/recipes', createConnectorRecipeRoutes(sql));
   authed.route('/admin/index', createAdminIndexRoutes(sql));
+  authed.route('/context', createStreamingContextRoutes(sql));
 
   // Webhook routes: inbound (unauthenticated) + events status (authenticated)
   app.route('/api/v1/webhooks', createWebhookRoutes(sql));
