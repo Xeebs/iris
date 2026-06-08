@@ -68,6 +68,7 @@ export default defineConfig({
       '@iris/semantic-core/metric-formula-engine': path.resolve(__dirname, '../../packages/semantic-core/src/metric-formula-engine.ts'),
       '@iris/semantic-core/nlp-config-engine': path.resolve(__dirname, '../../packages/semantic-core/src/nlp-config-engine.ts'),
       '@iris/semantic-core/query-optimizer': path.resolve(__dirname, '../../packages/semantic-core/src/query-optimizer.ts'),
+      '@iris/semantic-core/query-learning-engine': path.resolve(__dirname, '../../packages/semantic-core/src/query-learning-engine.ts'),
     },
   },
   test: {
