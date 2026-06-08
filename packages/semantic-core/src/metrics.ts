@@ -41,6 +41,126 @@ function toMetric(row: z.infer<typeof metricRow>): Metric {
   };
 }
 
+// ─── Formula Engine ───────────────────────────────────────────────────────────
+
+export type FormulaFunction = 'SUM' | 'COUNT' | 'AVG' | 'MIN' | 'MAX';
+export type FormulaToken =
+  | { kind: 'call'; fn: FormulaFunction; field: string }
+  | { kind: 'number'; value: number }
+  | { kind: 'op'; op: '+' | '-' | '*' | '/' };
+
+export type ParsedFormula = {
+  tokens: FormulaToken[];
+  raw: string;
+};
+
+export type FormulaEvalResult = {
+  value: number | null;
+  formula: string;
+  evaluatedAt: string;
+};
+
+const FORMULA_REGEX = /(\d+(?:\.\d+)?)|([A-Z]+)\(([^)]+)\)|([\+\-\*\/])/g;
+
+/**
+ * Parses and evaluates custom metric formulas against indexed entity data.
+ * Supports SUM/COUNT/AVG/MIN/MAX over indexed_entities attribute fields.
+ */
+export class MetricFormulaEngine {
+  private readonly cache = new Map<string, { value: number; expiresAt: number }>();
+
+  constructor(private readonly sql: SqlClient) {}
+
+  /**
+   * Parse a formula string into tokens.
+   * Supports: SUM(field), COUNT(field), AVG(field), MIN(field), MAX(field), +, -, *, /, numbers.
+   *
+   * @param formula - e.g. "SUM(revenue) / COUNT(customers)"
+   * @returns Parsed formula tokens
+   */
+  parseFormula(formula: string): Result<ParsedFormula, Error> {
+    const tokens: FormulaToken[] = [];
+    const regex = new RegExp(FORMULA_REGEX.source, 'g');
+    let match: RegExpExecArray | null;
+    while ((match = regex.exec(formula.trim())) !== null) {
+      const [, num, fn, field, op] = match;
+      if (num) {
+        tokens.push({ kind: 'number', value: parseFloat(num) });
+      } else if (fn && field) {
+        const upperFn = fn.toUpperCase() as FormulaFunction;
+        if (!['SUM', 'COUNT', 'AVG', 'MIN', 'MAX'].includes(upperFn)) {
+          return err(new Error(`Unknown function: ${fn}`));
+        }
+        tokens.push({ kind: 'call', fn: upperFn, field: field.trim() });
+      } else if (op) {
+        tokens.push({ kind: 'op', op: op as FormulaToken extends { kind: 'op' } ? FormulaToken['op'] : never });
+      }
+    }
+    if (tokens.length === 0) return err(new Error('Empty or unparseable formula'));
+    return ok({ tokens, raw: formula });
+  }
+
+  /**
+   * Evaluate a formula for a workspace, running the aggregations against indexed entity data.
+   * Results are cached for 60 seconds.
+   *
+   * @param workspaceId - Workspace scope
+   * @param formula - Formula string
+   * @returns Numeric result or null if no data
+   */
+  async evaluateFormula(workspaceId: string, formula: string): Promise<Result<FormulaEvalResult, Error>> {
+    const cacheKey = `${workspaceId}:${formula}`;
+    const cached = this.cache.get(cacheKey);
+    if (cached && cached.expiresAt > Date.now()) {
+      return ok({ value: cached.value, formula, evaluatedAt: new Date().toISOString() });
+    }
+
+    const parsed = this.parseFormula(formula);
+    if (parsed.isErr()) return err(parsed.error);
+
+    try {
+      const values: number[] = [];
+      for (const token of parsed.value.tokens) {
+        if (token.kind === 'call') {
+          const field = token.field;
+          const fn = token.fn;
+          const rows = await this.sql<Array<{ result: string | null }>>`
+            SELECT ${this.sql.unsafe(fn)}(
+              (attributes->>${field})::numeric
+            ) AS result
+            FROM indexed_entities
+            WHERE workspace_id = ${workspaceId}
+              AND attributes ? ${field}
+              AND (attributes->>${field})::text ~ '^[0-9]+(\.[0-9]+)?$'
+          `;
+          const v = rows[0]?.result;
+          values.push(v !== null && v !== undefined ? parseFloat(v) : 0);
+        } else if (token.kind === 'number') {
+          values.push(token.value);
+        }
+      }
+
+      // Simple left-to-right evaluation of operators between resolved values
+      const ops: string[] = parsed.value.tokens.filter((t) => t.kind === 'op').map((t) => (t as { kind: 'op'; op: string }).op);
+      let result = values[0] ?? 0;
+      for (let i = 0; i < ops.length; i++) {
+        const rhs = values[i + 1] ?? 0;
+        switch (ops[i]) {
+          case '+': result += rhs; break;
+          case '-': result -= rhs; break;
+          case '*': result *= rhs; break;
+          case '/': result = rhs !== 0 ? result / rhs : 0; break;
+        }
+      }
+
+      this.cache.set(cacheKey, { value: result, expiresAt: Date.now() + 60_000 });
+      return ok({ value: result, formula, evaluatedAt: new Date().toISOString() });
+    } catch (e) {
+      return err(e instanceof Error ? e : new Error(String(e)));
+    }
+  }
+}
+
 export class MetricRegistry {
   constructor(private readonly sql: SqlClient) {}
 

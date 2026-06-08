@@ -16,8 +16,8 @@ export type { VectorStore, VectorSearchFilter, VectorSearchResult } from './vect
 export { PgvectorStore } from './vector-store.js';
 export type { GlossaryTerm } from './glossary.js';
 export { GlossaryService } from './glossary.js';
-export type { Metric } from './metrics.js';
-export { MetricRegistry } from './metrics.js';
+export type { Metric, FormulaEvalResult, ParsedFormula } from './metrics.js';
+export { MetricRegistry, MetricFormulaEngine } from './metrics.js';
 export type { TokenEventInput, DailyTokenSummary, TokenAnalyticsSummary } from './token-analytics.js';
 export { TokenAnalytics } from './token-analytics.js';
 export type { ApiKeyRecord, ValidatedKey } from './api-key-manager.js';
