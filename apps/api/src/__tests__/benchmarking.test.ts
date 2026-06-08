@@ -171,3 +171,105 @@ describe('POST /api/v1/benchmarks/export', () => {
     expect(res.status).toBe(422);
   });
 });
+
+// ─── /benchmarks opt-in API (new opt-in/opt-out/peers routes) ─────────────────
+
+function makeBenchApp() {
+  const app = new Hono();
+  app.route('/benchmarks', createBenchmarkingRoutes({} as Parameters<typeof createBenchmarkingRoutes>[0]));
+  return app;
+}
+
+describe('GET /benchmarks/opt-in', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('returns 401 without workspace header', async () => {
+    const app = makeBenchApp();
+    const res = await app.request('/benchmarks/opt-in');
+    expect(res.status).toBe(401);
+  });
+
+  it('returns settings for workspace', async () => {
+    const { ok } = await import('neverthrow');
+    mockSvc.getSettings.mockResolvedValue(ok({ workspaceId: WORKSPACE, benchmarkingEnabled: false, industry: null, companySize: null }));
+    const app = makeBenchApp();
+    const res = await app.request('/benchmarks/opt-in', { headers: { 'x-workspace-id': WORKSPACE } });
+    expect(res.status).toBe(200);
+    const json = await res.json() as { data: { benchmarkingEnabled: boolean } };
+    expect(json.data.benchmarkingEnabled).toBe(false);
+  });
+});
+
+describe('POST /benchmarks/opt-in', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('returns 400 for invalid companySize', async () => {
+    const app = makeBenchApp();
+    const res = await app.request('/benchmarks/opt-in', {
+      method: 'POST',
+      headers: { 'x-workspace-id': WORKSPACE, 'content-type': 'application/json' },
+      body: JSON.stringify({ industry: 'software', companySize: 'unicorn' }),
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it('opts in and returns updated settings', async () => {
+    const { ok } = await import('neverthrow');
+    const updated = { workspaceId: WORKSPACE, benchmarkingEnabled: true, industry: 'software', companySize: 'smb' };
+    mockSvc.updateSettings.mockResolvedValue(ok(updated));
+    const app = makeBenchApp();
+    const res = await app.request('/benchmarks/opt-in', {
+      method: 'POST',
+      headers: { 'x-workspace-id': WORKSPACE, 'content-type': 'application/json' },
+      body: JSON.stringify({ industry: 'software', companySize: 'smb' }),
+    });
+    expect(res.status).toBe(200);
+    const json = await res.json() as { data: typeof updated };
+    expect(json.data.benchmarkingEnabled).toBe(true);
+  });
+});
+
+describe('POST /benchmarks/opt-out', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('opts out and returns confirmation', async () => {
+    const { ok } = await import('neverthrow');
+    mockSvc.updateSettings.mockResolvedValue(ok({ workspaceId: WORKSPACE, benchmarkingEnabled: false, industry: null, companySize: null }));
+    const app = makeBenchApp();
+    const res = await app.request('/benchmarks/opt-out', {
+      method: 'POST',
+      headers: { 'x-workspace-id': WORKSPACE },
+    });
+    expect(res.status).toBe(200);
+    const json = await res.json() as { data: { optedOut: boolean } };
+    expect(json.data.optedOut).toBe(true);
+  });
+});
+
+describe('GET /benchmarks/peers', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('returns 422 when no snapshot exists', async () => {
+    const { err } = await import('neverthrow');
+    mockSvc.getPeerBenchmarks.mockResolvedValue(err(new Error('No snapshot found')));
+    const app = makeBenchApp();
+    const res = await app.request('/benchmarks/peers', { headers: { 'x-workspace-id': WORKSPACE } });
+    expect(res.status).toBe(422);
+  });
+
+  it('returns peer comparison report', async () => {
+    const { ok } = await import('neverthrow');
+    const report = {
+      workspaceId: WORKSPACE,
+      metrics: { entityCount: 100, queryCount: 50, avgContextSizeTokens: 1500, tokenSavingsRatio: 0.6, cacheHitRate: 0.75, snapshotAt: new Date() },
+      peerComparisons: [{ metric: 'cacheHitRate', workspaceValue: 0.75, peerPercentiles: { p25: 0.4, p50: 0.6, p75: 0.8, p90: 0.9 }, percentileRank: 65 }],
+      peerCount: 20,
+    };
+    mockSvc.getPeerBenchmarks.mockResolvedValue(ok(report));
+    const app = makeBenchApp();
+    const res = await app.request('/benchmarks/peers', { headers: { 'x-workspace-id': WORKSPACE } });
+    expect(res.status).toBe(200);
+    const json = await res.json() as { data: typeof report };
+    expect(json.data.peerCount).toBe(20);
+  });
+});
