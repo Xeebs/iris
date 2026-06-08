@@ -1,5 +1,15 @@
 import OpenAI from 'openai';
+import { createHash } from 'crypto';
+import type postgres from 'postgres';
 import { logger } from '@iris/core/logger';
+
+type SqlClient = ReturnType<typeof postgres>;
+
+/** Redis-compatible interface (subset used for caching). */
+interface RedisLike {
+  get(key: string): Promise<string | null>;
+  set(key: string, value: string, expiryMode: 'EX', time: number): Promise<unknown>;
+}
 
 const log = logger.child({ service: 'query-decomposer' });
 
@@ -113,6 +123,138 @@ export function getDomainKeywords(query: string): DomainAnalysis {
 /** Clear the in-memory detection cache. Use in tests or after schema changes. */
 export function clearDetectionCache(): void {
   detectionCache.clear();
+}
+
+const EXPANSION_OVER_THRESHOLD = 0.7;
+const EXPANSION_UNDER_THRESHOLD = 0.01;
+
+/**
+ * Expand a user query with domain-specific vocabulary predicted by gpt-4o-mini,
+ * then filter predicted terms against corpus frequency statistics.
+ * Terms that appear in >70% of workspace entities (too common) or <1% (too rare) are dropped.
+ * Results are cached in Redis (TTL: 1 hour) keyed by SHA-1(query+workspaceId).
+ *
+ * @param query - Original natural language query
+ * @param workspaceId - Workspace for corpus frequency lookup
+ * @param availableEntityTypes - Entity types present in the workspace
+ * @param apiKey - OpenAI API key for gpt-4o-mini
+ * @param sql - Optional Postgres client for frequency filtering
+ * @param redis - Optional Redis client for caching
+ * @returns Expanded query string (original + surviving predicted terms)
+ */
+export async function expandQuery(
+  query: string,
+  workspaceId: string,
+  availableEntityTypes: string[],
+  apiKey: string,
+  sql?: SqlClient,
+  redis?: RedisLike,
+): Promise<string> {
+  const cacheKeySuffix = createHash('sha1')
+    .update(`${workspaceId}:${query}`)
+    .digest('hex')
+    .slice(0, 16);
+  const redisKey = `iris:qexp:${cacheKeySuffix}`;
+
+  if (redis) {
+    const cached = await redis.get(redisKey).catch(() => null);
+    if (cached !== null) {
+      log.debug('Query expansion cache hit', { workspaceId });
+      return cached;
+    }
+  }
+
+  const rawTerms = await predictExpansionTerms(query, availableEntityTypes, apiKey);
+  const filtered = sql
+    ? await filterByCorpusFrequency(rawTerms, workspaceId, sql)
+    : rawTerms;
+
+  const expanded = filtered.length > 0
+    ? `${query} ${filtered.join(' ')}`
+    : query;
+
+  if (redis) {
+    await redis.set(redisKey, expanded, 'EX', 3600).catch(() => undefined);
+  }
+
+  log.debug('Query expanded', {
+    workspaceId,
+    originalLength: query.length,
+    rawTermCount: rawTerms.length,
+    filteredTermCount: filtered.length,
+  });
+
+  return expanded;
+}
+
+async function predictExpansionTerms(
+  query: string,
+  availableEntityTypes: string[],
+  apiKey: string,
+): Promise<string[]> {
+  const client = new OpenAI({ apiKey });
+  const prompt = [
+    `Query: "${query}"`,
+    `Available entity types in this workspace: ${availableEntityTypes.join(', ')}`,
+    'Predict 5-8 additional domain-specific terms a user might use when searching for this information.',
+    'Focus on synonyms, jargon, abbreviations, and related concepts (e.g. "pipeline" → "forecast ARR close date").',
+    'Respond with a JSON array of strings. Example: ["forecast", "ARR", "close date", "Q3", "pipeline"]',
+    'Return only the JSON array, nothing else.',
+  ].join('\n');
+
+  try {
+    const response = await client.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.2,
+      max_tokens: 120,
+    });
+    const text = response.choices[0]?.message.content ?? '[]';
+    const jsonMatch = text.match(/\[.*?\]/s);
+    const parsed = JSON.parse(jsonMatch?.[0] ?? '[]') as unknown[];
+    return parsed
+      .filter((t): t is string => typeof t === 'string' && t.trim().length > 1)
+      .map((t) => t.trim().toLowerCase())
+      .slice(0, 8);
+  } catch (e) {
+    log.warn('Query expansion LLM call failed', { error: e instanceof Error ? e.message : String(e) });
+    return [];
+  }
+}
+
+async function filterByCorpusFrequency(
+  terms: string[],
+  workspaceId: string,
+  sql: SqlClient,
+): Promise<string[]> {
+  if (terms.length === 0) return [];
+
+  try {
+    const rows = await sql<Array<{ attr_key: string; frequency_ratio: number }>>`
+      SELECT attr_key, MAX(frequency_ratio) AS frequency_ratio
+      FROM entity_attribute_frequency
+      WHERE workspace_id = ${workspaceId}
+        AND attr_key = ANY(${terms})
+      GROUP BY attr_key
+    `;
+
+    const freqMap = new Map(rows.map((r) => [r.attr_key, r.frequency_ratio]));
+
+    return terms.filter((term) => {
+      const ratio = freqMap.get(term);
+      if (ratio === undefined) {
+        // Term not in frequency table → could be too rare to appear in stats
+        // Treat as acceptable (not filtered out)
+        return true;
+      }
+      return ratio >= EXPANSION_UNDER_THRESHOLD && ratio <= EXPANSION_OVER_THRESHOLD;
+    });
+  } catch (e) {
+    log.warn('Corpus frequency filter failed, returning unfiltered terms', {
+      error: e instanceof Error ? e.message : String(e),
+    });
+    return terms;
+  }
 }
 
 function tokenize(text: string): string[] {

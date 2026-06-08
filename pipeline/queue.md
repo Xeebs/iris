@@ -2009,7 +2009,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Query Expansion with Corpus-Frequency Filtering
 - **Layer**: 41 — SIRA-Inspired Retrieval Improvements
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: Medium
 - **Description**: Extend the query decomposer to predict domain vocabulary missing from the user's query, then filter predicted terms using corpus statistics before embedding — mirroring SIRA's query-side LLM expansion. Implementation: (1) add `expandQuery(query, workspaceId, availableEntityTypes, apiKey): Promise<string>` to packages/semantic-core/src/query-decomposer.ts. The function prompts gpt-4o-mini with the query and a brief workspace schema summary to predict 5–8 additional domain terms (e.g., "what's our pipeline this quarter?" → ["deal stage", "forecast", "close date", "ARR", "Q3"]). (2) Filter predicted terms against the attribute frequency table: drop terms that appear in >70% of workspace entities (too common) or in <1% (too rare to match anything). (3) Concatenate surviving expansion terms to the original query before embedding in `retrieveContext`: `const embeddingInput = query + ' ' + expansions.join(' ')`. Gate behind `queryExpansion: boolean` option in RetrievalOptions (default false initially). Cache expansion results by query hash in Redis (TTL: 1 hour) to avoid repeated LLM calls on the same query. Add unit tests with mocked LLM responses and corpus frequency data, verifying filtering removes corpus-common and corpus-absent terms. Integration tests verifying expanded queries improve recall on sparse queries.
 - **Files**:

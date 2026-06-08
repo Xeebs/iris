@@ -4,7 +4,7 @@ import { logger } from '@iris/core/logger';
 import { IndexerError } from '@iris/core/errors';
 import { EMBEDDING_MODEL } from './embedding.js';
 import type { VectorStore } from './vector-store.js';
-import { detectEntityTypes } from './query-decomposer.js';
+import { detectEntityTypes, expandQuery } from './query-decomposer.js';
 import type { Result } from 'neverthrow';
 
 // Minimal graph interface — Neo4jGraphStore satisfies this via structural typing
@@ -48,6 +48,18 @@ export interface RetrievalOptions {
   hybridSearch?: boolean;
   /** RRF rank constant k. Higher k reduces the impact of rank differences. Default: 60 */
   rrfK?: number;
+  /**
+   * When true, calls expandQuery() to predict and prepend domain vocabulary to the query
+   * before embedding. Requires openAiApiKey to be set. Default: false.
+   */
+  queryExpansion?: boolean;
+  /** Postgres client for corpus frequency filtering during query expansion. */
+  expansionSql?: import('postgres').Sql;
+  /** Redis client for caching query expansion results (TTL: 1 hour). */
+  expansionRedis?: {
+    get(key: string): Promise<string | null>;
+    set(key: string, value: string, expiryMode: 'EX', time: number): Promise<unknown>;
+  };
 }
 
 export interface RetrievalResult {
@@ -80,8 +92,27 @@ export async function retrieveContext(
 ): Promise<RetrievalResult> {
   const opts = { ...DEFAULT_RETRIEVAL_OPTIONS, ...options };
 
+  let embeddingInput = query;
+  if (opts.queryExpansion && opts.openAiApiKey) {
+    try {
+      embeddingInput = await expandQuery(
+        query,
+        opts.workspaceId,
+        opts.availableEntityTypes ?? [],
+        opts.openAiApiKey,
+        opts.expansionSql as import('postgres').Sql | undefined,
+        opts.expansionRedis,
+      );
+      if (embeddingInput !== query) {
+        log.debug('Query expanded for embedding', { workspaceId: opts.workspaceId });
+      }
+    } catch (e) {
+      log.warn('Query expansion failed, using original query', { error: e });
+    }
+  }
+
   const embeddingStart = Date.now();
-  const queryVector = await embedQuery(query);
+  const queryVector = await embedQuery(embeddingInput);
   const queryEmbeddingMs = Date.now() - embeddingStart;
 
   // Auto-detect entity types from the query when caller hasn't specified them

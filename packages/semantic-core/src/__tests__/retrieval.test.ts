@@ -10,6 +10,13 @@ vi.mock('openai', () => ({
   AzureOpenAI: vi.fn(),
 }));
 
+vi.mock('../query-decomposer.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../query-decomposer.js')>();
+  return { ...actual, expandQuery: vi.fn().mockImplementation(async (q: string) => q) };
+});
+
+import { expandQuery } from '../query-decomposer.js';
+
 function makeEntity(
   id: string,
   type = 'contact',
@@ -411,5 +418,110 @@ describe('reciprocalRankFusion', () => {
     const scoreK1 = resultK1[0]!.score;
     const scoreK60 = resultK60[0]!.score;
     expect(scoreK1).toBeGreaterThan(scoreK60);
+  });
+});
+
+// ─── queryExpansion option ────────────────────────────────────────────────────
+
+describe('retrieveContext — queryExpansion', () => {
+  const mockCreate = vi.fn();
+
+  beforeEach(() => {
+    process.env['AZURE_OPENAI_ENDPOINT'] = 'https://test.openai.azure.com';
+    process.env['AZURE_OPENAI_API_KEY'] = 'test-key';
+    vi.mocked(AzureOpenAI).mockImplementation(
+      () => ({ embeddings: { create: mockCreate } }) as unknown as AzureOpenAI,
+    );
+    mockCreate.mockResolvedValue({
+      data: [{ index: 0, embedding: Array(1536).fill(0) }],
+      model: 'text-embedding-3-small',
+      usage: { prompt_tokens: 5, total_tokens: 5 },
+    });
+  });
+
+  afterEach(() => {
+    delete process.env['AZURE_OPENAI_ENDPOINT'];
+    delete process.env['AZURE_OPENAI_API_KEY'];
+    vi.clearAllMocks();
+  });
+
+  it('calls expandQuery when queryExpansion=true and openAiApiKey is set', async () => {
+    vi.mocked(expandQuery).mockResolvedValueOnce('pipeline forecast ARR');
+    const store = makeMockVectorStore([]);
+    await retrieveContext('pipeline', store, {
+      workspaceId: 'ws-1',
+      topK: 5,
+      expandRelationships: false,
+      maxDepth: 0,
+      queryExpansion: true,
+      openAiApiKey: 'sk-test',
+      availableEntityTypes: ['deal'],
+    });
+    expect(expandQuery).toHaveBeenCalledWith(
+      'pipeline',
+      'ws-1',
+      ['deal'],
+      'sk-test',
+      undefined,
+      undefined,
+    );
+  });
+
+  it('does NOT call expandQuery when queryExpansion=false', async () => {
+    const store = makeMockVectorStore([]);
+    await retrieveContext('pipeline', store, {
+      workspaceId: 'ws-1',
+      topK: 5,
+      expandRelationships: false,
+      maxDepth: 0,
+      queryExpansion: false,
+      openAiApiKey: 'sk-test',
+    });
+    expect(expandQuery).not.toHaveBeenCalled();
+  });
+
+  it('does NOT call expandQuery when openAiApiKey is missing', async () => {
+    const store = makeMockVectorStore([]);
+    await retrieveContext('pipeline', store, {
+      workspaceId: 'ws-1',
+      topK: 5,
+      expandRelationships: false,
+      maxDepth: 0,
+      queryExpansion: true,
+    });
+    expect(expandQuery).not.toHaveBeenCalled();
+  });
+
+  it('embeds the expanded query string', async () => {
+    vi.mocked(expandQuery).mockResolvedValueOnce('pipeline forecast ARR');
+    const store = makeMockVectorStore([]);
+    await retrieveContext('pipeline', store, {
+      workspaceId: 'ws-1',
+      topK: 5,
+      expandRelationships: false,
+      maxDepth: 0,
+      queryExpansion: true,
+      openAiApiKey: 'sk-test',
+    });
+    expect(mockCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ input: 'pipeline forecast ARR' }),
+    );
+  });
+
+  it('falls back to original query when expandQuery throws', async () => {
+    vi.mocked(expandQuery).mockRejectedValueOnce(new Error('LLM error'));
+    const store = makeMockVectorStore([]);
+    const result = await retrieveContext('pipeline', store, {
+      workspaceId: 'ws-1',
+      topK: 5,
+      expandRelationships: false,
+      maxDepth: 0,
+      queryExpansion: true,
+      openAiApiKey: 'sk-test',
+    });
+    expect(result.entities).toBeDefined();
+    expect(mockCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ input: 'pipeline' }),
+    );
   });
 });

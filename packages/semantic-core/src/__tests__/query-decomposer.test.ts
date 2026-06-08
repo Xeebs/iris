@@ -12,7 +12,7 @@ vi.mock('openai', () => ({
   })),
 }));
 
-import { detectEntityTypes, getDomainKeywords, clearDetectionCache } from '../query-decomposer.js';
+import { detectEntityTypes, getDomainKeywords, clearDetectionCache, expandQuery } from '../query-decomposer.js';
 
 const ALL_TYPES = ['contact', 'company', 'deal', 'issue', 'project', 'page', 'channel', 'user', 'file', 'record'];
 
@@ -213,5 +213,95 @@ describe('detectEntityTypes — LLM fallback', () => {
   it('does not call OpenAI when no API key is given', async () => {
     await detectEntityTypes('something with no keywords', ['contact', 'deal'], undefined);
     expect(mockCreate).not.toHaveBeenCalled();
+  });
+});
+
+// ─── expandQuery ─────────────────────────────────────────────────────────────
+
+function makeSql(rows: unknown[]): ReturnType<typeof import('postgres').default> {
+  return (() => Promise.resolve(rows)) as unknown as ReturnType<typeof import('postgres').default>;
+}
+
+function makeRedis(cached: string | null = null) {
+  return {
+    get: vi.fn().mockResolvedValue(cached),
+    set: vi.fn().mockResolvedValue('OK'),
+  };
+}
+
+describe('expandQuery', () => {
+  beforeEach(() => mockCreate.mockReset());
+
+  it('returns expanded query with LLM-predicted terms', async () => {
+    mockCreate.mockResolvedValueOnce({
+      choices: [{ message: { content: '["forecast", "ARR", "close date"]' } }],
+    });
+    const result = await expandQuery('pipeline this quarter', 'ws-1', ['deal', 'contact'], 'sk-test');
+    expect(result).toContain('pipeline this quarter');
+    expect(result).toContain('forecast');
+  });
+
+  it('returns original query when LLM returns empty array', async () => {
+    mockCreate.mockResolvedValueOnce({ choices: [{ message: { content: '[]' } }] });
+    const result = await expandQuery('pipeline', 'ws-1', ['deal'], 'sk-test');
+    expect(result).toBe('pipeline');
+  });
+
+  it('filters out over-threshold terms (>70%) from corpus', async () => {
+    mockCreate.mockResolvedValueOnce({
+      choices: [{ message: { content: '["common", "rare"]' } }],
+    });
+    // SQL returns common term with ratio=0.8 (too common) and rare not present (keep)
+    const sql = makeSql([{ attr_key: 'common', frequency_ratio: 0.8 }]);
+    const result = await expandQuery('test query', 'ws-1', ['deal'], 'sk-test', sql);
+    expect(result).not.toContain('common');
+    expect(result).toContain('rare');
+  });
+
+  it('keeps terms within acceptable frequency range (1%-70%)', async () => {
+    mockCreate.mockResolvedValueOnce({
+      choices: [{ message: { content: '["goodterm"]' } }],
+    });
+    const sql = makeSql([{ attr_key: 'goodterm', frequency_ratio: 0.4 }]);
+    const result = await expandQuery('test query', 'ws-1', ['deal'], 'sk-test', sql);
+    expect(result).toContain('goodterm');
+  });
+
+  it('returns cached result without calling LLM', async () => {
+    const redis = makeRedis('pipeline this quarter forecast ARR');
+    const result = await expandQuery('pipeline this quarter', 'ws-1', ['deal'], 'sk-test', undefined, redis);
+    expect(mockCreate).not.toHaveBeenCalled();
+    expect(result).toBe('pipeline this quarter forecast ARR');
+  });
+
+  it('stores result in Redis cache after LLM call', async () => {
+    mockCreate.mockResolvedValueOnce({
+      choices: [{ message: { content: '["forecast"]' } }],
+    });
+    const redis = makeRedis(null);
+    await expandQuery('pipeline', 'ws-1', ['deal'], 'sk-test', undefined, redis);
+    expect(redis.set).toHaveBeenCalledWith(
+      expect.stringMatching(/^iris:qexp:/),
+      expect.stringContaining('pipeline'),
+      'EX',
+      3600,
+    );
+  });
+
+  it('returns original query when LLM fails', async () => {
+    mockCreate.mockRejectedValueOnce(new Error('API timeout'));
+    const result = await expandQuery('pipeline', 'ws-1', ['deal'], 'sk-test');
+    expect(result).toBe('pipeline');
+  });
+
+  it('returns unfiltered terms when SQL query fails', async () => {
+    mockCreate.mockResolvedValueOnce({
+      choices: [{ message: { content: '["term1", "term2"]' } }],
+    });
+    const sql = (() => Promise.reject(new Error('DB error'))) as unknown as ReturnType<typeof import('postgres').default>;
+    const result = await expandQuery('query', 'ws-1', ['deal'], 'sk-test', sql);
+    // Falls back to unfiltered terms
+    expect(result).toContain('term1');
+    expect(result).toContain('term2');
   });
 });
