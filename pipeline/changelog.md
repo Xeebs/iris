@@ -67,3 +67,5 @@ f57c456 feat(semantic-core): data lineage integration tests and enhanced lineage
 Entity Validation Engine with Data Quality Rules — entity-validator + rules/failures DB + REST API + dashboard UI
 Index Rebuild & Corruption Recovery Tools — IndexRepairService + integrity_scans/rebuild_jobs DB + REST API + dashboard panels
 Custom Transformation Pipeline & Entity Mapping Language — TransformationDSLEngine with 11 op types + REST API + live test panel
+- feat(semantic-core,api,mcp-server,dashboard): query anomaly detection & metrics forecasting engine — Z-score detector, exponential smoothing forecast, REST routes, MCP tool detect-anomalies, anomaly-timeline.tsx
+- feat(mcp-server): advanced MCP aggregation & comparison tools with server registration

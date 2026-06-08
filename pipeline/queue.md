@@ -2818,7 +2818,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Query Anomaly Detection & Metrics Forecasting Engine
 - **Layer**: 52 — MCP Tool Enhancements & Streaming
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: Medium
 - **Description**: Build an anomaly detection and forecasting service for metrics to help teams surface unexpected business changes. Create packages/semantic-core/src/metrics-anomaly-detector.ts with: (1) detectAnomalies(metricId, lookbackDays=30, sensitivityLevel='medium') using Z-score (|value - mean| > sensitivityLevel * stdDev) on historical metric values, (2) forecastMetricValue(metricId, daysAhead=7) using exponential smoothing (alpha=0.3) to predict future values, (3) anomalyContext(metricId, timestamp) to retrieve contextual entities that changed around the anomaly time (from lineage_events). Persist anomalies to new migration 080_metric_anomalies.sql table (metric_id, anomaly_date, severity: 'low'|'medium'|'high', detected_at, acknowledged_at, notes). Expose REST GET /api/v1/metrics/:id/anomalies and POST /api/v1/metrics/:id/anomalies/:anomalyId/acknowledge. Add MCP tool detect-anomalies for query-time context enrichment ("metric X had an anomaly 2 days ago"). Create 18 unit tests for Z-score calculation, exponential smoothing, edge cases (zero variance, single data point). Integration tests: historical anomaly detection against real database, forecast accuracy on 30-day dataset.
 - **Files**:
@@ -2835,7 +2835,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Advanced MCP Aggregation & Comparison Tools
 - **Layer**: 52 — MCP Tool Enhancements & Streaming
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: Medium
 - **Description**: Implement aggregation and entity comparison MCP tools to enable complex business questions ("compare top 5 customers by ARR and show their churn risk"). Create apps/mcp-server/src/tools/aggregate-entities.ts with: (1) aggregateEntities(entityType, groupByAttribute, aggregations=['count', 'sum', 'avg', 'max', 'min'], filters, topK=10) returning grouped results with token budget enforcement, (2) compareEntities(entityIds=[], attributes=['all'|specific list], diffHighlight=true) showing side-by-side attributes with changes highlighted. Implement token-efficient comparison by: only including differing attributes if diffHighlight=true, using abbreviated labels, respecting context budget. Register both tools in server.ts. Create 16 unit tests covering: aggregation correctness, budget enforcement on large result sets, attribute filtering, edge cases (no results, single entity). Integration tests: compare 3 HubSpot contacts across 8 attributes within 300-token budget.
 - **Files**:
@@ -2849,7 +2849,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: CLI Tooling & Developer Experience Enhancements
 - **Layer**: 52 — MCP Tool Enhancements & Streaming
-- **Status**: UNWORKED
+- **Status**: IN_PROGRESS
 - **Priority**: Medium
 - **Description**: Enhance the CLI tool (scripts/iris) with developer-friendly commands for local testing and debugging. Extend scripts/iris to support: (1) iris connector:test <name> [--watch] — run connector tests with live reload, (2) iris mcp:debug — start MCP server in debug mode with verbose logging to stdout, (3) iris index:inspect — interactive CLI to query the local vector index (search by text, see similarity scores, view entity embeddings), (4) iris sync:simulate <connectorId> — dry-run a sync without persisting to DB, validate schema mapping, show token estimates. Build these as TypeScript CLI utilities in scripts/cli/, use commander.js for argument parsing, ensure all commands have --help and examples. Create comprehensive CLI tests (8+) covering: argument parsing, error handling, command execution validation. Document all commands in a new CLI_GUIDE.md.
 - **Files**:
@@ -2918,4 +2918,76 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
   - apps/dashboard/components/transformation-rule-editor.tsx
   - apps/dashboard/components/transformation-test-panel.tsx
 - **Depends on**: Entity Schema & Transformation (completed)
+- **Added**: 2026-06-08
+
+---
+
+## Layer 54: Connector Expansion & V1 Features
+
+### Task: Google Drive Connector Implementation
+- **Layer**: 54 — Connector Expansion & V1 Features
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Implement a Google Drive connector in packages/connectors/google-drive/ for syncing files, folders, and shared drives as queryable entities. Implement connect() with OAuth2 (scopes: 'drive.readonly', 'drive.metadata.readonly'), sync() as AsyncGenerator yielding File and Folder entities, getSchema() exposing file metadata (name, mimeType, owner, sharedWith, createdTime, modifiedTime, webViewLink), healthCheck(). Use cursor-based pagination via pageToken for incremental sync. Transform raw Google Drive API responses into SemanticEntity format with relationships (file_in_folder, shared_with). Create apps/connectors/google-drive/ with connector.ts, manifest.ts, transformers.ts. Include ConnectorManifest with OAuth config. Add 16+ tests using MSW to mock Google Drive API (list files, folder traversal, shared drives). Integration test: sync a folder tree with 50+ files, verify relationship edges and workspace isolation. Reference connector-patterns.md for transform patterns and code-style.md for error handling.
+- **Files**:
+  - packages/connectors/google-drive/src/google-drive-connector.ts
+  - packages/connectors/google-drive/src/manifest.ts
+  - packages/connectors/google-drive/src/transformers.ts
+  - packages/connectors/google-drive/src/__tests__/google-drive-connector.test.ts
+  - packages/connectors/google-drive/tests/fixtures/files.json
+  - packages/connectors/google-drive/tests/fixtures/folders.json
+  - packages/connectors/google-drive/package.json
+- **Depends on**: Connector Registry (completed)
+- **Added**: 2026-06-08
+
+### Task: PostgreSQL Direct Connector Implementation
+- **Layer**: 54 — Connector Expansion & V1 Features
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Implement a PostgreSQL direct database connector in packages/connectors/postgres/ for syncing tables and views as entity types. Implement connect() with SSL/TLS support, sync() as AsyncGenerator discovering tables via information_schema and yielding rows as SemanticEntity objects, getSchema() returning table definitions (columns, types, pk, fk), healthCheck(). Support incremental sync via timestamp/sequence columns (auto-detection). Transform each table row into a SemanticEntity with attributes mapped from columns; create relationships for foreign keys. Handle type coercion (SQL types → JSON/attribute types). Create packages/connectors/postgres/ with connector.ts, manifest.ts, sql-query-builder.ts, transformers.ts. Include ConnectorManifest with configSchema (host, port, database, username, password, sslMode). Add 18+ unit tests with containerized postgres (docker) for real SQL tests. Integration test: sync a 3-table schema with FK relationships, verify edge creation and query-time graph expansion. Reference connector-patterns.md for pagination patterns.
+- **Files**:
+  - packages/connectors/postgres/src/postgres-connector.ts
+  - packages/connectors/postgres/src/manifest.ts
+  - packages/connectors/postgres/src/sql-query-builder.ts
+  - packages/connectors/postgres/src/transformers.ts
+  - packages/connectors/postgres/src/__tests__/postgres-connector.test.ts
+  - packages/connectors/postgres/src/__tests__/postgres-connector.integration.test.ts
+  - packages/connectors/postgres/package.json
+- **Depends on**: Connector Registry (completed), Sync Scheduling & Frequency Configuration (completed)
+- **Added**: 2026-06-08
+
+### Task: Schema Auto-Discovery & Human-in-the-Loop Confirmation
+- **Layer**: 54 — Connector Expansion & V1 Features
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Build a schema discovery and user confirmation workflow for automating entity type and relationship detection. Create packages/semantic-core/src/schema-discovery.ts with SchemaDiscoveryEngine: (1) detectEntityTypes(connectorId) automatically discovering entity types from sync metadata, (2) suggestRelationships(entityType1, entityType2) using heuristics (FK patterns, id suffix matches, name similarity), (3) generateMappingReport() showing discovered types, fields, confidence scores. Create apps/api/migrations/084_add_schema_discovery.sql with entity_type_suggestions and relationship_suggestions tables. Expose REST: POST /api/v1/connectors/:id/discover-schema (triggers discovery + stores suggestions), GET /api/v1/connectors/:id/schema-suggestions (lists all suggestions with confidence), POST /api/v1/schema-suggestions/:id/confirm (user confirms suggestion, applies to workspace). Build dashboard page at apps/dashboard/app/admin/schema-discovery/page.tsx with discovery wizard: (1) trigger discovery button, (2) interactive suggestions table (entity types + fields), (3) confirmation checkboxes, (4) relationship mapping preview with visual graph. Add 16+ unit tests for discovery heuristics, confidence scoring, conflict resolution. Integration test: run discovery on HubSpot connector, verify detected entity types, confirm suggestions, verify in retrieval. Reference embedding-patterns.md for semantic similarity checks in relationship detection.
+- **Files**:
+  - packages/semantic-core/src/schema-discovery.ts
+  - packages/semantic-core/src/__tests__/schema-discovery.test.ts
+  - packages/semantic-core/src/__tests__/schema-discovery.integration.test.ts
+  - apps/api/migrations/084_add_schema_discovery.sql
+  - apps/api/src/routes/schema-discovery.ts
+  - apps/api/src/__tests__/schema-discovery.test.ts
+  - apps/dashboard/app/admin/schema-discovery/page.tsx
+  - apps/dashboard/components/schema-discovery-wizard.tsx
+  - apps/dashboard/components/entity-type-suggester.tsx
+  - apps/dashboard/components/relationship-mapper.tsx
+- **Depends on**: Connector Registry (completed), Entity Schema & Transformation (completed)
+- **Added**: 2026-06-08
+
+### Task: Batch Sync Optimization & Performance Tuning
+- **Layer**: 54 — Connector Expansion & V1 Features
+- **Status**: UNWORKED
+- **Priority**: Medium
+- **Description**: Build a performance optimization suite for connector syncs, reducing latency and token costs for large-scale ingestion. Create packages/semantic-core/src/sync-optimizer.ts with SyncOptimizer class: (1) analyzeHistoricalSyncMetrics(connectorId, days=30) calculating P50/P95/P99 latencies, entity/token throughput, failure rates, (2) recommendOptimalBatchSize(connectorId, targetDurationMs=300_000) using linear regression to predict optimal batch size (default 100), (3) recommendParallelism(connectorId, cpuCount) computing safe concurrency given connector rate limits, (4) getOptimizationReport(connectorId) showing bottlenecks (API rate limit vs. processing time). Create apps/api/migrations/085_add_sync_metrics.sql with sync_metrics table (connector_id, sync_id, batch_size, entity_count, token_count, durationMs, entity_throughput). Expose REST: GET /api/v1/connectors/:id/sync-metrics, POST /api/v1/connectors/:id/optimize (triggers analyzer). Build dashboard panel at apps/dashboard/components/sync-optimization-panel.tsx with metric charts (throughput over time), optimization recommendations. Update SyncWorker to log metrics to new table. Add 14+ unit tests for regression analysis, batch size tuning, parallelism calculation. Integration test: simulate 1000+ entity sync, verify metrics logged, run optimizer, confirm recommendation improves throughput by ≥10%. Reference code-style.md for structured logging.
+- **Files**:
+  - packages/semantic-core/src/sync-optimizer.ts
+  - packages/semantic-core/src/__tests__/sync-optimizer.test.ts
+  - packages/semantic-core/src/__tests__/sync-optimizer.integration.test.ts
+  - apps/api/migrations/085_add_sync_metrics.sql
+  - apps/api/src/routes/sync-metrics.ts
+  - apps/api/src/__tests__/sync-metrics.test.ts
+  - apps/api/src/workers/sync-worker.ts (update to log metrics)
+  - apps/dashboard/components/sync-optimization-panel.tsx
+- **Depends on**: Sync Scheduling & Frequency Configuration (completed), Indexer Implementation (completed)
 - **Added**: 2026-06-08
