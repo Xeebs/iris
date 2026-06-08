@@ -2022,7 +2022,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Offline Entity Enrichment with LLM-Predicted Search Vocabulary
 - **Layer**: 41 — SIRA-Inspired Retrieval Improvements
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: Medium
 - **Description**: At index time, optionally augment entity embedding inputs with LLM-predicted domain vocabulary that is missing from the raw entity attributes — the corpus-side enrichment technique from SIRA. This improves recall for natural language queries that use different terminology than the raw data (e.g., a Jira issue titled "Q3-ENT-2204" would be enriched with predicted terms like "enterprise ticket Q3 bug sprint backlog"). Implementation: (1) create packages/semantic-core/src/entity-enricher.ts with EntityEnricher class: `enrichEntity(entity, workspaceId): Promise<string[]>` calls gpt-4o-mini with the entity's type, label, and attributes, asking it to predict 5–10 additional search terms a user might use to find this entity. Returns deduplicated predicted terms filtered against corpus frequency (drop terms with ratio > 0.7). (2) Cache enrichment results by entity content hash in Redis (TTL: 7 days — enrichment only changes if entity data changes). (3) Integrate into indexer.ts: when `enrichEntities: true` option is set in IndexerConfig, call enrichEntity() after building the embedding input and append surviving terms to the embedding string before the API call. (4) Gate by entity type allowlist in IndexerConfig (e.g., enrich only `issue`, `transaction`, `document` types — not `contact` or `deal` which already have rich attributes). Add unit tests with mocked LLM responses, cache hit/miss behavior. Integration tests comparing retrieval recall with and without enrichment on a synthetic sparse-attribute dataset.
 - **Files**:
@@ -2039,7 +2039,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: GitHub Connector with Issues, PRs & Repository Context
 - **Layer**: 42 — Source Control Integration
-- **Status**: IN_PROGRESS
+- **Status**: COMMITTED
 - **Priority**: High
 - **Description**: Implement GitHub connector in packages/connectors/github/ to sync repositories, issues, pull requests, and discussions as SemanticEntity objects. Connect via OAuth2 to GitHub API (graphql + rest endpoints). Sync entity types: (1) `repository` (name, description, topics, language, stargazers, forks), (2) `issue` (title, body, state, assignees, labels, milestone, linked PRs), (3) `pull_request` (title, description, state, author, reviewers, commits, linked issues), (4) `discussion` (title, body, category, answers). Support incremental sync via updatedAt cursor using search API for efficient delta queries. Extract relationships: issue ↔ pull_request (via "closes" mentions), pull_request → repository, issue → assignee (linked entity IDs). Use MSW for tests with fixture responses from GitHub GraphQL schema. Include ConnectorManifest with GitHub App OAuth scopes (repo:read, discussions:read). Add 20+ unit tests covering pagination, relationship extraction, incremental filtering, and error handling. Integration tests with real Postgres. Follow connector-patterns.md for entity transformation and embedding-patterns.md for relationship representation.
 - **Files**:
@@ -2070,7 +2070,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Connector Sync Quality Metrics & Anomaly Detection
 - **Layer**: 42 — Source Control Integration
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: High
 - **Description**: Implement automated quality monitoring for connector syncs to detect data degradation and schema changes. Create packages/semantic-core/src/sync-quality-monitor.ts with SyncQualityMonitor service: (1) recordSyncMetrics(syncId, metrics) tracking: entity_count, attribute_completeness (% non-null), unique_value_ratio (entropy per attribute), schema_stability (unchanged attribute count / total attributes), (2) detectAnomalies(connectorId) comparing current sync stats against 30-day historical baseline using z-score: alert if entity_count deviates >3σ, if completeness drops >20%, if new attributes appear (schema drift), (3) trackDataQualityTrend(connectorId, windowDays) returning trend indicators. Store metrics in sync_quality_metrics table (sync_id, connector_id, entity_count, completeness_pct, schema_stability_pct, anomaly_flags, recorded_at). Expose GET /api/v1/admin/connectors/:id/quality returning current + historical metrics, POST /api/v1/admin/connectors/:id/quality/configure to set anomaly thresholds. Build admin dashboard at apps/dashboard/app/admin/sync-quality/page.tsx with: quality trend chart per connector (entity count line, completeness gauge, schema drift indicator), anomaly alert list with drill-down details. Wire quality checks into the sync-job-queue to emit warnings/errors on anomalies. Add 15+ unit tests with synthetic metrics fixtures, integration tests verifying baseline calculation and anomaly detection. Reference embedding-patterns.md for cost control (quality checks should be lightweight).
 - **Files**:
@@ -2083,4 +2083,78 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
   - apps/dashboard/components/sync-quality-monitor.tsx
   - apps/api/src/__tests__/admin-sync-quality.test.ts
 - **Depends on**: BullMQ Job Queue Infrastructure, Sync Worker Implementation & Connector Invocation
+- **Added**: 2026-06-08
+
+---
+
+## Layer 43: Search Quality & Cost Optimization
+
+### Task: Advanced Entity Deduplication with Rule-Based Matching
+- **Layer**: 43 — Search Quality & Cost Optimization
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Implement rule-based entity deduplication to complement cosine similarity matching, enabling high-precision dedup for entities with structured attributes. Create packages/semantic-core/src/entity-deduplicator.ts with EntityDeduplicator class: (1) defineDeduplicationRules(workspaceId, entityType, rules) allowing users to specify exact-match rules (e.g., "contacts with same email AND domain belong to same customer"), fuzzy-match rules (levenshtein distance on name fields), and composite rules (AND/OR logic combining multiple conditions). (2) applyRules(entities, entityType) running rule engine to partition entities into groups and merge within groups. (3) scoreCandidate(entity1, entity2, rules): Promise<number> returning 0–1 confidence via: embedding cosine similarity (0.5 weight), rule match count (0.3 weight), value overlap ratio (0.2 weight). Wire into indexer.ts during flushBatch: after cosine dedup, apply rule-based dedup as a second pass to catch structural duplicates missed by embeddings. Store dedup rules in entity_dedup_rules table (workspace_id, entity_type, rule_json, enabled_at, created_by). Expose POST /api/v1/admin/dedup-rules (define rule), GET /api/v1/admin/dedup-rules (list rules), and PUT /api/v1/admin/dedup-rules/:id/test (preview matches on sample data). Build admin UI at apps/dashboard/app/admin/dedup/page.tsx with: rule builder (visual editor for conditions), test data input (paste entities), preview matched groups, confidence scores. Add 22+ unit tests covering rule evaluation logic (exact match, fuzzy match, composite rules, edge cases), and integration tests verifying end-to-end dedup with real entity data. Reference embedding-patterns.md for cost implications of running additional matching passes.
+- **Files**:
+  - packages/semantic-core/src/entity-deduplicator.ts
+  - packages/semantic-core/src/__tests__/entity-deduplicator.test.ts
+  - packages/semantic-core/src/__tests__/entity-deduplicator.integration.test.ts
+  - packages/semantic-core/src/indexer.ts (update: wire rule-based dedup into flushBatch)
+  - apps/api/migrations/051_add_dedup_rules.sql
+  - apps/api/src/routes/admin-dedup.ts (update)
+  - apps/dashboard/app/admin/dedup/page.tsx (update)
+  - apps/api/src/__tests__/admin-dedup.test.ts (update)
+- **Depends on**: Indexer Implementation, Semantic Cache
+- **Added**: 2026-06-08
+
+### Task: Per-Connector Cost Attribution & Billing Breakdown
+- **Layer**: 43 — Search Quality & Cost Optimization
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Extend billing infrastructure to track and report costs per connector, enabling data-driven decisions about which integrations deliver ROI. Create packages/semantic-core/src/connector-cost-attribution.ts with ConnectorCostAttributor class: (1) recordConnectorCost(workspaceId, connectorId, event: 'entity_indexed'|'query_executed', quantity, costCents) and aggregateByConnector(workspaceId, periodStart, periodEnd): Promise<{connectorId, entityCount, indexCosts, queryCosts, totalCosts}>. Store in connector_cost_attribution table (workspace_id, connector_id, period_start, period_end, entity_count_indexed, index_cost_cents, query_cost_cents, tokens_spent, tokens_saved, created_at). (2) Implement cost calculation: indexing cost = (entities × embedding_model_cost_per_entity) + (kb_stored × storage_cost), query cost = (queries × avg_tokens_per_query × token_cost). (3) Wire into: sync-worker (record index costs after sync completion), retrieval engine (record query costs per MCP invocation). Expose GET /api/v1/billing/connectors returning: cost breakdown per connector (cost rank, % of total, 30-day trend), top ROI connectors (queries per $1 spent), and recommendations (disable low-ROI connectors, consolidate overlapping ones). Build analytics dashboard at apps/dashboard/app/analytics/[workspaceId]/breakdown/page.tsx with: cost-per-connector bar chart (sortable), ROI scatterplot (x=cost, y=queries), month-over-month trend, and "disable low-ROI" recommendation panel with one-click action. Add 20+ unit tests for cost calculation logic and aggregation, integration tests verifying costs are correctly attributed during real syncs and queries. Reference embedding-patterns.md for cost control and billing-meter.ts for metering patterns.
+- **Files**:
+  - packages/semantic-core/src/connector-cost-attribution.ts
+  - packages/semantic-core/src/__tests__/connector-cost-attribution.test.ts
+  - packages/semantic-core/src/__tests__/connector-cost-attribution.integration.test.ts
+  - apps/api/migrations/052_add_connector_cost_attribution.sql
+  - apps/api/src/routes/billing.ts (update: add connector breakdown endpoints)
+  - apps/dashboard/app/analytics/[workspaceId]/breakdown/page.tsx (update or create)
+  - apps/dashboard/components/connector-cost-chart.tsx
+  - apps/dashboard/components/roi-scatterplot.tsx
+  - apps/api/src/__tests__/billing.test.ts (update)
+- **Depends on**: Usage-Based Billing & Metering Infrastructure
+- **Added**: 2026-06-08
+
+### Task: Search Quality Evaluation & A/B Testing Framework
+- **Layer**: 43 — Search Quality & Cost Optimization
+- **Status**: UNWORKED
+- **Priority**: Medium
+- **Description**: Build an evaluation framework for measuring and comparing retrieval quality across different ranking algorithms, embeddings, and retrieval strategies (exact match vs. semantic, BM25 tuning, etc.). Create packages/semantic-core/src/search-quality-evaluator.ts with SearchQualityEvaluator: (1) defineTestSet(workspaceId, queries, expectedEntities) where users upload query → expected entities mappings for evaluation, (2) measureMetrics(results, expected) computing: precision@k, recall@k, NDCG@k, MRR (mean reciprocal rank), (3) compareStrategies(testSet, [strategy1, strategy2, ...]) running all strategies and returning comparative metrics. Implement A/B testing workflow: POST /api/v1/admin/search-experiments (define experiment with control/treatment retrievers), GET /api/v1/admin/search-experiments/:id/results (live metrics, confidence intervals), PUT /api/v1/admin/search-experiments/:id/promote (apply winning strategy to production). Store test sets and results in search_quality_evaluations table (workspace_id, test_set_id, query, expected_entity_ids, created_by, created_at) and search_experiment_results table (experiment_id, strategy_name, precision_at_5, recall_at_10, ndcg, sample_size, timestamp). Build admin UI at apps/dashboard/app/admin/query-analytics/page.tsx (or create new page) with: test set manager (upload/review query sets), active experiments (live metrics dashboard), strategy comparison (side-by-side results), promotion UI. Implement controlled rollout: keep control strategy, gradually shift traffic to treatment via random sampling (10% → 25% → 50% → 100%). Add 18+ unit tests for metric calculations and comparison logic, integration tests verifying experiment lifecycle and promotion safety. Reference code-style.md for experiment state management and logging patterns.
+- **Files**:
+  - packages/semantic-core/src/search-quality-evaluator.ts
+  - packages/semantic-core/src/__tests__/search-quality-evaluator.test.ts
+  - packages/semantic-core/src/__tests__/search-quality-evaluator.integration.test.ts
+  - apps/api/migrations/053_add_search_quality_evaluation.sql
+  - apps/api/src/routes/admin-query-analytics.ts (update)
+  - apps/dashboard/app/admin/query-analytics/page.tsx (update with experiment features)
+  - apps/dashboard/components/search-quality-dashboard.tsx
+  - apps/dashboard/components/experiment-comparison-table.tsx
+  - apps/api/src/__tests__/admin-query-analytics.test.ts (update)
+- **Depends on**: Retrieval Engine, Hybrid BM25 + Vector Retrieval with Reciprocal Rank Fusion
+- **Added**: 2026-06-08
+
+### Task: Cost Optimization Advisor with Token Spend Recommendations
+- **Layer**: 43 — Search Quality & Cost Optimization
+- **Status**: UNWORKED
+- **Priority**: Medium
+- **Description**: Implement an ML-driven advisor that analyzes workspace usage patterns and recommends cost-saving actions. Create packages/semantic-core/src/cost-optimizer.ts with CostOptimizationAdvisor: (1) analyzeSpendPatterns(workspaceId, windowDays: 30) computing: tokens spent per day, cost per query, top queries by token spend, cache hit rate, compression efficiency, (2) generateRecommendations() returning ranked list of optimization opportunities with estimated token savings: (a) "enable semantic cache" (if hit rate < 15%, save est. X tokens/day), (b) "tune context budget" (if avg query uses < 30% budget, reduce and save X tokens), (c) "consolidate low-ROI connectors" (if connector A and B have >0.9 cosine overlap, disable A and save indexing costs), (d) "archive stale entities" (entities not queried in 90 days can be offloaded), (e) "upgrade to large embedding model" (if search quality below threshold, invest in better embeddings). Each recommendation includes: title, description, estimated_savings_tokens_per_day, estimated_savings_cost_monthly, implementation_effort ('low'|'medium'|'high'), and one-click apply action. Store recommendations in cost_optimization_recommendations table (workspace_id, recommendation_id, type, estimated_savings_cents, applied_at, savings_realized_cents). Expose GET /api/v1/cost-optimizer/recommendations returning current opportunities and historical savings realized. Build dashboard widget at apps/dashboard/components/cost-optimizer-panel.tsx showing: top 3 recommendations with savings estimate, "apply all low-effort" quick action button, realized savings graph. Add 16+ unit tests for pattern analysis and recommendation logic, integration tests with synthetic spending data and recommendation application. Reference embedding-patterns.md for cost control budgets and code-style.md for recommendation scoring logic.
+- **Files**:
+  - packages/semantic-core/src/cost-optimizer.ts
+  - packages/semantic-core/src/__tests__/cost-optimizer.test.ts
+  - packages/semantic-core/src/__tests__/cost-optimizer.integration.test.ts
+  - apps/api/migrations/054_add_cost_recommendations.sql
+  - apps/api/src/routes/cost-optimizer.ts
+  - apps/dashboard/components/cost-optimizer-panel.tsx
+  - apps/dashboard/components/recommendation-action-card.tsx
+  - apps/api/src/__tests__/cost-optimizer.test.ts
+- **Depends on**: Per-Connector Cost Attribution & Billing Breakdown, Token Analytics Service & Dashboard
 - **Added**: 2026-06-08

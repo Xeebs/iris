@@ -57,6 +57,7 @@ import { createVectorHealthRoutes } from './routes/vector-health.js';
 import { createEntityLineageRoutes } from './routes/entity-lineage.js';
 import { createDataImportExportRoutes } from './routes/data-import-export.js';
 import { createMcpResourcesRoutes } from './routes/mcp-resources.js';
+import { createAdminSyncQualityRoutes } from './routes/admin-sync-quality.js';
 import { openApiSpec } from './openapi.js';
 
 export { createApp };
@@ -185,6 +186,7 @@ function createApp(
   authed.route('/lineage', createEntityLineageRoutes(sql));
   authed.route('/data', createDataImportExportRoutes(sql));
   authed.route('/mcp/resources', createMcpResourcesRoutes());
+  authed.route('/admin/connectors', createAdminSyncQualityRoutes(sql));
 
   // Webhook routes: inbound (unauthenticated) + events status (authenticated)
   app.route('/api/v1/webhooks', createWebhookRoutes(sql));

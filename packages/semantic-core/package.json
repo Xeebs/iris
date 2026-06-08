@@ -46,7 +46,8 @@
     "./attribute-frequency": "./dist/attribute-frequency.js",
     "./data-lineage": "./dist/data-lineage.js",
     "./data-import-export": "./dist/data-import-export.js",
-    "./resource-builder": "./dist/resource-builder.js"
+    "./resource-builder": "./dist/resource-builder.js",
+    "./sync-quality-monitor": "./dist/sync-quality-monitor.js"
   },
   "scripts": {
     "build": "tsc --build",

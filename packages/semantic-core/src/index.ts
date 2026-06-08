@@ -49,3 +49,21 @@ export type {
   ExportJob,
 } from './data-exporter.js';
 export { DataExporter } from './data-exporter.js';
+export type {
+  SyncQualityInput,
+  SyncQualityRecord,
+  AnomalyType,
+  Anomaly,
+  AnomalyReport,
+  QualityThresholds,
+  TrendPoint,
+  DataQualityTrend,
+} from './sync-quality-monitor.js';
+export {
+  SyncQualityMonitor,
+  computeCompleteness,
+  computeUniqueValueRatio,
+  computeSchemaStability,
+  detectNewAttributes,
+  computeZScore,
+} from './sync-quality-monitor.js';
