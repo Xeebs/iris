@@ -121,3 +121,5 @@ Custom Transformation Pipeline & Entity Mapping Language — TransformationDSLEn
 - feat(semantic-core,api,dashboard): connector circuit breaker with DB-backed state machine — a3b0d38
 - feat(semantic-core,api,dashboard): SLO monitoring engine with attainment tracking and violation detection — 6f59154
 - feat(semantic-core,api,dashboard): intelligent backup with PITR and RTO/RPO metrics — e6fdc0f
+- feat(semantic-core,api,dashboard): distributed tracing with W3C TraceContext and span storage — 169e641
+- feat(semantic-core,api,dashboard): HA failover control with replication lag monitoring — TBD

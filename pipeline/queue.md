@@ -3818,7 +3818,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: High-Availability Failover & Multi-Region Support
 - **Layer**: 63 — Hardening & Integration Completeness
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: High
 - **Description**: Implement active-passive failover and optional multi-region read-replica support for production deployments. Create packages/semantic-core/src/ha-manager.ts with HaManager: (1) detectPrimaryFailure() via periodic health checks to primary Postgres + Redis + Qdrant with configurable timeout/retry, (2) initiateFailo ver() promoting read-replica to primary with DNS/routing update, (3) validateReplicationLag() ensuring replica lag < threshold before promotion, (4) syncSecondaryContextIndex() triggering incremental reindex on promoted region, (5) recordFailoverEvent(timestamp, reason, metrics) for audit. Add migration 124 (ha_failover_log, replication_status, region_config tables). Create REST POST /api/v1/admin/ha/failover (admin-only, requires confirmation), GET /api/v1/admin/ha/status returning primary/replica health + replication lag. Add health-check endpoint /health/ha returning { status, primary_region, replica_regions, lag_seconds }. Build dashboard admin page /admin/ha-config with region selector, replica lag graph, manual failover button + confirmation modal. Ensure read queries route to replica when available (via connection pool strategy). Include 28+ tests (16 unit failover logic + 12 integration multi-region scenarios). Reference api-conventions.md for error codes (503 if primary unavailable).
 - **Files**:
