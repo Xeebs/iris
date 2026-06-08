@@ -3274,7 +3274,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Advanced Multi-LLM Cost Optimizer & Provider Router
 - **Layer**: 56 — Growth Phase V2 - Advanced Infrastructure & Enterprise Optimization
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: Medium
 - **Description**: Enhance the multi-LLM router to optimize cost across providers (Anthropic, OpenAI, Azure, Gemini) by analyzing query characteristics and selecting the cheapest provider that meets accuracy requirements. Create packages/semantic-core/src/llm-cost-optimizer.ts with LLMCostOptimizer: (1) classifyQueryComplexity(query, context) scoring complexity 1-10 based on entity count, relationship depth, required context size, (2) estimateTokenUsage(provider, query, context) calling provider APIs to predict token usage before committing, (3) rankProvidersByValue(complexity, requirements) scoring each provider on cost/speed/accuracy tradeoff, (4) selectOptimalProvider(query, workspace, budget) returning chosen provider with confidence score, (5) trackProviderAccuracy(provider, query, userFeedback) measuring actual accuracy for cost-optimization model improvement. Create apps/api/migrations/098_add_llm_cost_optimization.sql with: llm_cost_estimates (workspace_id, query_hash, provider, estimated_tokens, actual_tokens, cost_cents, execution_time_ms, user_satisfaction_score), provider_accuracy_baseline (provider, query_complexity_range, accuracy_score, confidence, measured_at). Integrate with query-context MCP tool: use optimizer to select provider for each query. Expose REST: POST /api/v1/llm-routing/estimate-cost (predict cost for query), GET /api/v1/llm-routing/recommendations (suggested providers for workspace), GET /api/v1/llm-routing/accuracy-baselines (show provider accuracy by complexity). Build dashboard: apps/dashboard/app/settings/[workspaceId]/llm-routing/page.tsx with: provider cost comparison, accuracy-by-complexity matrix, optimization recommendations, cost savings trend. Add 16+ unit tests for: complexity classification, token estimation accuracy, provider scoring, accuracy tracking. Integration test: run 500 queries across all 4 major providers, verify selected providers have ≥95% cost accuracy and maintain ≥98% user satisfaction.
 - **Files**:
@@ -3291,7 +3291,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Workspace Federation & Cross-Tenant Data Sharing
 - **Layer**: 56 — Growth Phase V2 - Advanced Infrastructure & Enterprise Optimization
-- **Status**: UNWORKED
+- **Status**: IN_PROGRESS
 - **Priority**: Medium
 - **Description**: Enable secure cross-workspace federation for agencies, holding companies, and partner networks that need to query related data from sibling workspaces with fine-grained access control. Create packages/semantic-core/src/federation-manager.ts with FederationManager: (1) registerFederatedWorkspace(sourceWorkspace, targetWorkspace, permissions) establishing trust relationship between workspaces, (2) queryFederatedContext(query, sourceworkspaceId, allowedTargetWorkspaces) executing queries across workspace boundaries with permission enforcement, (3) mergeFederatedResults(results, maxTokenBudget) combining results from multiple workspaces and applying compression to fit budget, (4) auditFederatedAccess(queryId, sourceWorkspace, queriedWorkspaces) logging all cross-workspace queries. Create apps/api/migrations/099_add_federation.sql with: federated_relationships (source_workspace_id, target_workspace_id, relationship_type: 'parent_child'|'sibling'|'partner', created_by_user_id, trusted_at), federation_permissions (relationship_id, entity_type_pattern, read|write, created_at). Add new MCP tool: query-federated-context (parameters: query, federatedWorkspaceIds, maxTokenBudget) returning merged, deduplicated, permission-filtered context from multiple workspaces. Build admin UI: apps/dashboard/app/settings/[workspaceId]/federation/page.tsx showing: federated relationships, per-workspace permissions, federation access audit log. Add 15+ unit tests for: permission enforcement, result merging, deduplication across workspaces, token budget enforcement. Integration test: create 5 federated workspaces, run queries with shared relationships, verify correct permission boundaries, token budgets respected, results properly merged. Reference api-conventions.md for MCP tool patterns, code-style.md for auth.
 - **Files**:
@@ -3304,4 +3304,93 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
   - apps/mcp-server/src/tools/query-federated-context.ts
   - apps/dashboard/app/settings/[workspaceId]/federation/page.tsx
 - **Depends on**: Multi-tenant support (completed), Role-Based Context Segmentation (completed)
+- **Added**: 2026-06-08
+
+---
+
+## Layer 57: Scale Phase III - Advanced Intelligence & Context Optimization
+
+### Task: Context Versioning & Time-Travel Query Engine
+- **Layer**: 57 — Scale Phase III - Advanced Intelligence & Context Optimization
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Build a context versioning system enabling users to query business context as it existed at a previous point in time, with full audit of what changed and when. Create packages/semantic-core/src/context-versioner.ts with ContextVersionManager: (1) captureContextSnapshot(workspaceId, snapshotKey) creating immutable point-in-time index state with gzip compression, (2) queryAsOfDate(workspaceId, query, targetDate, contextBudget) executing queries against a historical snapshot, (3) diffContextVersions(versionA, versionB) showing what entities/metrics changed between two points, (4) rollbackToVersion(workspaceId, versionId) reverting index to previous state (admin-only with confirmation), (5) listVersionHistory(workspaceId, limit) with cursor pagination. Create apps/api/migrations/100_add_context_versioning.sql with: context_snapshots (workspace_id, snapshot_id, snapshot_key, captured_at, data_size_bytes, gzip_size_bytes, entity_count, checksum), version_diffs (workspace_id, from_version_id, to_version_id, changed_entity_ids, change_types: 'created'|'updated'|'deleted', diff_summary). Expose REST: POST /api/v1/context/snapshots (capture now), GET /api/v1/context/snapshots (list versions), POST /api/v1/context/query-as-of (query historical), GET /api/v1/context/versions/:id/diff (compare versions), GET /api/v1/context/audit/changes (what changed when). Add MCP tool: query-context-at-date (parameters: query, targetDate, federatedWorkspaceIds, maxTokenBudget). Build dashboard: apps/dashboard/app/context-versioning/page.tsx with timeline selector, version list, diff viewer showing side-by-side entity changes, rollback confirmation UI. Add 16+ unit tests for: snapshot capture/compression, time-travel query accuracy, diff calculation, version rollback, edge cases (rollback with active queries). Integration test: capture 5 snapshots over time, run 20 queries at different dates, verify results match historical state, diff calculations 100% accurate. Reference code-style.md for error handling and api-conventions.md for REST design.
+- **Files**:
+  - packages/semantic-core/src/context-versioner.ts
+  - packages/semantic-core/src/__tests__/context-versioner.test.ts
+  - packages/semantic-core/src/__tests__/context-versioner.integration.test.ts
+  - apps/api/src/routes/context-versioning.ts
+  - apps/api/src/__tests__/context-versioning.test.ts
+  - apps/api/migrations/100_add_context_versioning.sql
+  - apps/mcp-server/src/tools/query-context-at-date.ts
+  - apps/dashboard/app/context-versioning/page.tsx
+  - apps/dashboard/components/version-timeline.tsx
+  - apps/dashboard/components/context-diff-viewer.tsx
+- **Depends on**: Workspace Federation & Cross-Tenant Data Sharing (in progress)
+- **Added**: 2026-06-08
+
+### Task: Intelligent Context Summarization Engine with Task-Specific Ranking
+- **Layer**: 57 — Scale Phase III - Advanced Intelligence & Context Optimization
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Build a dynamic context summarization system that generates provider-specific and task-aware summaries, adapting detail level and structure based on the LLM's capabilities and the query's intent. Create packages/semantic-core/src/context-summarizer.ts with ContextSummarizer: (1) classifyQueryIntent(query) detecting if task is 'analytical'|'operational'|'reporting'|'synthesis', (2) rankContextByTaskRelevance(entities, intent, workspaceSchema) scoring context importance 0-1 based on entity type, relationships, frequency in similar queries, (3) generateTaskSpecificSummary(context, modelCapability, targetTokens) creating summaries from verbose (GPT-4, 2000 tokens) to minimal (GPT-3.5, 500 tokens) with per-provider optimizations: Anthropic Claude prefers structured bullet lists, OpenAI prefers JSON, Gemini prefers conversational prose, (4) optimizeSummaryStructure(summary, format) serializing for token efficiency per LLM provider format rules. Create apps/api/migrations/101_add_context_summarization.sql with: summarization_styles (workspace_id, query_intent_pattern, preferred_style, applied_count), summary_metrics (workspace_id, original_token_count, summary_token_count, compression_ratio, user_satisfaction_score, generated_at). Integrate with query-context MCP tool: after retrieval, run summarizer before sending to LLM, pass intent through MCP context. Expose REST: POST /api/v1/context/summarize (create summary for given intent/budget), GET /api/v1/summarization/metrics (compression ratio and effectiveness). Build dashboard widgets: apps/dashboard/components/context-summary-preview.tsx (show original vs. summarized side-by-side), summarization-stats.tsx (compression ratios by intent type). Add 14+ unit tests for: intent classification accuracy, relevance ranking, per-provider format optimization, token budget enforcement, compression ratio measurements. Integration test: run 200 queries with diverse intents and LLM providers, measure token savings (target ≥40% vs. uncompressed) and verify user satisfaction scores ≥4/5. Reference embedding-patterns.md for relevance calculations, api-conventions.md for MCP tool patterns.
+- **Files**:
+  - packages/semantic-core/src/context-summarizer.ts
+  - packages/semantic-core/src/__tests__/context-summarizer.test.ts
+  - packages/semantic-core/src/__tests__/context-summarizer.integration.test.ts
+  - apps/api/src/routes/context-summarization.ts
+  - apps/api/src/__tests__/context-summarization.test.ts
+  - apps/api/migrations/101_add_context_summarization.sql
+  - apps/dashboard/components/context-summary-preview.tsx
+  - apps/dashboard/components/summarization-stats.tsx
+- **Depends on**: Advanced Multi-LLM Cost Optimizer & Provider Router (completed)
+- **Added**: 2026-06-08
+
+### Task: Relationship Inference & Hidden Link Discovery Engine
+- **Layer**: 57 — Scale Phase III - Advanced Intelligence & Context Optimization
+- **Status**: UNWORKED
+- **Priority**: Medium
+- **Description**: Build an ML-based relationship inference system that detects hidden or implicit relationships between entities and automatically suggests missing links in the knowledge graph. Create packages/semantic-core/src/relationship-inference.ts with RelationshipInferenceEngine: (1) buildCooccurrenceMatrix(workspaceId, days=90) analyzing entity co-occurrence in queries/contexts, (2) detectImplicitRelationships(sourceEntity, targetEntity) scoring likelihood of a relationship (0-1) based on: semantic similarity, co-occurrence frequency, connector metadata patterns, entity type compatibility rules, (3) predictMissingRelationships(entity, topK) returning top K likely-missing relationships for an entity using collaborative filtering on entity embeddings, (4) validateInferredRelationship(relationship, confidence) before suggestion, enforcing minimum confidence threshold (0.75), (5) suggestRelationshipCreation(workspaceId, topK) returning top unconfirmed relationships to admin. Create apps/api/migrations/102_add_relationship_inference.sql with: inferred_relationships (source_entity_id, target_entity_id, relationship_type_predicted, confidence_score, discovery_method: 'cooccurrence'|'embedding_similarity'|'metadata_pattern', suggested_at, confirmed_at, rejected_at), relationship_inference_metrics (workspace_id, total_inferred, confirmed_count, accuracy_ratio, measured_at). Expose REST: GET /api/v1/graph/inferred-relationships (list suggested links with confidence), POST /api/v1/graph/inferred/:relId/confirm (admin accepts suggestion), POST /api/v1/graph/inferred/:relId/reject (admin rejects), POST /api/v1/graph/suggest-relationships (async job returning top candidates). Integrate with graph visualization: apps/dashboard/components/relationship-suggestions-panel.tsx showing confidence scores, discovery method, admin confirmation controls. Add 15+ unit tests for: co-occurrence matrix building, implicit relationship detection, confidence scoring, relationship validation, edge cases (circular suggestions, duplicate). Integration test: index 3000 entities with sparse relationships, run inference, validate ≥80% confirmed suggestions are semantically correct by manual review. Reference embedding-patterns.md for similarity calculations, code-style.md for ML model patterns.
+- **Files**:
+  - packages/semantic-core/src/relationship-inference.ts
+  - packages/semantic-core/src/__tests__/relationship-inference.test.ts
+  - packages/semantic-core/src/__tests__/relationship-inference.integration.test.ts
+  - apps/api/src/routes/relationship-inference.ts
+  - apps/api/src/__tests__/relationship-inference.test.ts
+  - apps/api/migrations/102_add_relationship_inference.sql
+  - apps/dashboard/components/relationship-suggestions-panel.tsx
+- **Depends on**: Knowledge Graph Visualization Dashboard (completed)
+- **Added**: 2026-06-08
+
+### Task: Intelligent Query Clustering & Adaptive Cache TTL Engine
+- **Layer**: 57 — Scale Phase III - Advanced Intelligence & Context Optimization
+- **Status**: UNWORKED
+- **Priority**: Medium
+- **Description**: Build an intelligent query clustering system that groups semantically similar queries and learns optimal cache TTL policies per cluster, improving cache hit rates through smarter invalidation. Create packages/semantic-core/src/query-cluster-engine.ts with QueryClusteringEngine: (1) clusterQueriesBySemanticSimilarity(workspaceId, days=7) using query embeddings + k-means (k=10-50 adaptive) to group similar queries, (2) extractClusterSignature(cluster) identifying: dominant entity types, query intent, update frequency patterns, (3) predictOptimalCacheTtl(cluster) learning from historical cache hit rates and data freshness: clusters querying stable reference data get longer TTL (24h), clusters querying high-velocity data get shorter TTL (5min), (4) detectCacheInvalidationPatterns(cluster) identifying: when updates to entity types in cluster trigger cascading invalidation, (5) adaptiveTtlAssignment(query) assigning TTL based on which cluster the query belongs to. Create apps/api/migrations/103_add_query_clustering.sql with: query_clusters (workspace_id, cluster_id, cluster_signature, member_count, dominant_entity_types, update_frequency_percentile, optimal_ttl_seconds, confidence_score, created_at), query_membership (query_hash, cluster_id, similarity_score), cache_invalidation_events (workspace_id, trigger_entity_type, affected_clusters, cascade_depth). Integrate with SemanticCache: on cache miss, use clustering to check sibling queries in cluster for recent hits. Expose REST: GET /api/v1/cache/clusters (show active clusters), GET /api/v1/cache/clusters/:id (cluster members + TTL strategy). Build dashboard: apps/dashboard/components/query-clustering-analysis.tsx (show clusters, member queries, TTL distribution, cache hit improvement). Add 14+ unit tests for: query clustering quality (silhouette score ≥0.6), TTL prediction accuracy, invalidation pattern detection, edge cases (single-query clusters, volatile data). Integration test: run 5000 queries over 7 days, cluster automatically, measure cache hit rate improvement (target ≥15% vs. uniform TTL). Reference embedding-patterns.md for query embedding generation.
+- **Files**:
+  - packages/semantic-core/src/query-cluster-engine.ts
+  - packages/semantic-core/src/__tests__/query-cluster-engine.test.ts
+  - packages/semantic-core/src/__tests__/query-cluster-engine.integration.test.ts
+  - apps/api/src/routes/query-clustering.ts
+  - apps/api/src/__tests__/query-clustering.test.ts
+  - apps/api/migrations/103_add_query_clustering.sql
+  - apps/dashboard/components/query-clustering-analysis.tsx
+- **Depends on**: Semantic Cache (completed), Query Analytics Engine (completed)
+- **Added**: 2026-06-08
+
+### Task: MCP Tool Auto-Generation & Dynamic Schema Binding from Connectors
+- **Layer**: 57 — Scale Phase III - Advanced Intelligence & Context Optimization
+- **Status**: UNWORKED
+- **Priority**: Medium
+- **Description**: Build a system that automatically generates MCP tools from connector schemas, enabling dynamic query capabilities without manual tool definition. Create packages/semantic-core/src/mcp-tool-generator.ts with MCPToolGenerator: (1) generateToolsFromConnectorSchema(connectorId, schema) creating tools for each entity type: query-<connector>-<entity> (e.g., query-hubspot-contact), list-<connector>-<entity>-metrics, (2) buildToolInputSchema(entitySchema) converting connector schema to zod validation, (3) bindToolToRetrieval(tool) connecting auto-gen tool to query-context retrieval engine with semantic filtering, (4) versionToolDefinition(toolId, newSchema) managing schema changes with backward-compatibility warnings, (5) validateToolUsage(toolId, input) runtime validation and error mapping. Create apps/api/migrations/104_add_auto_mcp_tools.sql with: auto_generated_tools (workspace_id, tool_id, source_connector_id, entity_type, tool_definition_json, version, generated_at, last_invoked_at), tool_version_history (tool_id, version, schema_changes, is_backward_compatible, deprecation_warning). Integrate with MCP server: on workspace load, scan enabled connectors, auto-generate tools, register in MCP server, emit schema to Claude. Expose REST: GET /api/v1/mcp/auto-tools (list auto-generated tools), GET /api/v1/mcp/auto-tools/:toolId/schema (tool schema), POST /api/v1/mcp/auto-tools/:toolId/test (dry-run tool with sample input). Build dashboard: apps/dashboard/components/auto-tool-registry.tsx (show all auto-generated tools, source connector, usage stats). Add 14+ unit tests for: schema-to-tool conversion, zod validation generation, backward-compatibility detection, tool registration, version migration. Integration test: enable 5 connectors with 40+ entity types total, auto-generate tools, invoke 50 different auto-gen tools via MCP, verify all succeed and schema validation blocks invalid inputs. Reference api-conventions.md for MCP tool patterns, code-style.md for schema validation.
+- **Files**:
+  - packages/semantic-core/src/mcp-tool-generator.ts
+  - packages/semantic-core/src/__tests__/mcp-tool-generator.test.ts
+  - packages/semantic-core/src/__tests__/mcp-tool-generator.integration.test.ts
+  - apps/api/src/routes/mcp-auto-tools.ts
+  - apps/api/src/__tests__/mcp-auto-tools.test.ts
+  - apps/api/migrations/104_add_auto_mcp_tools.sql
+  - apps/mcp-server/src/tools/auto-tool-registry.ts
+  - apps/dashboard/components/auto-tool-registry.tsx
+- **Depends on**: MCP Tool Versioning & Backwards Compatibility Manager (completed)
 - **Added**: 2026-06-08

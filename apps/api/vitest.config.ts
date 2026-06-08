@@ -57,6 +57,7 @@ export default defineConfig({
       '@iris/semantic-core/scim-provisioner': path.resolve(__dirname, '../../packages/semantic-core/src/scim-provisioner.ts'),
       '@iris/semantic-core/cache-prewarmer': path.resolve(__dirname, '../../packages/semantic-core/src/cache-prewarmer.ts'),
       '@iris/semantic-core/llm-cost-optimizer': path.resolve(__dirname, '../../packages/semantic-core/src/llm-cost-optimizer.ts'),
+      '@iris/semantic-core/federation-manager': path.resolve(__dirname, '../../packages/semantic-core/src/federation-manager.ts'),
       '@iris/semantic-core': path.resolve(__dirname, '../../packages/semantic-core/src/index.ts'),
       '@iris/cache/response-cache': path.resolve(__dirname, '../../packages/cache/src/response-cache.ts'),
       '@iris/compression': path.resolve(__dirname, '../../packages/compression/src/index.ts'),
