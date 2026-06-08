@@ -3792,3 +3792,99 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
   - apps/api/migrations/122_pii_access_audit.sql
 - **Depends on**: None
 - **Added**: 2026-06-08
+
+---
+
+## Layer 63: Hardening & Integration Completeness
+
+### Task: Distributed Tracing & OpenTelemetry Integration
+- **Layer**: 63 — Hardening & Integration Completeness
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Implement end-to-end distributed tracing across MCP server, REST API, and connector syncs using OpenTelemetry and Jaeger (self-hosted). Create packages/semantic-core/src/tracing.ts with TracingService: (1) initializeTracer() configuring OTLP exporter to Jaeger, (2) createSpan(operationName, attributes) for request-scoped tracing, (3) recordSpanEvent(name, attributes) for milestones, (4) spanContext() to propagate trace IDs via W3C TraceContext headers. Add instrumentation to: indexing pipelines (entity extraction, embedding, deduplication), connector syncs (API calls, pagination, error recovery), MCP tool invocations (query-context response time, token counting, cache checks), and API routes (request-to-response latency by endpoint). Create migration 123 (trace_spans table for async trace storage fallback). Add dashboard /analytics/[workspaceId]/traces page with timeline flame-graph, latency p50/p95/p99 by operation, and error rate heatmap. Include 32+ tests (18 unit tracing + 14 integration spanning multiple services). Reference CLAUDE.md logging guidelines and ensure no PII in span attributes.
+- **Files**:
+  - packages/semantic-core/src/tracing.ts
+  - packages/semantic-core/src/__tests__/tracing.test.ts
+  - packages/semantic-core/src/__tests__/tracing.integration.test.ts
+  - apps/api/src/middleware/tracing-middleware.ts
+  - apps/api/migrations/123_trace_spans.sql
+  - apps/mcp-server/src/telemetry-middleware.ts
+  - apps/dashboard/app/analytics/[workspaceId]/traces/page.tsx
+  - apps/dashboard/components/trace-flame-graph.tsx
+  - apps/dashboard/components/trace-latency-histogram.tsx
+  - infra/docker/docker-compose.yml (add Jaeger service)
+- **Depends on**: None
+- **Added**: 2026-06-08
+
+### Task: High-Availability Failover & Multi-Region Support
+- **Layer**: 63 — Hardening & Integration Completeness
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Implement active-passive failover and optional multi-region read-replica support for production deployments. Create packages/semantic-core/src/ha-manager.ts with HaManager: (1) detectPrimaryFailure() via periodic health checks to primary Postgres + Redis + Qdrant with configurable timeout/retry, (2) initiateFailo ver() promoting read-replica to primary with DNS/routing update, (3) validateReplicationLag() ensuring replica lag < threshold before promotion, (4) syncSecondaryContextIndex() triggering incremental reindex on promoted region, (5) recordFailoverEvent(timestamp, reason, metrics) for audit. Add migration 124 (ha_failover_log, replication_status, region_config tables). Create REST POST /api/v1/admin/ha/failover (admin-only, requires confirmation), GET /api/v1/admin/ha/status returning primary/replica health + replication lag. Add health-check endpoint /health/ha returning { status, primary_region, replica_regions, lag_seconds }. Build dashboard admin page /admin/ha-config with region selector, replica lag graph, manual failover button + confirmation modal. Ensure read queries route to replica when available (via connection pool strategy). Include 28+ tests (16 unit failover logic + 12 integration multi-region scenarios). Reference api-conventions.md for error codes (503 if primary unavailable).
+- **Files**:
+  - packages/semantic-core/src/ha-manager.ts
+  - packages/semantic-core/src/__tests__/ha-manager.test.ts
+  - packages/semantic-core/src/__tests__/ha-manager.integration.test.ts
+  - apps/api/src/routes/ha-admin.ts
+  - apps/api/src/__tests__/ha-admin.test.ts
+  - apps/api/migrations/124_ha_failover_config.sql
+  - apps/dashboard/app/admin/ha-config/page.tsx
+  - apps/dashboard/components/failover-control-panel.tsx
+  - apps/dashboard/components/replication-lag-monitor.tsx
+- **Depends on**: None
+- **Added**: 2026-06-08
+
+### Task: Connector Circuit Breaker & Graceful Degradation Strategy
+- **Layer**: 63 — Hardening & Integration Completeness
+- **Status**: COMMITTED
+- **Priority**: High
+- **Description**: Implement Circuit Breaker pattern for all connector API calls to prevent cascading failures. Create packages/semantic-core/src/circuit-breaker.ts with CircuitBreakerService: (1) executeWithCircuitBreaker(connectorId, fn) wrapping all connector API calls, (2) recordAttempt(success, latencyMs, errorCode) updating state machine, (3) getConnectorStatus() returning CLOSED/OPEN/HALF_OPEN with fail_count/success_count/last_failure_at, (4) resetCircuit(connectorId) manually resetting after manual remediation. State transitions: CLOSED → OPEN on 5 consecutive failures or error_rate > 50% over rolling 1min window; OPEN → HALF_OPEN after 30s backoff; HALF_OPEN → CLOSED on 2 successes, else back to OPEN. When OPEN, return cached/fallback context instead of failing the query (graceful degradation). Create migration 125 (circuit_breaker_state, fallback_context table). Add REST GET /api/v1/admin/connectors/:id/circuit-status returning state + metrics, POST /api/v1/admin/connectors/:id/circuit-reset. Add dashboard widget on connector detail page showing circuit state (traffic-light indicator), failure count, auto-recovery countdown. Include 36+ tests (20 unit state machine + 16 integration covering all transition paths + fallback scenarios).
+- **Files**:
+  - packages/semantic-core/src/circuit-breaker.ts
+  - packages/semantic-core/src/__tests__/circuit-breaker.test.ts
+  - packages/semantic-core/src/__tests__/circuit-breaker.integration.test.ts
+  - apps/api/src/routes/circuit-breaker-admin.ts
+  - apps/api/src/__tests__/circuit-breaker-admin.test.ts
+  - apps/api/migrations/125_circuit_breaker_state.sql
+  - apps/dashboard/components/circuit-breaker-indicator.tsx
+  - apps/dashboard/components/connector-resilience-widget.tsx
+- **Depends on**: Connector Instance Management API
+- **Added**: 2026-06-08
+
+### Task: Service-Level Objective (SLO) Monitoring & Alerting Engine
+- **Layer**: 63 — Hardening & Integration Completeness
+- **Status**: UNWORKED
+- **Priority**: Medium
+- **Description**: Implement SLO tracking for key operational metrics with automated alerting when thresholds are breached. Create packages/semantic-core/src/slo-monitor.ts with SloService: (1) defineSlo(name, metric, target, window, severity) registering SLOs for: MCP query latency p95 < 2s (99%), API availability (99.9%), connector sync success rate > 95%, index staleness < 6h (95%), (2) calculateSloAttainment(metric, window) computing percentage of time SLO was met using event log, (3) detectSloViolation() comparing attainment against target with grace period (e.g., 5min before alerting), (4) suggestCorrectiveAction() using rule engine (increase cache TTL, upgrade vector-store, throttle indexing, etc.). Create migration 126 (slo_definitions, slo_events, slo_violations, slo_alerts). Add REST GET /api/v1/admin/slos returning all SLOs with current attainment%, GET /api/v1/admin/slos/:name/violations (historical). Add dashboard page /admin/slos with SLO cards (green if >= target, yellow if 95-99%, red if < 95%), trend sparkline, violation timeline, alert history. Integrate with existing AlertingService for alert delivery (email, Slack, PagerDuty via webhook). Include 34+ tests (20 unit SLO math + 14 integration covering violation detection + corrective actions).
+- **Files**:
+  - packages/semantic-core/src/slo-monitor.ts
+  - packages/semantic-core/src/__tests__/slo-monitor.test.ts
+  - packages/semantic-core/src/__tests__/slo-monitor.integration.test.ts
+  - apps/api/src/routes/slo-admin.ts
+  - apps/api/src/__tests__/slo-admin.test.ts
+  - apps/api/migrations/126_slo_monitoring.sql
+  - apps/dashboard/app/admin/slos/page.tsx
+  - apps/dashboard/components/slo-scorecard.tsx
+  - apps/dashboard/components/slo-trend-chart.tsx
+  - apps/dashboard/components/slo-violation-timeline.tsx
+- **Depends on**: Connector Health Monitoring Dashboard Enhancement
+- **Added**: 2026-06-08
+
+### Task: Intelligent Backup & Point-in-Time Recovery with RTO/RPO Guarantees
+- **Layer**: 63 — Hardening & Integration Completeness
+- **Status**: UNWORKED
+- **Priority**: Medium
+- **Description**: Enhance the existing backup system (IndexSnapshotService exists) with incremental backups, continuous transaction logs, and point-in-time recovery (PITR) capability with defined RTO/RPO SLAs. Create packages/semantic-core/src/backup-manager.ts with BackupService: (1) createFullBackup(timestamp) capturing entity graph + vector embeddings + metrics as gzip (baseline), (2) createIncrementalBackup(since_timestamp) capturing only changed entities via transaction log, (3) restoreToPoint(target_timestamp) performing PITR from full backup + replay incremental logs, (4) calculateBackupSize(), (5) pruneOldBackups(retention_days), (6) validateBackupIntegrity() via checksum verification. Create migration 127 (backup_manifests, transaction_log, backup_integrity_checks). Add REST POST /api/v1/admin/backups/full, POST /api/v1/admin/backups/incremental, POST /api/v1/admin/backups/:id/restore-to-point?timestamp=..., GET /api/v1/admin/backups (cursor-paginated with size/status/duration). Add dashboard /admin/backup-recovery page with: backup calendar heatmap, restore wizard (select timestamp → preview entities → confirm), RTO/RPO metrics (last_backup_age, recovery_time_estimate, data_loss_estimate). Add automated daily full backup + hourly incremental backups via BullMQ. Include 32+ tests (18 unit backup logic + 14 integration covering PITR accuracy + integrity checks).
+- **Files**:
+  - packages/semantic-core/src/backup-manager.ts
+  - packages/semantic-core/src/__tests__/backup-manager.test.ts
+  - packages/semantic-core/src/__tests__/backup-manager.integration.test.ts
+  - apps/api/src/routes/backup-recovery.ts
+  - apps/api/src/__tests__/backup-recovery.test.ts
+  - apps/api/migrations/127_backup_rto_rpo.sql
+  - apps/dashboard/app/admin/backup-recovery/page.tsx
+  - apps/dashboard/components/backup-calendar.tsx
+  - apps/dashboard/components/point-in-time-restore-wizard.tsx
+  - apps/dashboard/components/rto-rpo-metrics.tsx
+- **Depends on**: Index Snapshot Export & Disaster Recovery
+- **Added**: 2026-06-08
