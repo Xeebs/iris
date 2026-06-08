@@ -29,6 +29,7 @@ export default defineConfig({
       '@iris/semantic-core/vector-health': path.resolve(__dirname, '../../packages/semantic-core/src/vector-health.ts'),
       '@iris/semantic-core/data-lineage': path.resolve(__dirname, '../../packages/semantic-core/src/data-lineage.ts'),
       '@iris/semantic-core/data-import-export': path.resolve(__dirname, '../../packages/semantic-core/src/data-import-export.ts'),
+      '@iris/semantic-core/resource-builder': path.resolve(__dirname, '../../packages/semantic-core/src/resource-builder.ts'),
       '@iris/semantic-core': path.resolve(__dirname, '../../packages/semantic-core/src/index.ts'),
       '@iris/cache/response-cache': path.resolve(__dirname, '../../packages/cache/src/response-cache.ts'),
       '@iris/compression': path.resolve(__dirname, '../../packages/compression/src/index.ts'),

@@ -1,9 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createMcpServer } from '../server.js';
 import type { VectorStore, VectorSearchResult } from '@iris/semantic-core';
 import type { SemanticEntity } from '@iris/connector-sdk';
-import { SemanticCache } from '@iris/cache/semantic-cache';
-import { GlossaryService, MetricRegistry } from '@iris/semantic-core';
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+
+vi.mock('@iris/core/logger', () => ({
+  logger: { child: () => ({ debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() }) },
+}));
 
 function makeEntity(id: string, type = 'contact', rels: { type: string; targetId: string }[] = []): SemanticEntity {
   return {
@@ -30,45 +32,16 @@ function makeVectorStore(entities: SemanticEntity[]): VectorStore {
   } as unknown as VectorStore;
 }
 
-function makeSemanticCache(): SemanticCache {
-  return {
-    get: vi.fn().mockResolvedValue(null),
-    set: vi.fn(),
-    invalidate: vi.fn(),
-    getStats: vi.fn().mockResolvedValue({ hitCount: 0, missCount: 0, hitRate: 0 }),
-  } as unknown as SemanticCache;
-}
-
-function makeGlossaryService(): GlossaryService {
-  return { listTerms: vi.fn().mockResolvedValue([]) } as unknown as GlossaryService;
-}
-
-function makeMetricRegistry(): MetricRegistry {
-  return { getMetric: vi.fn().mockResolvedValue(null) } as unknown as MetricRegistry;
-}
-
 describe('MCP Resource Registration', () => {
-  let vectorStore: VectorStore;
-
-  beforeEach(() => {
-    process.env['AZURE_OPENAI_ENDPOINT'] = 'https://test.openai.azure.com';
-    process.env['AZURE_OPENAI_API_KEY'] = 'test-key';
-    vectorStore = makeVectorStore([
-      makeEntity('hubspot:contact:1', 'contact', [{ type: 'belongs_to', targetId: 'hubspot:company:2' }]),
-      makeEntity('hubspot:company:2', 'company'),
-    ]);
-  });
-
-  it('creates a server with resources registered without throwing', () => {
-    expect(() =>
-      createMcpServer(
-        vectorStore,
-        makeSemanticCache(),
-        'test-key',
-        makeGlossaryService(),
-        makeMetricRegistry(),
-      ),
-    ).not.toThrow();
+  it('entity, document, and graph resources register without throwing', async () => {
+    const { registerEntityResource } = await import('../resources/entity-resource.js');
+    const { registerDocumentResource } = await import('../resources/document-resource.js');
+    const { registerGraphResource } = await import('../resources/graph-resource.js');
+    const server = new McpServer({ name: 'test', version: '0.0.1' });
+    const vs = makeVectorStore([]);
+    expect(() => registerEntityResource(server, vs)).not.toThrow();
+    expect(() => registerDocumentResource(server)).not.toThrow();
+    expect(() => registerGraphResource(server, vs)).not.toThrow();
   });
 });
 

@@ -1877,7 +1877,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Connector Integration Testing Framework & Test Utilities
 - **Layer**: 38 — Testing & Developer Experience
-- **Status**: IN_PROGRESS
+- **Status**: COMMITTED
 - **Priority**: Medium
 - **Description**: Build a comprehensive testing framework for connector developers to simplify connector implementation and validation. Create packages/connector-sdk/src/testing/connector-test-harness.ts with ConnectorTestHarness class providing: (1) createTestContext(connectorConfig) setting up mocked API client, test database, and mock data, (2) mockConnectorAPI(responses) setting up MSW handlers per vendor, (3) assertSyncOutput(result, expectedEntities) validating sync generator output matches schema, (4) assertEntityShape(entity) strict validation per connector manifest, (5) timeoutAssertion(operation, maxMs) verifying operation completes within latency SLA. Add test fixtures in packages/connector-sdk/tests/fixtures/ with real API responses for: HubSpot (contacts, companies, deals), Slack (channels, users, messages), Notion (databases, pages). Create a test generator: generateConnectorTest(connectorId) that scaffolds a test file with boilerplate for: connect, sync, healthCheck, error handling. Implement ConnectorTestRunner CLI tool that runs all connector tests and generates a test report (coverage %, pass rate, performance metrics). Add documentation guide at packages/connector-sdk/README.test.md with examples. Include 30+ unit tests validating test harness correctness and 5 reference connector test suites demonstrating best practices.
 - **Files**:
@@ -1940,7 +1940,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Agent Workflow Templates & Pre-Configured Context Flows
 - **Layer**: 40 — Advanced Agent & Workflow Features
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: Medium
 - **Description**: Build pre-configured workflow templates that allow non-technical users to compose multi-step agent flows with Iris context automatically injected. Create packages/semantic-core/src/workflow-templates.ts with WorkflowTemplateService: (1) listTemplates(workspaceId, category) returning curated templates (e.g., 'Sales QA', 'Finance Reporting', 'Customer Support'), (2) instantiateTemplate(workspaceId, templateId, params) creating a workflow instance with templated steps, (3) enrichWorkflowContext(workflowId) calling retrieval engine to fetch relevant context for each step in advance. Define WorkflowTemplate schema: steps (array of {type: 'mcp-query'|'llm-reason'|'webhook-notify', config}), contextDefinitions (array of entity types/metrics needed), timeout, triggerCondition (manual|scheduled|webhook). Store in workflows table (workspace_id, template_id, status, created_by, created_at, last_executed_at). Build workflow template builder UI at apps/dashboard/app/workflows/templates/page.tsx with: template gallery (searchable/filterable), create custom template wizard (drag-drop steps, configure context injection), test template flow simulator. Expose POST /api/v1/workflows with template schema, GET /api/v1/workflows/:id/run to execute workflow (context is fetched and injected into each MCP query automatically). Add 18+ tests covering template instantiation, context injection, step execution, and error handling. See api-conventions.md for workflow execution API structure.
 - **Files**:
@@ -1958,7 +1958,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: MCP Resources Support & Document/File Streaming
 - **Layer**: 40 — Advanced Agent & Workflow Features
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: Medium
 - **Description**: Extend MCP server to expose both tools (current implementation) and resources — allowing Claude and other agents to read indexed documents and files directly via MCP resources. Implement MCP resources for: (1) indexed document sources (e.g., GET file:///workspace/document-id returning file content with metadata), (2) entity detail resources (GET entity:///hubspot:contact:12345 returning full entity JSON), (3) relationship subgraphs (GET graph:///entity-id?depth=2 returning entity + related entities as JSON). Update apps/mcp-server/src/server.ts to add resources alongside tools using MCP ResourceListResponseSchema and ResourceReadResponseSchema. Support streaming for large documents (chunked transfer via resource_content with pagination). Add permission checks (resource access respects role-based context permissions). Implement in retrieval engine: buildEntityResource(entityId, workspaceId, depth) and buildDocumentResource(docId, workspaceId). Add resource discovery: GET /api/v1/mcp/resources endpoint listing all available resources per workspace (enable IDE autocomplete for resource URIs). Build dashboard page at apps/dashboard/app/mcp/resources/page.tsx showing: available resources, sample URIs, rate limiting per resource type. Add 20+ tests covering resource schemas, pagination, permission enforcement, and streaming behavior.
 - **Files**:
@@ -2032,3 +2032,55 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
   - packages/semantic-core/src/__tests__/indexer.test.ts (update)
 - **Depends on**: Corpus-Discriminative Embedding Inputs via Attribute Frequency Filtering, Embedding Service
 - **Added**: 2026-06-07
+
+---
+
+## Layer 42: Source Control Integration
+
+### Task: GitHub Connector with Issues, PRs & Repository Context
+- **Layer**: 42 — Source Control Integration
+- **Status**: IN_PROGRESS
+- **Priority**: High
+- **Description**: Implement GitHub connector in packages/connectors/github/ to sync repositories, issues, pull requests, and discussions as SemanticEntity objects. Connect via OAuth2 to GitHub API (graphql + rest endpoints). Sync entity types: (1) `repository` (name, description, topics, language, stargazers, forks), (2) `issue` (title, body, state, assignees, labels, milestone, linked PRs), (3) `pull_request` (title, description, state, author, reviewers, commits, linked issues), (4) `discussion` (title, body, category, answers). Support incremental sync via updatedAt cursor using search API for efficient delta queries. Extract relationships: issue ↔ pull_request (via "closes" mentions), pull_request → repository, issue → assignee (linked entity IDs). Use MSW for tests with fixture responses from GitHub GraphQL schema. Include ConnectorManifest with GitHub App OAuth scopes (repo:read, discussions:read). Add 20+ unit tests covering pagination, relationship extraction, incremental filtering, and error handling. Integration tests with real Postgres. Follow connector-patterns.md for entity transformation and embedding-patterns.md for relationship representation.
+- **Files**:
+  - packages/connectors/github/src/github-connector.ts
+  - packages/connectors/github/src/manifest.ts
+  - packages/connectors/github/src/transformers.ts
+  - packages/connectors/github/src/__tests__/github-connector.test.ts
+  - packages/connectors/github/tests/fixtures/repositories.json
+  - packages/connectors/github/tests/fixtures/issues.json
+  - packages/connectors/github/tests/fixtures/pull-requests.json
+  - packages/connectors/github/package.json
+- **Depends on**: HubSpot Connector, Entity Relationship Indexing
+- **Added**: 2026-06-08
+
+### Task: Advanced Query Filter Builder UI Component
+- **Layer**: 42 — Source Control Integration
+- **Status**: UNWORKED
+- **Priority**: Medium
+- **Description**: Build an interactive query filter builder UI component for the advanced-query-context MCP tool. Create apps/dashboard/components/advanced-query-builder.tsx with: (1) visual filter chain editor (drag-drop filter rules), (2) entity type selector (dropdown listing indexed entity types per workspace), (3) attribute picker (dynamically load attributes for selected entity type from schema), (4) filter operators (=, !=, >, <, >=, <=, contains, in, startsWith, endsWith), (5) value input (text field with autocomplete for enum attributes), (6) aggregation selector (sum, count, avg, min, max with groupBy), (7) real-time query string preview (shows the filter syntax being constructed), (8) "Execute Query" button triggering POST /api/v1/advanced-query with the constructed filter. Add validation: prevent filters on non-existent attributes, type-check values against attribute type, warn if filter matches 0 entities. Build as a modal/sidebar component. Include unit tests with React Testing Library verifying: filter rule addition/removal, operator changes, aggregation selection, query string generation. Add integration test verifying constructed filter matches backend parsing logic (test round-trip: UI builder → filter string → backend parser → SQL equivalent).
+- **Files**:
+  - apps/dashboard/components/advanced-query-builder.tsx
+  - apps/dashboard/components/__tests__/advanced-query-builder.test.tsx
+  - apps/dashboard/components/filter-rule-editor.tsx
+  - apps/dashboard/components/attribute-picker.tsx
+  - apps/dashboard/components/query-preview.tsx
+- **Depends on**: Advanced MCP Query Features & Aggregations
+- **Added**: 2026-06-08
+
+### Task: Connector Sync Quality Metrics & Anomaly Detection
+- **Layer**: 42 — Source Control Integration
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Implement automated quality monitoring for connector syncs to detect data degradation and schema changes. Create packages/semantic-core/src/sync-quality-monitor.ts with SyncQualityMonitor service: (1) recordSyncMetrics(syncId, metrics) tracking: entity_count, attribute_completeness (% non-null), unique_value_ratio (entropy per attribute), schema_stability (unchanged attribute count / total attributes), (2) detectAnomalies(connectorId) comparing current sync stats against 30-day historical baseline using z-score: alert if entity_count deviates >3σ, if completeness drops >20%, if new attributes appear (schema drift), (3) trackDataQualityTrend(connectorId, windowDays) returning trend indicators. Store metrics in sync_quality_metrics table (sync_id, connector_id, entity_count, completeness_pct, schema_stability_pct, anomaly_flags, recorded_at). Expose GET /api/v1/admin/connectors/:id/quality returning current + historical metrics, POST /api/v1/admin/connectors/:id/quality/configure to set anomaly thresholds. Build admin dashboard at apps/dashboard/app/admin/sync-quality/page.tsx with: quality trend chart per connector (entity count line, completeness gauge, schema drift indicator), anomaly alert list with drill-down details. Wire quality checks into the sync-job-queue to emit warnings/errors on anomalies. Add 15+ unit tests with synthetic metrics fixtures, integration tests verifying baseline calculation and anomaly detection. Reference embedding-patterns.md for cost control (quality checks should be lightweight).
+- **Files**:
+  - packages/semantic-core/src/sync-quality-monitor.ts
+  - packages/semantic-core/src/__tests__/sync-quality-monitor.test.ts
+  - packages/semantic-core/src/__tests__/sync-quality-monitor.integration.test.ts
+  - apps/api/migrations/044_add_sync_quality_metrics.sql
+  - apps/api/src/routes/admin-sync-quality.ts
+  - apps/dashboard/app/admin/sync-quality/page.tsx
+  - apps/dashboard/components/sync-quality-monitor.tsx
+  - apps/api/src/__tests__/admin-sync-quality.test.ts
+- **Depends on**: BullMQ Job Queue Infrastructure, Sync Worker Implementation & Connector Invocation
+- **Added**: 2026-06-08
