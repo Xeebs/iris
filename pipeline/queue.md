@@ -2056,7 +2056,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Advanced Query Filter Builder UI Component
 - **Layer**: 42 — Source Control Integration
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: Medium
 - **Description**: Build an interactive query filter builder UI component for the advanced-query-context MCP tool. Create apps/dashboard/components/advanced-query-builder.tsx with: (1) visual filter chain editor (drag-drop filter rules), (2) entity type selector (dropdown listing indexed entity types per workspace), (3) attribute picker (dynamically load attributes for selected entity type from schema), (4) filter operators (=, !=, >, <, >=, <=, contains, in, startsWith, endsWith), (5) value input (text field with autocomplete for enum attributes), (6) aggregation selector (sum, count, avg, min, max with groupBy), (7) real-time query string preview (shows the filter syntax being constructed), (8) "Execute Query" button triggering POST /api/v1/advanced-query with the constructed filter. Add validation: prevent filters on non-existent attributes, type-check values against attribute type, warn if filter matches 0 entities. Build as a modal/sidebar component. Include unit tests with React Testing Library verifying: filter rule addition/removal, operator changes, aggregation selection, query string generation. Add integration test verifying constructed filter matches backend parsing logic (test round-trip: UI builder → filter string → backend parser → SQL equivalent).
 - **Files**:
