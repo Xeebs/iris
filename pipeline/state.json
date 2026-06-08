@@ -1,6 +1,6 @@
 {
   "current_phase": "IMPLEMENT",
-  "active_task": "Data Lineage & Impact Analysis Engine",
+  "active_task": "Entity Deduplication Review Workflow & Manual Reconciliation UI",
   "active_layer": 48,
   "last_cycle": "2026-06-08",
   "last_research": "2026-06-08",
@@ -8,5 +8,5 @@
   "cycle_count": 168,
   "rate_limit_hit": false,
   "mode": "BUILD",
-  "notes": "Implementing lineage REST API routes, impact analysis, dashboard page and components."
+  "notes": "Implementing dedup-reconciliation service with candidate management, merge decisions, and undo capability."
 }

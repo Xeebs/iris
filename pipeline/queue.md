@@ -2515,7 +2515,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Data Lineage & Impact Analysis Engine
 - **Layer**: 48 — Real-Time Updates & Advanced Data Governance
-- **Status**: IN_PROGRESS
+- **Status**: COMMITTED
 - **Priority**: High
 - **Description**: Build a data lineage tracking system that traces entity data flow from source connectors through transformations and relationships, enabling impact analysis when data changes. Create packages/semantic-core/src/data-lineage.ts with DataLineageService: (1) track entity provenance (source connector, sync timestamp, source record ID), (2) model relationship dependencies (entityA references entityB, entityB's change impacts entityA), (3) compute impact scope (given entity X changed, what other entities are affected?), (4) build lineage graph (parents/ancestors and children/descendants up to depth N). Add apps/api/migrations/067_add_lineage_tables.sql with tables: entity_lineage (entity_id, source_connector, source_record_id, last_modified_at, sync_run_id), entity_dependencies (entity_id, depends_on_entity_id, relationship_type, confidence). Expose GET /api/v1/lineage/:entityId (fetch lineage for entity), POST /api/v1/lineage/:entityId/impact-analysis (compute change impact). Build dashboard page at apps/dashboard/app/data-lineage/page.tsx with: interactive lineage graph (upstream/downstream), impact analysis tool (select entity, see affected entities), sync history timeline. Add 18+ unit tests for graph traversal and impact computation, integration tests with synthetic lineage fixtures. Reference code-style.md for error handling.
 - **Files**:
@@ -2533,7 +2533,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Entity Deduplication Review Workflow & Manual Reconciliation UI
 - **Layer**: 48 — Real-Time Updates & Advanced Data Governance
-- **Status**: UNWORKED
+- **Status**: IN_PROGRESS
 - **Priority**: High
 - **Description**: Implement a comprehensive entity deduplication workflow with UI for users to review and manually reconcile duplicate entities detected by the semantic deduplication engine. Create packages/semantic-core/src/dedup-reconciliation.ts with DedupReconciliationService: (1) maintain dedup_candidates table (source_entity_id, candidate_duplicate_id, similarity_score, detection_timestamp, reviewed, decision), (2) generate dedup batches (group candidates by threshold for efficient review), (3) track reconciliation decisions (merge, keep-separate, ignore). Build comprehensive dashboard page at apps/dashboard/app/admin/dedup/page.tsx with: (1) candidate list showing entity pairs with similarity scores and side-by-side preview, (2) bulk review interface (approve, reject, keep-separate buttons), (3) merge action that combines entities (update relationships, redirect old ID to new), (4) undo capability (restore merged entities within 30 days), (5) metrics dashboard (dedup rate, merge success rate, manual review backlog). Create modal components: EntityPairComparison (shows attributes diff), MergePreview (preview of merged entity), DecisionHistory (audit trail). Add API endpoints: GET /api/v1/dedup/candidates (paginated list), POST /api/v1/dedup/candidates/:sourceId/:dupId/decide (submit decision), POST /api/v1/dedup/merge (execute merge). Add 16+ unit tests for reconciliation logic, integration tests with dedup candidate fixtures, E2E test verifying full merge workflow including undo. Reference embedding-patterns.md for dedup threshold notes.
 - **Files**:

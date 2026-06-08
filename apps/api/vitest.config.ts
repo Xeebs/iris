@@ -50,6 +50,7 @@ export default defineConfig({
       '@iris/semantic-core/provider-registry': path.resolve(__dirname, '../../packages/semantic-core/src/providers/provider-registry.ts'),
       '@iris/semantic-core/compliance-reporter': path.resolve(__dirname, '../../packages/semantic-core/src/compliance-reporter.ts'),
       '@iris/semantic-core/data-lineage': path.resolve(__dirname, '../../packages/semantic-core/src/data-lineage.ts'),
+      '@iris/semantic-core/dedup-reconciliation': path.resolve(__dirname, '../../packages/semantic-core/src/dedup-reconciliation.ts'),
     },
   },
   test: {

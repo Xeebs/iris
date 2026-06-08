@@ -71,6 +71,7 @@ import { createAutoTuningRoutes } from './routes/auto-tuning.js';
 import { createProvidersRoutes } from './routes/providers.js';
 import { createComplianceRoutes } from './routes/compliance.js';
 import { createLineageRoutes } from './routes/lineage.js';
+import { createDedupRoutes } from './routes/dedup-reconciliation.js';
 import { openApiSpec } from './openapi.js';
 
 export { createApp };
@@ -213,6 +214,7 @@ function createApp(
   authed.route('/providers', createProvidersRoutes(sql));
   authed.route('/compliance', createComplianceRoutes(sql));
   authed.route('/lineage', createLineageRoutes(sql));
+  authed.route('/dedup', createDedupRoutes(sql));
 
   // Webhook routes: inbound (unauthenticated) + events status (authenticated)
   app.route('/api/v1/webhooks', createWebhookRoutes(sql));

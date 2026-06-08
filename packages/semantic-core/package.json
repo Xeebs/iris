@@ -60,7 +60,8 @@
     "./auto-tuning-optimizer": "./dist/auto-tuning-optimizer.js",
     "./multi-provider-optimizer": "./dist/multi-provider-optimizer.js",
     "./provider-registry": "./dist/providers/provider-registry.js",
-    "./compliance-reporter": "./dist/compliance-reporter.js"
+    "./compliance-reporter": "./dist/compliance-reporter.js",
+    "./dedup-reconciliation": "./dist/dedup-reconciliation.js"
   },
   "scripts": {
     "build": "tsc --build",
