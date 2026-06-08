@@ -26,6 +26,7 @@ import { createWorkspaceConfigRoutes } from './routes/workspace-config.js';
 import { createIndexOptimizationRoutes } from './routes/index-optimization.js';
 import { createWorkflowTemplateRoutes } from './routes/workflow-templates.js';
 import { createWorkspaceBenchmarkingRoutes } from './routes/workspace-benchmarking.js';
+import { createBenchmarkingRoutes } from './routes/benchmarking.js';
 import { createAdminDlqRoutes } from './routes/admin-dlq.js';
 import { createAdminDedupRoutes } from './routes/admin-dedup.js';
 import { createWorkspaceExportRoutes } from './routes/workspace-export.js';
@@ -160,6 +161,7 @@ function createApp(
   authed.route('/index-optimization', createIndexOptimizationRoutes(sql));
   authed.route('/workflow-templates', createWorkflowTemplateRoutes(sql));
   authed.route('/workspace', createWorkspaceBenchmarkingRoutes(sql));
+  authed.route('/benchmarks', createBenchmarkingRoutes(sql));
 
   if (redisUrl) {
     authed.route('/admin/dlq', createAdminDlqRoutes(sql, redisUrl));
