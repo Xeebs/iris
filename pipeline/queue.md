@@ -1760,7 +1760,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Data Lineage Tracking & Provenance
 - **Layer**: 35 — Data Management & Governance
-- **Status**: UNWORKED
+- **Status**: IN_PROGRESS
 - **Priority**: Medium
 - **Description**: Implement comprehensive data lineage tracking to show where each entity came from and how it was transformed. Create packages/semantic-core/src/data-lineage.ts with DataLineageService tracking: (1) source tracking (which connector, which sync job, original API timestamp), (2) transformation history (embeddings generated, deduplication applied, relationships added), (3) enrichment provenance (cross-connector links, field masking applied). Store in entity_lineage table (entity_id, source_connector_id, source_sync_job_id, source_api_timestamp, lineage_json, last_modified_by, last_modified_at). Expose GET /api/v1/entities/:id/lineage returning full provenance chain. Build dashboard visualization at apps/dashboard/components/entity-lineage-viewer.tsx with: entity origin (connector, sync time), transformation steps timeline, enrichments applied. Enable audit/compliance use case (prove where data came from). Full unit + integration tests. Reference code-style.md for JSON serialization patterns.
 - **Files**:
@@ -1994,7 +1994,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Corpus-Discriminative Embedding Inputs via Attribute Frequency Filtering
 - **Layer**: 41 — SIRA-Inspired Retrieval Improvements
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: High
 - **Description**: Improve embedding quality by excluding high-frequency attribute values from embedding inputs at index time. Inspired by SIRA's corpus-discriminative filtering: attributes shared by >60% of same-type entities within a workspace carry no discriminative signal and dilute embedding similarity boundaries (e.g., `stage: Negotiation` on 65% of deals, `country: US` on 80% of contacts). Implementation: (1) add migration 050_add_attribute_frequency.sql with table `entity_attribute_frequency (workspace_id, entity_type, attr_key, attr_value_hash, occurrence_count, total_entities, frequency_ratio, updated_at)`. (2) Create packages/semantic-core/src/attribute-frequency.ts with AttributeFrequencyTracker: `recordAttributes(workspaceId, entityType, attrs)` updating frequency counts incrementally on each sync, and `isDiscriminative(workspaceId, entityType, attrKey, attrValue): Promise<boolean>` returning false when frequency_ratio > 0.6. (3) Update `buildEmbeddingInput()` in packages/semantic-core/src/embedding.ts to call `isDiscriminative()` and omit non-discriminative attribute values (keep the key but replace value with a placeholder, or drop the pair entirely). Cache frequency lookups in-memory per indexer run (LRU, 1000 entries). Add unit tests with synthetic high-frequency attribute data and integration tests verifying embedding inputs exclude corpus-common terms.
 - **Files**:

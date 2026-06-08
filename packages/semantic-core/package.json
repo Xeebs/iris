@@ -42,7 +42,9 @@
     "./connector-marketplace": "./dist/connector-marketplace.js",
     "./embedding-provider": "./dist/embedding-provider.js",
     "./reindex-utils": "./dist/reindex-utils.js",
-    "./vector-health": "./dist/vector-health.js"
+    "./vector-health": "./dist/vector-health.js",
+    "./attribute-frequency": "./dist/attribute-frequency.js",
+    "./data-lineage": "./dist/data-lineage.js"
   },
   "scripts": {
     "build": "tsc --build",
