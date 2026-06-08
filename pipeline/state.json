@@ -1,12 +1,12 @@
 {
   "current_phase": "COMMIT",
-  "active_task": "Native Document Indexing from Connector Sources",
+  "active_task": "Search Relevance Tuning & Scoring UI",
   "active_layer": 45,
   "last_cycle": "2026-06-08",
   "last_research": "2026-06-08",
   "last_commit": "2026-06-08",
-  "cycle_count": 146,
+  "cycle_count": 148,
   "rate_limit_hit": false,
   "mode": "BUILD",
-  "notes": "All tests pass. Committing document indexer and related files."
+  "notes": "All tests pass. Committing search relevance tuning task."
 }

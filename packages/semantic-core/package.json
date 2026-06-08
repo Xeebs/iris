@@ -52,7 +52,8 @@
     "./connector-cost-attribution": "./dist/connector-cost-attribution.js",
     "./onboarding-manager": "./dist/onboarding-manager.js",
     "./cost-optimizer": "./dist/cost-optimizer.js",
-    "./document-indexer": "./dist/document-indexer.js"
+    "./document-indexer": "./dist/document-indexer.js",
+    "./relevance-tuner": "./dist/relevance-tuner.js"
   },
   "scripts": {
     "build": "tsc --build",
