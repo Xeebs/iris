@@ -114,4 +114,10 @@ Custom Transformation Pipeline & Entity Mapping Language — TransformationDSLEn
 - feat(semantic-core,api,dashboard): end-to-end connector monitoring & health scoring system — 382e02d
 - feat(semantic-core,api,dashboard): API rate limiting & quota management system — 02fd1a7
 - feat(semantic-core,api,dashboard): advanced entity search & filtering engine — cb3d34d
-- feat(semantic-core,api,dashboard): streaming context SSE delivery for large MCP result sets — pending
+- feat(semantic-core,api,dashboard): streaming context SSE delivery for large MCP result sets — 727b310
+- feat(semantic-core,api,dashboard): batch entity import/export with CSV/JSON support — 90a0012
+- feat(semantic-core,api,dashboard): OSI interchange import + export wizard UI — cf32e8e
+- feat(semantic-core,api,dashboard): PII field masking audit trail & admin dashboard — 041d271
+- feat(semantic-core,api,dashboard): connector circuit breaker with DB-backed state machine — a3b0d38
+- feat(semantic-core,api,dashboard): SLO monitoring engine with attainment tracking and violation detection — 6f59154
+- feat(semantic-core,api,dashboard): intelligent backup with PITR and RTO/RPO metrics — e6fdc0f

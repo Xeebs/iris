@@ -3799,7 +3799,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Distributed Tracing & OpenTelemetry Integration
 - **Layer**: 63 — Hardening & Integration Completeness
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: High
 - **Description**: Implement end-to-end distributed tracing across MCP server, REST API, and connector syncs using OpenTelemetry and Jaeger (self-hosted). Create packages/semantic-core/src/tracing.ts with TracingService: (1) initializeTracer() configuring OTLP exporter to Jaeger, (2) createSpan(operationName, attributes) for request-scoped tracing, (3) recordSpanEvent(name, attributes) for milestones, (4) spanContext() to propagate trace IDs via W3C TraceContext headers. Add instrumentation to: indexing pipelines (entity extraction, embedding, deduplication), connector syncs (API calls, pagination, error recovery), MCP tool invocations (query-context response time, token counting, cache checks), and API routes (request-to-response latency by endpoint). Create migration 123 (trace_spans table for async trace storage fallback). Add dashboard /analytics/[workspaceId]/traces page with timeline flame-graph, latency p50/p95/p99 by operation, and error rate heatmap. Include 32+ tests (18 unit tracing + 14 integration spanning multiple services). Reference CLAUDE.md logging guidelines and ensure no PII in span attributes.
 - **Files**:
