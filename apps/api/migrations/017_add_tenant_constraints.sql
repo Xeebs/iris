@@ -10,71 +10,71 @@
 -- ─── sync_jobs ────────────────────────────────────────────────────────────────
 
 ALTER TABLE sync_jobs
-  ADD CONSTRAINT IF NOT EXISTS sync_jobs_workspace_fk
+  ADD CONSTRAINT sync_jobs_workspace_fk
     FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE;
 
 -- ─── token_events ─────────────────────────────────────────────────────────────
 
 ALTER TABLE token_events
-  ADD CONSTRAINT IF NOT EXISTS token_events_workspace_fk
+  ADD CONSTRAINT token_events_workspace_fk
     FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE;
 
 -- ─── entity_relationships ─────────────────────────────────────────────────────
 
 ALTER TABLE entity_relationships
-  ADD CONSTRAINT IF NOT EXISTS entity_relationships_workspace_fk
+  ADD CONSTRAINT entity_relationships_workspace_fk
     FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE;
 
 -- ─── mcp_api_keys ─────────────────────────────────────────────────────────────
 
 ALTER TABLE mcp_api_keys
-  ADD CONSTRAINT IF NOT EXISTS mcp_api_keys_workspace_fk
+  ADD CONSTRAINT mcp_api_keys_workspace_fk
     FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE;
 
 -- ─── mcp_audit_sessions ───────────────────────────────────────────────────────
 
 ALTER TABLE mcp_audit_sessions
-  ADD CONSTRAINT IF NOT EXISTS mcp_audit_sessions_workspace_fk
+  ADD CONSTRAINT mcp_audit_sessions_workspace_fk
     FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE;
 
 -- ─── connector_health ─────────────────────────────────────────────────────────
 
 ALTER TABLE connector_health
-  ADD CONSTRAINT IF NOT EXISTS connector_health_workspace_fk
+  ADD CONSTRAINT connector_health_workspace_fk
     FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE;
 
 -- ─── index_status ─────────────────────────────────────────────────────────────
 
 ALTER TABLE index_status
-  ADD CONSTRAINT IF NOT EXISTS index_status_workspace_fk
+  ADD CONSTRAINT index_status_workspace_fk
     FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE;
 
 -- ─── context_roles ────────────────────────────────────────────────────────────
 
 ALTER TABLE context_roles
-  ADD CONSTRAINT IF NOT EXISTS context_roles_workspace_fk
+  ADD CONSTRAINT context_roles_workspace_fk
     FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE;
 
 -- ─── pii_configs ──────────────────────────────────────────────────────────────
 
 ALTER TABLE pii_configs
-  ADD CONSTRAINT IF NOT EXISTS pii_configs_workspace_fk
+  ADD CONSTRAINT pii_configs_workspace_fk
     FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE;
 
 ALTER TABLE pii_field_configs
-  ADD CONSTRAINT IF NOT EXISTS pii_field_configs_workspace_fk
+  ADD CONSTRAINT pii_field_configs_workspace_fk
     FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE;
 
 -- ─── schema_overrides ─────────────────────────────────────────────────────────
 
 ALTER TABLE schema_overrides
-  ADD CONSTRAINT IF NOT EXISTS schema_overrides_workspace_fk
+  ADD CONSTRAINT schema_overrides_workspace_fk
     FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE;
 
 -- ─── context_suggestions ──────────────────────────────────────────────────────
 
 ALTER TABLE context_suggestions
-  ADD CONSTRAINT IF NOT EXISTS context_suggestions_workspace_fk
+  ADD CONSTRAINT context_suggestions_workspace_fk
     FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE;
 
 -- ─── Row-level security on highest-sensitivity tables ─────────────────────────
@@ -83,7 +83,7 @@ ALTER TABLE context_suggestions
 -- The policies are PERMISSIVE so they add to application-level checks, not replace them.
 
 ALTER TABLE mcp_api_keys ENABLE ROW LEVEL SECURITY;
-CREATE POLICY IF NOT EXISTS mcp_api_keys_workspace_rls ON mcp_api_keys
+CREATE POLICY mcp_api_keys_workspace_rls ON mcp_api_keys
   AS PERMISSIVE FOR ALL
   USING (
     workspace_id = current_setting('app.current_workspace_id', true)
@@ -92,7 +92,7 @@ CREATE POLICY IF NOT EXISTS mcp_api_keys_workspace_rls ON mcp_api_keys
   );
 
 ALTER TABLE connector_instances ENABLE ROW LEVEL SECURITY;
-CREATE POLICY IF NOT EXISTS connector_instances_workspace_rls ON connector_instances
+CREATE POLICY connector_instances_workspace_rls ON connector_instances
   AS PERMISSIVE FOR ALL
   USING (
     workspace_id = current_setting('app.current_workspace_id', true)
