@@ -44,6 +44,8 @@ export default defineConfig({
       '@iris/queue/connector-resilience': path.resolve(__dirname, '../../packages/queue/src/connector-resilience.ts'),
       '@iris/connector-hubspot/webhook-handler': path.resolve(__dirname, '../../packages/connectors/hubspot/src/webhook-handler.ts'),
       '@iris/connector-slack/webhook-handler': path.resolve(__dirname, '../../packages/connectors/slack/src/webhook-handler.ts'),
+      '@iris/semantic-core/index-analytics': path.resolve(__dirname, '../../packages/semantic-core/src/index-analytics.ts'),
+      '@iris/semantic-core/auto-tuning-optimizer': path.resolve(__dirname, '../../packages/semantic-core/src/auto-tuning-optimizer.ts'),
     },
   },
   test: {
