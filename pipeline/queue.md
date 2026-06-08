@@ -1760,7 +1760,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Data Lineage Tracking & Provenance
 - **Layer**: 35 — Data Management & Governance
-- **Status**: IN_PROGRESS
+- **Status**: COMMITTED
 - **Priority**: Medium
 - **Description**: Implement comprehensive data lineage tracking to show where each entity came from and how it was transformed. Create packages/semantic-core/src/data-lineage.ts with DataLineageService tracking: (1) source tracking (which connector, which sync job, original API timestamp), (2) transformation history (embeddings generated, deduplication applied, relationships added), (3) enrichment provenance (cross-connector links, field masking applied). Store in entity_lineage table (entity_id, source_connector_id, source_sync_job_id, source_api_timestamp, lineage_json, last_modified_by, last_modified_at). Expose GET /api/v1/entities/:id/lineage returning full provenance chain. Build dashboard visualization at apps/dashboard/components/entity-lineage-viewer.tsx with: entity origin (connector, sync time), transformation steps timeline, enrichments applied. Enable audit/compliance use case (prove where data came from). Full unit + integration tests. Reference code-style.md for JSON serialization patterns.
 - **Files**:
@@ -1855,7 +1855,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Bulk Data Import & Export UI
 - **Layer**: 37 — Response Caching & Query Optimization
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: Medium
 - **Description**: Build a user-friendly import/export interface for bulk data operations, enabling testing and migration workflows. Create apps/dashboard/app/data-tools/page.tsx with tabs: (1) Import Data (CSV/JSON file upload, field mapping wizard, preview, execute import), (2) Export Data (select entities to export, format picker: CSV/JSON/Parquet, download), (3) Migration Tools (export from workspace A, import to workspace B with entity matching/deduplication options). Implement backend: POST /api/v1/data/import accepting multipart form with file + mappings, executing async job, tracking progress. POST /api/v1/data/export with filters returning streamed file. Create packages/semantic-core/src/data-import-export.ts with: (1) parseCSV/parseJSON (detect schema automatically), (2) validateMapping(rows, schema) ensuring field compatibility, (3) transformRows(rows, mapping) converting to SemanticEntity, (4) batchInsert(entities, workspaceId) feeding into indexer. Add file size limits (max 100MB), entity count limits (max 50K per import), and job history tracking. Build import/export job history page showing: status, record count, timestamp, download links for exports, retry button for failed imports. Add 20+ tests covering: CSV parsing, schema detection, entity transformation, error handling (missing fields, type mismatches), and async job orchestration.
 - **Files**:
@@ -1877,7 +1877,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Connector Integration Testing Framework & Test Utilities
 - **Layer**: 38 — Testing & Developer Experience
-- **Status**: UNWORKED
+- **Status**: IN_PROGRESS
 - **Priority**: Medium
 - **Description**: Build a comprehensive testing framework for connector developers to simplify connector implementation and validation. Create packages/connector-sdk/src/testing/connector-test-harness.ts with ConnectorTestHarness class providing: (1) createTestContext(connectorConfig) setting up mocked API client, test database, and mock data, (2) mockConnectorAPI(responses) setting up MSW handlers per vendor, (3) assertSyncOutput(result, expectedEntities) validating sync generator output matches schema, (4) assertEntityShape(entity) strict validation per connector manifest, (5) timeoutAssertion(operation, maxMs) verifying operation completes within latency SLA. Add test fixtures in packages/connector-sdk/tests/fixtures/ with real API responses for: HubSpot (contacts, companies, deals), Slack (channels, users, messages), Notion (databases, pages). Create a test generator: generateConnectorTest(connectorId) that scaffolds a test file with boilerplate for: connect, sync, healthCheck, error handling. Implement ConnectorTestRunner CLI tool that runs all connector tests and generates a test report (coverage %, pass rate, performance metrics). Add documentation guide at packages/connector-sdk/README.test.md with examples. Include 30+ unit tests validating test harness correctness and 5 reference connector test suites demonstrating best practices.
 - **Files**:
