@@ -92,3 +92,20 @@ export {
   roleHasPermission,
   permissionsForRole,
 } from './collaboration-manager.js';
+export type {
+  RetrievalStrategy,
+  RetrievalMetrics,
+  StrategyComparison,
+  TestSetQuery,
+  SearchExperiment,
+} from './search-quality-evaluator.js';
+export {
+  SearchQualityEvaluator,
+  precisionAtK,
+  recallAtK,
+  ndcgAtK,
+  meanReciprocalRank,
+  computeMetrics,
+  averageMetrics,
+  compareStrategies,
+} from './search-quality-evaluator.js';
