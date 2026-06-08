@@ -1920,7 +1920,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Vector Index Health Monitoring & Drift Detection
 - **Layer**: 39 — LLM Provider Abstraction & Multi-Model Support
-- **Status**: IN_PROGRESS
+- **Status**: COMMITTED
 - **Priority**: High
 - **Description**: Implement health checks and drift detection for the vector index to ensure semantic quality over time. Create packages/semantic-core/src/vector-health.ts with VectorHealthService: (1) analyzeVectorDrift(workspaceId, sampleSize: 1000) computing vector statistics (centroid, variance, density) and detecting distribution shifts indicating stale or low-quality embeddings, (2) validateEmbeddingConsistency(entityIds) re-embedding a sample of entities and comparing similarity to stored embeddings (flag drifts > 0.05 as potential quality issues), (3) detectOutliers(workspaceId) finding entities with anomalous vectors via isolation forest or statistical bounds, (4) generateHealthReport(workspaceId) aggregating metrics into: overall_health_score (0–100), quality_issues_count, recommended_actions. Store health check results in vector_health_checks table (workspace_id, check_timestamp, drift_score, outlier_count, consistency_score, report_json). Expose GET /api/v1/admin/vector-health returning current status and historical trends. Build admin dashboard panel at apps/dashboard/components/vector-health-monitor.tsx showing: health trend chart, drift alerts, recommended re-indexing, manual health check trigger. Integrate health checks into sync completion workflow (after large syncs, run health check). Add 24+ tests covering drift detection, consistency validation, outlier detection with synthetic vector data. Reference embedding-patterns.md for quality thresholds and cost implications of re-indexing.
 - **Files**:
@@ -1980,7 +1980,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Hybrid BM25 + Vector Retrieval with Reciprocal Rank Fusion
 - **Layer**: 41 — SIRA-Inspired Retrieval Improvements
-- **Status**: UNWORKED
+- **Status**: IN_PROGRESS
 - **Priority**: High
 - **Description**: Add a sparse BM25 retrieval layer alongside the existing dense vector search, then combine both ranked lists using Reciprocal Rank Fusion (RRF). Inspired by Meta's SIRA paper, which shows sparse lexical retrieval is highly complementary to dense search for exact-match lookups. Implementation: (1) add migration 049_add_fts_vector.sql adding a `fts_vector tsvector` column to the entities table, populated from entity label + all attribute values via a Postgres trigger; add a GIN index on `fts_vector`. (2) Add `bm25Search(workspaceId, queryText, topK, entityTypes?)` method to PgvectorStore in packages/semantic-core/src/vector-store.ts using `ts_rank_cd` and `plainto_tsquery`. (3) Update `retrieveContext` in packages/semantic-core/src/retrieval.ts to run BM25 and vector searches in parallel, then merge results with RRF: `rrf_score = 1/(k + rank_bm25) + 1/(k + rank_vector)` where k=60. Return top-K by combined score. (4) Expose `hybridSearch: boolean` option in RetrievalOptions (default true). Add unit tests for BM25 search, RRF merge logic, and integration tests verifying exact-match queries ("find invoice INV-2024-0312", "Acme Corp deal") rank correctly where vector search alone underperforms.
 - **Files**:
@@ -1994,7 +1994,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Corpus-Discriminative Embedding Inputs via Attribute Frequency Filtering
 - **Layer**: 41 — SIRA-Inspired Retrieval Improvements
-- **Status**: UNWORKED
+- **Status**: IN_PROGRESS
 - **Priority**: High
 - **Description**: Improve embedding quality by excluding high-frequency attribute values from embedding inputs at index time. Inspired by SIRA's corpus-discriminative filtering: attributes shared by >60% of same-type entities within a workspace carry no discriminative signal and dilute embedding similarity boundaries (e.g., `stage: Negotiation` on 65% of deals, `country: US` on 80% of contacts). Implementation: (1) add migration 050_add_attribute_frequency.sql with table `entity_attribute_frequency (workspace_id, entity_type, attr_key, attr_value_hash, occurrence_count, total_entities, frequency_ratio, updated_at)`. (2) Create packages/semantic-core/src/attribute-frequency.ts with AttributeFrequencyTracker: `recordAttributes(workspaceId, entityType, attrs)` updating frequency counts incrementally on each sync, and `isDiscriminative(workspaceId, entityType, attrKey, attrValue): Promise<boolean>` returning false when frequency_ratio > 0.6. (3) Update `buildEmbeddingInput()` in packages/semantic-core/src/embedding.ts to call `isDiscriminative()` and omit non-discriminative attribute values (keep the key but replace value with a placeholder, or drop the pair entirely). Cache frequency lookups in-memory per indexer run (LRU, 1000 entries). Add unit tests with synthetic high-frequency attribute data and integration tests verifying embedding inputs exclude corpus-common terms.
 - **Files**:

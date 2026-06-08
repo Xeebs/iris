@@ -48,6 +48,13 @@ export interface VectorStore {
    * Returns null if not found.
    */
   getById(workspaceId: string, id: string): Promise<SemanticEntity | null>;
+
+  /**
+   * BM25 full-text search using Postgres tsvector.
+   * Optional — not all VectorStore implementations support lexical search.
+   * Requires the fts_vector column (migration 049_add_fts_vector.sql).
+   */
+  bm25Search?(workspaceId: string, queryText: string, topK: number, entityTypes?: string[]): Promise<VectorSearchResult[]>;
 }
 
 /**
@@ -232,6 +239,58 @@ export class PgvectorStore implements VectorStore {
       lastModified: r.last_modified,
       sourceId: r.source_id,
     };
+  }
+
+  /**
+   * Full-text BM25 search using Postgres ts_rank_cd.
+   * Requires migration 049_add_fts_vector.sql to have run.
+   *
+   * @param workspaceId - Workspace to search within
+   * @param queryText   - Natural language query (converted to tsquery via plainto_tsquery)
+   * @param topK        - Maximum results to return
+   * @param entityTypes - Optional entity type filter
+   */
+  async bm25Search(
+    workspaceId: string,
+    queryText: string,
+    topK: number,
+    entityTypes?: string[],
+  ): Promise<VectorSearchResult[]> {
+    type BM25Row = {
+      id: string;
+      type: string;
+      label: string;
+      attributes: Record<string, unknown>;
+      relationships: Array<{ type: string; targetId: string }>;
+      last_modified: Date;
+      source_id: string;
+      score: number;
+    };
+
+    const rows = await this.sql<BM25Row[]>`
+      SELECT
+        id, type, label, attributes, relationships, last_modified, source_id,
+        ts_rank_cd(fts_vector, plainto_tsquery('english', ${queryText})) AS score
+      FROM iris_entities
+      WHERE workspace_id = ${workspaceId}
+        AND fts_vector @@ plainto_tsquery('english', ${queryText})
+        ${entityTypes?.length ? this.sql`AND type = ANY(${entityTypes})` : this.sql``}
+      ORDER BY score DESC
+      LIMIT ${topK}
+    `;
+
+    return rows.map((r) => ({
+      entity: {
+        id: r.id,
+        type: r.type,
+        label: r.label,
+        attributes: r.attributes as SemanticEntity['attributes'],
+        relationships: r.relationships,
+        lastModified: r.last_modified,
+        sourceId: r.source_id,
+      },
+      score: r.score,
+    }));
   }
 
   async close(): Promise<void> {

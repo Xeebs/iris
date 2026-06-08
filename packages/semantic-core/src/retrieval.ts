@@ -41,6 +41,13 @@ export interface RetrievalOptions {
   graphStore?: GraphExpander;
   /** When true, use QueryDecomposer to auto-detect entity types from the query */
   autoDetectEntityTypes?: boolean;
+  /**
+   * When true, run BM25 lexical search in parallel with vector search and merge results
+   * via Reciprocal Rank Fusion (RRF). Default: true if vectorStore supports bm25Search.
+   */
+  hybridSearch?: boolean;
+  /** RRF rank constant k. Higher k reduces the impact of rank differences. Default: 60 */
+  rrfK?: number;
 }
 
 export interface RetrievalResult {
@@ -88,10 +95,28 @@ export async function retrieveContext(
   }
 
   const searchStart = Date.now();
-  const searchResults = await vectorStore.search(queryVector, opts.topK, {
+  const vectorFilter = {
     workspaceId: opts.workspaceId,
     ...(resolvedEntityTypes !== undefined ? { entityTypes: resolvedEntityTypes } : {}),
-  });
+  };
+
+  const useHybrid = (opts.hybridSearch ?? true) && typeof vectorStore.bm25Search === 'function';
+
+  let searchResults;
+  if (useHybrid) {
+    const [vectorResults, bm25Results] = await Promise.all([
+      vectorStore.search(queryVector, opts.topK * 2, vectorFilter),
+      vectorStore.bm25Search!(opts.workspaceId, query, opts.topK * 2, resolvedEntityTypes),
+    ]);
+    searchResults = reciprocalRankFusion(vectorResults, bm25Results, opts.rrfK ?? 60).slice(0, opts.topK);
+    log.debug('Hybrid search: RRF merge complete', {
+      vectorHits: vectorResults.length,
+      bm25Hits: bm25Results.length,
+      mergedHits: searchResults.length,
+    });
+  } else {
+    searchResults = await vectorStore.search(queryVector, opts.topK, vectorFilter);
+  }
   const vectorSearchMs = Date.now() - searchStart;
 
   const graphStart = Date.now();
@@ -194,4 +219,40 @@ async function expandViaRelationships(
   }
 
   return { entities: expanded, scores: expandedScores };
+}
+
+/**
+ * Reciprocal Rank Fusion — combine two ranked result lists into one.
+ * score(d) = Σ 1/(k + rank(d)) over each list that contains d.
+ * Results are sorted by combined score descending.
+ *
+ * @param listA - First ranked list (typically vector search)
+ * @param listB - Second ranked list (typically BM25)
+ * @param k     - RRF smoothing constant (default 60, from the original RRF paper)
+ */
+export function reciprocalRankFusion(
+  listA: import('./vector-store.js').VectorSearchResult[],
+  listB: import('./vector-store.js').VectorSearchResult[],
+  k = 60,
+): import('./vector-store.js').VectorSearchResult[] {
+  const scores = new Map<string, number>();
+  const entities = new Map<string, import('@iris/connector-sdk').SemanticEntity>();
+
+  for (let i = 0; i < listA.length; i++) {
+    const item = listA[i]!;
+    const current = scores.get(item.entity.id) ?? 0;
+    scores.set(item.entity.id, current + 1 / (k + i + 1));
+    entities.set(item.entity.id, item.entity);
+  }
+
+  for (let i = 0; i < listB.length; i++) {
+    const item = listB[i]!;
+    const current = scores.get(item.entity.id) ?? 0;
+    scores.set(item.entity.id, current + 1 / (k + i + 1));
+    entities.set(item.entity.id, item.entity);
+  }
+
+  return Array.from(scores.entries())
+    .sort(([, a], [, b]) => b - a)
+    .map(([id, score]) => ({ entity: entities.get(id)!, score }));
 }

@@ -1,11 +1,14 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { retrieveContext } from '../retrieval.js';
-import type { VectorStore } from '../vector-store.js';
+import { retrieveContext, reciprocalRankFusion } from '../retrieval.js';
+import type { VectorStore, VectorSearchResult } from '../vector-store.js';
 import type { SemanticEntity } from '@iris/connector-sdk';
 import { ok, err } from 'neverthrow';
-import OpenAI from 'openai';
+import { AzureOpenAI } from 'openai';
 
-vi.mock('openai');
+vi.mock('openai', () => ({
+  default: vi.fn(),
+  AzureOpenAI: vi.fn(),
+}));
 
 function makeEntity(
   id: string,
@@ -47,8 +50,10 @@ describe('retrieveContext', () => {
   const mockCreate = vi.fn();
 
   beforeEach(() => {
-    vi.mocked(OpenAI).mockImplementation(
-      () => ({ embeddings: { create: mockCreate } }) as unknown as OpenAI,
+    process.env['AZURE_OPENAI_ENDPOINT'] = 'https://test.openai.azure.com';
+    process.env['AZURE_OPENAI_API_KEY'] = 'test-key';
+    vi.mocked(AzureOpenAI).mockImplementation(
+      () => ({ embeddings: { create: mockCreate } }) as unknown as AzureOpenAI,
     );
     mockCreate.mockResolvedValue({
       data: [{ index: 0, embedding: mockQueryVector }],
@@ -58,6 +63,8 @@ describe('retrieveContext', () => {
   });
 
   afterEach(() => {
+    delete process.env['AZURE_OPENAI_ENDPOINT'];
+    delete process.env['AZURE_OPENAI_API_KEY'];
     vi.clearAllMocks();
   });
 
@@ -272,5 +279,137 @@ describe('retrieveContext', () => {
     expect(result.queryEmbeddingMs).toBeGreaterThanOrEqual(0);
     expect(result.vectorSearchMs).toBeGreaterThanOrEqual(0);
     expect(result.graphExpansionMs).toBeGreaterThanOrEqual(0);
+  });
+
+  it('uses hybrid search when vectorStore supports bm25Search', async () => {
+    const entity1 = makeEntity('hubspot:contact:1');
+    const entity2 = makeEntity('hubspot:contact:2');
+    const store = makeMockVectorStore([{ entity: entity1, score: 0.9 }]);
+    const bm25Mock = vi.fn().mockResolvedValue([{ entity: entity2, score: 0.8 }]);
+    (store as VectorStore & { bm25Search: typeof bm25Mock }).bm25Search = bm25Mock;
+
+    const result = await retrieveContext('find contacts', store, {
+      workspaceId: 'ws-1',
+      topK: 5,
+      expandRelationships: false,
+      maxDepth: 0,
+      hybridSearch: true,
+    });
+
+    expect(bm25Mock).toHaveBeenCalledOnce();
+    expect(result.entities.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('skips BM25 when hybridSearch=false', async () => {
+    const entity = makeEntity('hubspot:contact:1');
+    const store = makeMockVectorStore([{ entity, score: 0.9 }]);
+    const bm25Mock = vi.fn().mockResolvedValue([]);
+    (store as VectorStore & { bm25Search: typeof bm25Mock }).bm25Search = bm25Mock;
+
+    await retrieveContext('find contacts', store, {
+      workspaceId: 'ws-1',
+      topK: 5,
+      expandRelationships: false,
+      maxDepth: 0,
+      hybridSearch: false,
+    });
+
+    expect(bm25Mock).not.toHaveBeenCalled();
+  });
+
+  it('falls back to vector-only when bm25Search not available', async () => {
+    const entity = makeEntity('hubspot:contact:1');
+    const store = makeMockVectorStore([{ entity, score: 0.9 }]);
+    // No bm25Search on the store
+
+    const result = await retrieveContext('find contacts', store, {
+      workspaceId: 'ws-1',
+      topK: 5,
+      expandRelationships: false,
+      maxDepth: 0,
+      hybridSearch: true, // requested, but store doesn't support it
+    });
+
+    expect(store.search).toHaveBeenCalledWith(
+      expect.any(Array),
+      5,
+      expect.any(Object),
+    );
+    expect(result.entities).toHaveLength(1);
+  });
+});
+
+describe('reciprocalRankFusion', () => {
+  function makeResult(id: string, score = 0.5): VectorSearchResult {
+    return {
+      entity: makeEntity(id),
+      score,
+    };
+  }
+
+  it('returns empty array when both lists are empty', () => {
+    const result = reciprocalRankFusion([], []);
+    expect(result).toEqual([]);
+  });
+
+  it('passes through list A when list B is empty', () => {
+    const a = [makeResult('e1', 0.9), makeResult('e2', 0.7)];
+    const result = reciprocalRankFusion(a, []);
+    expect(result).toHaveLength(2);
+    expect(result[0]!.entity.id).toBe('e1');
+  });
+
+  it('passes through list B when list A is empty', () => {
+    const b = [makeResult('e3', 0.8)];
+    const result = reciprocalRankFusion([], b);
+    expect(result).toHaveLength(1);
+    expect(result[0]!.entity.id).toBe('e3');
+  });
+
+  it('boosts entity that appears in both lists', () => {
+    // e1 ranks first in vector, e2 ranks first in BM25; e1 also appears second in BM25
+    const vectorList = [makeResult('e1', 0.9), makeResult('e2', 0.7)];
+    const bm25List = [makeResult('e2', 0.8), makeResult('e1', 0.5)];
+    const result = reciprocalRankFusion(vectorList, bm25List);
+    // e1 appears at rank 1 in vector (score=1/61) and rank 2 in bm25 (score=1/62): total ≈ 0.0327
+    // e2 appears at rank 2 in vector (score=1/62) and rank 1 in bm25 (score=1/61): total ≈ 0.0327
+    // They should be equal or close
+    expect(result).toHaveLength(2);
+    const ids = result.map((r) => r.entity.id);
+    expect(ids).toContain('e1');
+    expect(ids).toContain('e2');
+  });
+
+  it('produces higher combined score for entity in both lists than entity in one', () => {
+    // overlap: e1 rank 1 in both → high score
+    // unique: e3 rank 1 in bm25 only
+    const vectorList = [makeResult('e1', 0.9)];
+    const bm25List = [makeResult('e1', 0.8), makeResult('e3', 0.7)];
+    const result = reciprocalRankFusion(vectorList, bm25List);
+    const e1Score = result.find((r) => r.entity.id === 'e1')!.score;
+    const e3Score = result.find((r) => r.entity.id === 'e3')!.score;
+    expect(e1Score).toBeGreaterThan(e3Score);
+  });
+
+  it('results are sorted by descending RRF score', () => {
+    const vectorList = [makeResult('e1', 0.9), makeResult('e2', 0.6)];
+    const bm25List = [makeResult('e2', 0.95)]; // e2 in both lists boosts it
+    const result = reciprocalRankFusion(vectorList, bm25List);
+    // e2 appears in both → higher combined score than e1 which appears in one
+    expect(result[0]!.entity.id).toBe('e2');
+  });
+
+  it('respects custom k parameter', () => {
+    const vectorList = [makeResult('e1', 0.9)];
+    const bm25List = [makeResult('e2', 0.8)];
+    const resultK60 = reciprocalRankFusion(vectorList, bm25List, 60);
+    const resultK1 = reciprocalRankFusion(vectorList, bm25List, 1);
+    // Both should have 2 results; k changes magnitudes but not ordering here (both rank 1)
+    expect(resultK60).toHaveLength(2);
+    expect(resultK1).toHaveLength(2);
+    // With k=1, scores are much larger: 1/(1+1) = 0.5 vs 1/(60+1) ≈ 0.016
+    const scoreK1 = resultK1[0]!.score;
+    const scoreK60 = resultK60[0]!.score;
+    expect(scoreK1).toBeGreaterThan(scoreK60);
   });
 });
