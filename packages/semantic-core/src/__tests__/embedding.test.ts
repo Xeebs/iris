@@ -77,6 +77,29 @@ describe('buildEmbeddingInput', () => {
     const input = buildEmbeddingInput(entity);
     expect(input).toContain('tags: product, planning');
   });
+
+  it('omits non-discriminative attributes when isDiscriminativeAttr returns false', () => {
+    const filter = (entityType: string, key: string, _value: string) =>
+      !(entityType === 'contact' && key === 'stage');
+    const input = buildEmbeddingInput(contactEntity, new Set(), filter);
+    expect(input).not.toContain('stage: lead');
+    expect(input).toContain('company: Acme Corp');
+  });
+
+  it('keeps all attributes when isDiscriminativeAttr returns true for all', () => {
+    const filter = () => true;
+    const input = buildEmbeddingInput(contactEntity, new Set(), filter);
+    expect(input).toContain('stage: lead');
+    expect(input).toContain('company: Acme Corp');
+  });
+
+  it('passes correct (entityType, key, value) to isDiscriminativeAttr predicate', () => {
+    const calls: Array<[string, string, string]> = [];
+    const filter = (t: string, k: string, v: string) => { calls.push([t, k, v]); return true; };
+    buildEmbeddingInput(contactEntity, new Set(), filter);
+    expect(calls.some(([t, k]) => t === 'contact' && k === 'company')).toBe(true);
+    expect(calls.some(([, k, v]) => k === 'stage' && v === 'lead')).toBe(true);
+  });
 });
 
 describe('generateEmbeddings', () => {

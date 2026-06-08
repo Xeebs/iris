@@ -2,6 +2,7 @@ import type { SemanticEntity } from '@iris/connector-sdk';
 import { logger } from '@iris/core/logger';
 import { generateEmbeddings } from './embedding.js';
 import type { VectorStore } from './vector-store.js';
+import type { AttributeFrequencyTracker } from './attribute-frequency.js';
 import type { Result } from 'neverthrow';
 
 // Minimal graph interface — Neo4jGraphStore satisfies this via structural typing
@@ -32,6 +33,12 @@ export interface IndexerConfig {
   onLargeSyncComplete?: (workspaceId: string, entityCount: number) => void;
   /** Minimum number of entities indexed before calling onLargeSyncComplete. Default: 500 */
   largeSyncThreshold?: number;
+  /**
+   * When provided, records attribute frequencies per batch and filters non-discriminative
+   * attribute values (>60% occurrence rate) from embedding inputs per the SIRA approach.
+   * Requires workspaceId to be set.
+   */
+  attributeFrequencyTracker?: AttributeFrequencyTracker;
 }
 
 export interface IndexResult {
@@ -128,9 +135,40 @@ async function flushBatch(
   vectorStore: VectorStore,
   result: IndexResult,
 ): Promise<void> {
+  // Corpus-discriminative frequency tracking: record attributes and warm cache per entity type
+  let isDiscriminativeAttr: ((entityType: string, key: string, value: string) => boolean) | undefined;
+  if (config.attributeFrequencyTracker && config.workspaceId) {
+    const tracker = config.attributeFrequencyTracker;
+    const ws = config.workspaceId;
+
+    // Group batch by entity type for recording
+    const byType = new Map<string, SemanticEntity[]>();
+    for (const e of batch) {
+      const group = byType.get(e.type) ?? [];
+      group.push(e);
+      byType.set(e.type, group);
+    }
+
+    const totalRows = await Promise.all(
+      Array.from(byType.entries()).map(async ([type, entities]) => {
+        const attrMaps = entities.map((e) => e.attributes);
+        await tracker.recordAttributes(ws, type, attrMaps, entities.length);
+        const attrKeys = [...new Set(attrMaps.flatMap((a) => Object.keys(a)))];
+        await tracker.warmCache(ws, type, attrKeys);
+        return type;
+      }),
+    );
+
+    if (totalRows.length > 0) {
+      isDiscriminativeAttr = (entityType, key, value) =>
+        tracker.isDiscriminativeSync(ws, entityType, key, value);
+    }
+  }
+
   const embeddingResults = await generateEmbeddings(batch, {
     model: config.embeddingModel,
     ...(config.openAiApiKey !== undefined ? { apiKey: config.openAiApiKey } : {}),
+    ...(isDiscriminativeAttr !== undefined ? { isDiscriminativeAttr } : {}),
   });
 
   const vectors = embeddingResults.map((r) => r.vector);

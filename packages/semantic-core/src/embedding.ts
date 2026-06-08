@@ -48,12 +48,29 @@ function buildAzureClient(deploymentName: string): AzureOpenAI {
 
 /**
  * Build a semantic embedding input string from a SemanticEntity.
- * Excludes PII-flagged fields and null values.
+ * Excludes PII-flagged fields, null values, and non-discriminative attribute values.
  * Per embedding-patterns.md: "type: label. key: value; ..."
+ *
+ * @param entity              - Entity to embed
+ * @param piiFields           - Set of attribute keys that contain PII (excluded entirely)
+ * @param isDiscriminativeAttr - Optional sync predicate called with (entityType, attrKey, attrValue).
+ *                               Attributes for which it returns false are omitted from the input.
+ *                               Call AttributeFrequencyTracker.warmCache() before using this.
  */
-export function buildEmbeddingInput(entity: SemanticEntity, piiFields: Set<string> = new Set()): string {
+export function buildEmbeddingInput(
+  entity: SemanticEntity,
+  piiFields: Set<string> = new Set(),
+  isDiscriminativeAttr?: (entityType: string, key: string, value: string) => boolean,
+): string {
   const attrs = Object.entries(entity.attributes)
-    .filter(([k, v]) => v !== null && !piiFields.has(k))
+    .filter(([k, v]) => {
+      if (v === null || piiFields.has(k)) return false;
+      if (isDiscriminativeAttr) {
+        const strVal = Array.isArray(v) ? v.join(', ') : String(v);
+        return isDiscriminativeAttr(entity.type, k, strVal);
+      }
+      return true;
+    })
     .map(([k, v]) => `${k}: ${formatValue(v as NonNullable<AttributeValue>)}`)
     .join('; ');
 
@@ -87,6 +104,12 @@ export interface EmbeddingServiceOptions {
   piiFields?: Set<string>;
   /** Optionally supply an EmbeddingProvider to override the default Azure OpenAI path. */
   provider?: EmbeddingProvider;
+  /**
+   * Corpus-discriminative attribute filter (SIRA-inspired).
+   * Called with (entityType, attrKey, attrValue); return false to omit the attribute from the input.
+   * Warm AttributeFrequencyTracker.warmCache() before each batch for correct results.
+   */
+  isDiscriminativeAttr?: (entityType: string, key: string, value: string) => boolean;
 }
 
 /**
@@ -105,7 +128,8 @@ export async function generateEmbeddings(
   if (entities.length === 0) return [];
 
   const piiFields = options.piiFields ?? new Set<string>();
-  const inputs = entities.map((e) => buildEmbeddingInput(e, piiFields));
+  const { isDiscriminativeAttr } = options;
+  const inputs = entities.map((e) => buildEmbeddingInput(e, piiFields, isDiscriminativeAttr));
 
   if (options.provider) {
     const start = Date.now();
