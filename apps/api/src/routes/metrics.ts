@@ -2,7 +2,8 @@ import { Hono } from 'hono';
 import { z } from 'zod';
 import type postgres from 'postgres';
 
-import { MetricRegistry, MetricFormulaEngine } from '@iris/semantic-core';
+import { MetricRegistry } from '@iris/semantic-core';
+import { MetricFormulaEngine, validateFormula } from '@iris/semantic-core/metric-formula-engine';
 import { logger } from '@iris/core/logger';
 
 const log = logger.child({ route: 'metrics' });
@@ -85,7 +86,9 @@ export function createMetricRoutes(sql: SqlClient): Hono {
     if (metricResult.isErr()) return c.json({ error: { code: 'INTERNAL_ERROR', message: metricResult.error.message } }, 500);
     if (!metricResult.value) return c.json({ error: { code: 'NOT_FOUND', message: 'Metric not found' } }, 404);
 
-    const evalResult = await formulaEngine.evaluateFormula(workspaceId, metricResult.value.formula);
+    const evalResult = await formulaEngine.evaluate(
+      c.req.param('id'), workspaceId, metricResult.value.formula,
+    );
     if (evalResult.isErr()) return c.json({ error: { code: 'FORMULA_ERROR', message: evalResult.error.message } }, 422);
     return c.json({ data: { metric: metricResult.value, evaluation: evalResult.value } });
   });
@@ -94,9 +97,9 @@ export function createMetricRoutes(sql: SqlClient): Hono {
   routes.post('/validate-formula', async (c) => {
     const body = await c.req.json().catch(() => null) as { formula?: string } | null;
     if (!body?.formula) return c.json({ error: { code: 'VALIDATION_ERROR', message: 'formula is required' } }, 400);
-    const parsed = formulaEngine.parseFormula(body.formula);
-    if (parsed.isErr()) return c.json({ data: { valid: false, error: parsed.error.message } });
-    return c.json({ data: { valid: true, tokenCount: parsed.value.tokens.length } });
+    const errors = validateFormula(body.formula);
+    if (errors.length > 0) return c.json({ data: { valid: false, errors } });
+    return c.json({ data: { valid: true, errors: [] } });
   });
 
   /** DELETE /api/v1/metrics/:name?workspaceId= */

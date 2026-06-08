@@ -62,7 +62,8 @@
     "./provider-registry": "./dist/providers/provider-registry.js",
     "./compliance-reporter": "./dist/compliance-reporter.js",
     "./dedup-reconciliation": "./dist/dedup-reconciliation.js",
-    "./proactive-context-engine": "./dist/proactive-context-engine.js"
+    "./proactive-context-engine": "./dist/proactive-context-engine.js",
+    "./metric-formula-engine": "./dist/metric-formula-engine.js"
   },
   "scripts": {
     "build": "tsc --build",

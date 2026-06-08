@@ -9,7 +9,18 @@ vi.mock('@iris/semantic-core', async (importOriginal) => {
   };
 });
 
+vi.mock('@iris/semantic-core/metric-formula-engine', () => ({
+  MetricFormulaEngine: vi.fn().mockImplementation(() => mockFormulaSvc),
+  validateFormula: vi.fn(),
+}));
+
+const mockFormulaSvc = {
+  evaluate: vi.fn(),
+  invalidateCache: vi.fn(),
+};
+
 import { MetricRegistry } from '@iris/semantic-core';
+import { validateFormula } from '@iris/semantic-core/metric-formula-engine';
 import { createMetricRoutes } from '../routes/metrics.js';
 
 const WORKSPACE = 'ws-test';
@@ -128,5 +139,103 @@ describe('DELETE /api/v1/metrics/:name', () => {
     expect(res.status).toBe(200);
     const body = await res.json() as { data: { deleted: boolean } };
     expect(body.data.deleted).toBe(true);
+  });
+});
+
+describe('POST /api/v1/metrics/:id/evaluate', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('returns 401 without workspace header', async () => {
+    const app = makeApp({});
+    const res = await app.request('/api/v1/metrics/metric-1/evaluate', { method: 'POST' });
+    expect(res.status).toBe(401);
+  });
+
+  it('returns 404 when metric not found', async () => {
+    const { ok } = await import('neverthrow');
+    vi.mocked(MetricRegistry).mockImplementation(() => ({
+      getMetric: vi.fn().mockResolvedValue(ok(null)),
+    } as unknown as InstanceType<typeof MetricRegistry>));
+    const app = new Hono();
+    app.route('/api/v1/metrics', createMetricRoutes({} as Parameters<typeof createMetricRoutes>[0]));
+    const res = await app.request('/api/v1/metrics/nonexistent/evaluate', {
+      method: 'POST',
+      headers: { 'x-workspace-id': WORKSPACE },
+    });
+    expect(res.status).toBe(404);
+  });
+
+  it('returns evaluation result on success', async () => {
+    const { ok } = await import('neverthrow');
+    vi.mocked(MetricRegistry).mockImplementation(() => ({
+      getMetric: vi.fn().mockResolvedValue(ok(FAKE_METRIC)),
+    } as unknown as InstanceType<typeof MetricRegistry>));
+    const evalResult = { metricId: 'metric-1', workspaceId: WORKSPACE, value: 42000, formula: 'SUM(deal.amount)', evaluatedAt: '2026-06-08T00:00:00Z', fromCache: false };
+    mockFormulaSvc.evaluate.mockResolvedValue(ok(evalResult));
+    const app = new Hono();
+    app.route('/api/v1/metrics', createMetricRoutes({} as Parameters<typeof createMetricRoutes>[0]));
+    const res = await app.request('/api/v1/metrics/metric-1/evaluate', {
+      method: 'POST',
+      headers: { 'x-workspace-id': WORKSPACE },
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json() as { data: { evaluation: typeof evalResult } };
+    expect(body.data.evaluation.value).toBe(42000);
+  });
+
+  it('returns 422 on formula error', async () => {
+    const { ok, err } = await import('neverthrow');
+    vi.mocked(MetricRegistry).mockImplementation(() => ({
+      getMetric: vi.fn().mockResolvedValue(ok(FAKE_METRIC)),
+    } as unknown as InstanceType<typeof MetricRegistry>));
+    mockFormulaSvc.evaluate.mockResolvedValue(err(new Error('Division by entity type')));
+    const app = new Hono();
+    app.route('/api/v1/metrics', createMetricRoutes({} as Parameters<typeof createMetricRoutes>[0]));
+    const res = await app.request('/api/v1/metrics/metric-1/evaluate', {
+      method: 'POST',
+      headers: { 'x-workspace-id': WORKSPACE },
+    });
+    expect(res.status).toBe(422);
+  });
+});
+
+describe('POST /api/v1/metrics/validate-formula', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('returns 400 when formula is missing', async () => {
+    const app = makeApp({});
+    const res = await app.request('/api/v1/metrics/validate-formula', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({}),
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it('returns valid:true for a correct formula', async () => {
+    vi.mocked(validateFormula).mockReturnValue([]);
+    const app = makeApp({});
+    const res = await app.request('/api/v1/metrics/validate-formula', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ formula: 'COUNT(deal)' }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json() as { data: { valid: boolean } };
+    expect(body.data.valid).toBe(true);
+  });
+
+  it('returns valid:false with errors for bad formula', async () => {
+    vi.mocked(validateFormula).mockReturnValue([{ message: 'Invalid syntax' }]);
+    const app = makeApp({});
+    const res = await app.request('/api/v1/metrics/validate-formula', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ formula: 'GARBAGE(deal)' }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json() as { data: { valid: boolean; errors: { message: string }[] } };
+    expect(body.data.valid).toBe(false);
+    expect(body.data.errors[0]?.message).toBe('Invalid syntax');
   });
 });

@@ -52,6 +52,7 @@ export default defineConfig({
       '@iris/semantic-core/data-lineage': path.resolve(__dirname, '../../packages/semantic-core/src/data-lineage.ts'),
       '@iris/semantic-core/dedup-reconciliation': path.resolve(__dirname, '../../packages/semantic-core/src/dedup-reconciliation.ts'),
       '@iris/semantic-core/proactive-context-engine': path.resolve(__dirname, '../../packages/semantic-core/src/proactive-context-engine.ts'),
+      '@iris/semantic-core/metric-formula-engine': path.resolve(__dirname, '../../packages/semantic-core/src/metric-formula-engine.ts'),
     },
   },
   test: {
