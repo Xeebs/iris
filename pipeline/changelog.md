@@ -56,3 +56,6 @@ feat(api): webhook-driven real-time sync (HubSpot + Slack HMAC validation, 10 te
 - feat(mcp-server,semantic-core): advanced MCP query features & aggregations (f921772)
 - feat(connector-sdk,dashboard): comprehensive webhook validation & testing suite (75973e2)
 - feat(api,dashboard,queue): real-time sync performance monitoring dashboard (9651820)
+feat(dashboard,api): admin dashboard pages & system monitoring suite (Layer 44)
+feat(semantic-core,api,dashboard): native document indexing from connector sources (Layer 45)
+feat(semantic-core,api,dashboard): search relevance tuning & scoring UI (Layer 45)

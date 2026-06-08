@@ -52,6 +52,16 @@ function makeSql(tokenRows: unknown[] = [], topRows: unknown[] = [], staleRows: 
   return fn as unknown as ReturnType<typeof import('postgres').default>;
 }
 
+function makeMultiSql(...responses: unknown[][]) {
+  let callCount = 0;
+  const fn = vi.fn().mockImplementation(() => {
+    const r = responses[callCount++] ?? [];
+    return Promise.resolve(r);
+  });
+  (fn as unknown as Record<string, unknown>).array = vi.fn((v: unknown) => v);
+  return fn as unknown as ReturnType<typeof import('postgres').default>;
+}
+
 describe('estimateMonthlySavings', () => {
   it('returns 0 for 0 tokens saved per day', () => {
     expect(estimateMonthlySavings(0)).toBe(0);
@@ -273,6 +283,124 @@ describe('CostOptimizationAdvisor', () => {
 
     it('defaults savingsRealizedCents to 0', async () => {
       const result = await advisor.applyRecommendation('ws-1', 'enable_semantic_cache');
+      expect(result.isOk()).toBe(true);
+    });
+  });
+
+  describe('trackContextSize', () => {
+    it('inserts a context cost event', async () => {
+      const sql = makeSql([[{ id: 'evt-1' }]]);
+      const advisor = new CostOptimizationAdvisor(sql);
+      await expect(
+        advisor.trackContextSize({
+          workspaceId: 'ws-1',
+          query: 'find all contracts mentioning payment terms',
+          entities: [
+            { id: 'e-1', type: 'contact', sourceConnectorId: 'gdrive-1' },
+            { id: 'e-2', type: 'deal', sourceConnectorId: 'hubspot-1' },
+          ],
+          tokensSpent: 1200,
+          tokensSaved: 300,
+          cacheHit: false,
+        }),
+      ).resolves.toBeUndefined();
+      expect(sql).toHaveBeenCalledTimes(1);
+    });
+
+    it('deduplicates source connectors and entity types', async () => {
+      const sql = makeSql([[{ id: 'evt-2' }]]);
+      const advisor = new CostOptimizationAdvisor(sql);
+      await advisor.trackContextSize({
+        workspaceId: 'ws-1',
+        query: 'test',
+        entities: [
+          { id: 'e-1', type: 'contact', sourceConnectorId: 'gdrive-1' },
+          { id: 'e-2', type: 'contact', sourceConnectorId: 'gdrive-1' },
+        ],
+        tokensSpent: 500,
+        tokensSaved: 0,
+        cacheHit: true,
+      });
+      expect(sql).toHaveBeenCalledTimes(1);
+    });
+
+    it('handles entities without sourceConnectorId', async () => {
+      const sql = makeSql([[{ id: 'evt-3' }]]);
+      const advisor = new CostOptimizationAdvisor(sql);
+      await expect(
+        advisor.trackContextSize({
+          workspaceId: 'ws-1',
+          query: 'test',
+          entities: [{ id: 'e-1', type: 'metric' }],
+          tokensSpent: 100,
+          tokensSaved: 0,
+          cacheHit: false,
+        }),
+      ).resolves.toBeUndefined();
+    });
+
+    it('propagates SQL errors', async () => {
+      const fn = vi.fn().mockRejectedValueOnce(new Error('insert failed'));
+      (fn as unknown as Record<string, unknown>).array = vi.fn((v: unknown) => v);
+      const sql = fn as unknown as ReturnType<typeof import('postgres').default>;
+      const advisor = new CostOptimizationAdvisor(sql);
+      await expect(
+        advisor.trackContextSize({
+          workspaceId: 'ws-1',
+          query: 'q',
+          entities: [],
+          tokensSpent: 100,
+          tokensSaved: 0,
+          cacheHit: false,
+        }),
+      ).rejects.toThrow('insert failed');
+    });
+  });
+
+  describe('attributeCosts', () => {
+    it('returns breakdown by connector, entity type, and week-over-week change', async () => {
+      const connectorRows = [{ connector_id: 'gdrive-1', tokens_spent: '5000' }];
+      const typeRows = [{ entity_type: 'contact', tokens_spent: '3000' }];
+      const currentWeekRows = [{ total: '4000' }];
+      const prevWeekRows = [{ total: '3000' }];
+      const sql = makeMultiSql(connectorRows, typeRows, currentWeekRows, prevWeekRows);
+      const advisor = new CostOptimizationAdvisor(sql);
+      const result = await advisor.attributeCosts('ws-1', 30);
+      expect(result.byConnector).toHaveLength(1);
+      expect(result.byConnector[0]!.connectorId).toBe('gdrive-1');
+      expect(result.byEntityType).toHaveLength(1);
+      expect(result.weekOverWeekChange).toBeCloseTo(33.33, 1);
+    });
+
+    it('returns 0 week-over-week change when no prior week data', async () => {
+      const sql = makeMultiSql([], [], [{ total: '1000' }], [{ total: '0' }]);
+      const advisor = new CostOptimizationAdvisor(sql);
+      const result = await advisor.attributeCosts('ws-1', 30);
+      expect(result.weekOverWeekChange).toBe(0);
+    });
+
+    it('computes pctOfTotal correctly', async () => {
+      const connectorRows = [
+        { connector_id: 'c-1', tokens_spent: '3000' },
+        { connector_id: 'c-2', tokens_spent: '1000' },
+      ];
+      const sql = makeMultiSql(connectorRows, [], [{ total: '0' }], [{ total: '0' }]);
+      const advisor = new CostOptimizationAdvisor(sql);
+      const result = await advisor.attributeCosts('ws-1', 30);
+      expect(result.byConnector[0]!.pctOfTotal).toBeCloseTo(75, 1);
+      expect(result.byConnector[1]!.pctOfTotal).toBeCloseTo(25, 1);
+    });
+  });
+
+  describe('recommend', () => {
+    it('returns recommendations result', async () => {
+      const sql = makeSql([
+        [{ total_tokens_spent: '600000', total_tokens_saved_caching: '0', total_tokens_saved_compression: '0', query_count: '1000', avg_tokens_per_query: '600', cache_hit_rate: '0.05' }],
+        [{ tool_name: 'query-context', total_tokens: '600000', call_count: '1000' }],
+        [{ stale_count: '0' }],
+      ]);
+      const advisor = new CostOptimizationAdvisor(sql);
+      const result = await advisor.recommend('ws-1');
       expect(result.isOk()).toBe(true);
     });
   });

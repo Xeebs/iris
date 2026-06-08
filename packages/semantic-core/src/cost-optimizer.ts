@@ -304,6 +304,126 @@ export class CostOptimizationAdvisor {
     }
   }
 
+  /**
+   * Record a single context cost event for attribution analysis.
+   * Stores query hash, entity breakdown, and token spend in context_cost_events.
+   *
+   * @param params - Context cost event data
+   */
+  async trackContextSize(params: {
+    workspaceId: string;
+    query: string;
+    entities: Array<{ id: string; type: string; sourceConnectorId?: string }>;
+    tokensSpent: number;
+    tokensSaved: number;
+    cacheHit: boolean;
+  }): Promise<void> {
+    const crypto = await import('node:crypto');
+    const queryHash = crypto.createHash('sha256').update(params.query).digest('hex').slice(0, 16);
+
+    const sourceConnectors = [...new Set(params.entities.map((e) => e.sourceConnectorId).filter(Boolean))];
+    const entityTypes = [...new Set(params.entities.map((e) => e.type))];
+
+    await this.sql`
+      INSERT INTO context_cost_events
+        (workspace_id, query_hash, entities_returned, tokens_spent, tokens_saved, cache_hit, source_connectors, entity_types, timestamp)
+      VALUES
+        (${params.workspaceId}, ${queryHash}, ${params.entities.length}, ${params.tokensSpent},
+         ${params.tokensSaved}, ${params.cacheHit}, ${sourceConnectors}, ${entityTypes}, now())
+    `;
+  }
+
+  /**
+   * Break down token costs by connector, entity type, and query pattern over a time window.
+   *
+   * @param workspaceId - Workspace to analyze
+   * @param windowDays  - Lookback period in days (default: 30)
+   */
+  async attributeCosts(workspaceId: string, windowDays = 30): Promise<{
+    byConnector: Array<{ connectorId: string; tokensSpent: number; pctOfTotal: number }>;
+    byEntityType: Array<{ entityType: string; tokensSpent: number; pctOfTotal: number }>;
+    weekOverWeekChange: number;
+  }> {
+    const [connectorRows, typeRows, currentWeekRows, prevWeekRows] = await Promise.all([
+      this.sql<Array<{ connector_id: string; tokens_spent: string }>>`
+        SELECT
+          unnest(source_connectors) AS connector_id,
+          SUM(tokens_spent)::text   AS tokens_spent
+        FROM context_cost_events
+        WHERE workspace_id = ${workspaceId}
+          AND timestamp >= now() - (${windowDays} || ' days')::interval
+        GROUP BY 1
+        ORDER BY SUM(tokens_spent) DESC
+        LIMIT 20
+      `,
+      this.sql<Array<{ entity_type: string; tokens_spent: string }>>`
+        SELECT
+          unnest(entity_types) AS entity_type,
+          SUM(tokens_spent)::text AS tokens_spent
+        FROM context_cost_events
+        WHERE workspace_id = ${workspaceId}
+          AND timestamp >= now() - (${windowDays} || ' days')::interval
+        GROUP BY 1
+        ORDER BY SUM(tokens_spent) DESC
+        LIMIT 20
+      `,
+      this.sql<Array<{ total: string }>>`
+        SELECT COALESCE(SUM(tokens_spent), 0)::text AS total
+        FROM context_cost_events
+        WHERE workspace_id = ${workspaceId}
+          AND timestamp >= now() - '7 days'::interval
+      `,
+      this.sql<Array<{ total: string }>>`
+        SELECT COALESCE(SUM(tokens_spent), 0)::text AS total
+        FROM context_cost_events
+        WHERE workspace_id = ${workspaceId}
+          AND timestamp >= now() - '14 days'::interval
+          AND timestamp < now() - '7 days'::interval
+      `,
+    ]);
+
+    const totalConnector = connectorRows.reduce((s, r) => s + parseInt(r.tokens_spent, 10), 0) || 1;
+    const totalType = typeRows.reduce((s, r) => s + parseInt(r.tokens_spent, 10), 0) || 1;
+    const currentWeek = parseInt(currentWeekRows[0]?.total ?? '0', 10);
+    const prevWeek = parseInt(prevWeekRows[0]?.total ?? '0', 10);
+    const weekOverWeekChange = prevWeek > 0 ? ((currentWeek - prevWeek) / prevWeek) * 100 : 0;
+
+    if (weekOverWeekChange > 20) {
+      log.warn('Week-over-week token cost increased >20%', {
+        workspaceId,
+        currentWeek,
+        prevWeek,
+        changePct: weekOverWeekChange.toFixed(1),
+      });
+    }
+
+    return {
+      byConnector: connectorRows.map((r) => ({
+        connectorId: r.connector_id,
+        tokensSpent: parseInt(r.tokens_spent, 10),
+        pctOfTotal: (parseInt(r.tokens_spent, 10) / totalConnector) * 100,
+      })),
+      byEntityType: typeRows.map((r) => ({
+        entityType: r.entity_type,
+        tokensSpent: parseInt(r.tokens_spent, 10),
+        pctOfTotal: (parseInt(r.tokens_spent, 10) / totalType) * 100,
+      })),
+      weekOverWeekChange,
+    };
+  }
+
+  /**
+   * Convenience wrapper: analyze patterns then generate ranked recommendations.
+   *
+   * @param workspaceId - Workspace to analyze
+   * @param windowDays  - Lookback period (default: 30)
+   */
+  async recommend(workspaceId: string, windowDays = 30): Promise<Result<CostRecommendation[], Error>> {
+    const patternResult = await this.analyzeSpendPatterns(workspaceId, windowDays);
+    if (patternResult.isErr()) return err(patternResult.error);
+    return this.generateRecommendations(patternResult.value);
+  }
+
   private async getStaleEntityCount(workspaceId: string): Promise<number> {
     try {
       const rows = await this.sql`
