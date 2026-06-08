@@ -67,7 +67,8 @@
     "./nlp-config-engine": "./dist/nlp-config-engine.js",
     "./workflow-service": "./dist/workflow-service.js",
     "./enrichment-engine": "./dist/enrichment-engine.js",
-    "./schema-evolution": "./dist/schema-evolution.js"
+    "./schema-evolution": "./dist/schema-evolution.js",
+    "./query-analytics-engine": "./dist/query-analytics-engine.js"
   },
   "scripts": {
     "build": "tsc --build",
