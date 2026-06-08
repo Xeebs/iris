@@ -3890,7 +3890,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Webhook Delivery Reliability & Dead-Letter Queue Management
 - **Layer**: 64 — Production Readiness & API Polish
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: High
 - **Description**: Enhance webhook delivery reliability with exponential backoff retries, dead-letter queue (DLQ) management, and inspection/replay capabilities. Create packages/semantic-core/src/webhook-reliability.ts with WebhookReliabilityManager: (1) enqueueWebhookWithRetry(event, endpoint, retryPolicy) queuing via BullMQ with exponential backoff (1s, 4s, 16s, 64s, 256s), (2) markWebhookFailed(webhookId, finalError) moving to DLQ after max retries exhausted, (3) inspectDlqEvent(eventId) returning full payload + error trace + retry history, (4) replayDlqEvent(eventId, patchPayload?) retrying a dead-lettered event with optional payload modification, (5) analyzeDlqPatterns() identifying systemic issues (bad endpoint URL, network issues, payload schema mismatch). Create migration 130 (webhook_retry_log, webhook_dlq, dlq_analysis). Add REST routes: GET /api/v1/admin/webhooks/dlq (cursor-paginated DLQ events with error classification), POST /api/v1/admin/webhooks/dlq/:id/retry (manual replay with optional patch), POST /api/v1/admin/webhooks/dlq/analyze (returns pattern analysis + remediation suggestions). Add dashboard page /admin/webhooks/dlq with table of failed deliveries, retry history graph, error breakdown pie chart, pattern alerts. Add automatic DLQ cleanup (events older than 30 days). Include 34+ tests (20 unit retry logic + 14 integration DLQ + replay scenarios).
 - **Files**:

@@ -124,3 +124,4 @@ Custom Transformation Pipeline & Entity Mapping Language — TransformationDSLEn
 - feat(semantic-core,api,dashboard): distributed tracing with W3C TraceContext and span storage — 169e641
 - feat(semantic-core,api,dashboard): HA failover control with replication lag monitoring — TBD
 - feat(semantic-core,api,dashboard): API versioning and deprecation management — 6ca89de
+- feat(semantic-core,api,dashboard): content negotiation with JSON/CSV/Parquet response formats — 27ee2cd
