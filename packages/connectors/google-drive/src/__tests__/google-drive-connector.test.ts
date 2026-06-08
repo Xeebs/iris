@@ -5,6 +5,7 @@ import { GoogleDriveConnector } from '../google-drive-connector.js';
 import { assertEntityShape } from '@iris/connector-sdk';
 
 import filesFixture from '../../tests/fixtures/files.json' assert { type: 'json' };
+import foldersFixture from '../../tests/fixtures/folders.json' assert { type: 'json' };
 
 const VALID_TOKENS = {
   accessToken: 'test-access-token',
@@ -153,6 +154,90 @@ describe('GoogleDriveConnector', () => {
       const status = await connector.healthCheck();
       expect(status.healthy).toBe(false);
       expect(status.error).toBeDefined();
+    });
+  });
+
+  describe('sync() — pagination', () => {
+    it('follows nextPageToken to retrieve multiple pages', async () => {
+      let page = 0;
+      server.use(
+        http.get('https://www.googleapis.com/drive/v3/files', () => {
+          page++;
+          if (page === 1) {
+            return HttpResponse.json({
+              files: [filesFixture.files[0]],
+              nextPageToken: 'page-2-token',
+            });
+          }
+          return HttpResponse.json({ files: [filesFixture.files[1]], nextPageToken: undefined });
+        }),
+      );
+      const connector = makeConnector();
+      const entities = [];
+      for await (const entity of connector.sync({})) {
+        entities.push(entity);
+      }
+      expect(entities.length).toBe(2);
+      expect(page).toBe(2);
+    });
+  });
+
+  describe('sync() — error handling', () => {
+    it('throws ConnectorError on 401 (token expired mid-sync)', async () => {
+      server.use(
+        http.get('https://www.googleapis.com/drive/v3/files', () =>
+          HttpResponse.json({ error: { code: 401 } }, { status: 401 }),
+        ),
+      );
+      const connector = makeConnector();
+      await expect(async () => {
+        for await (const _ of connector.sync({})) { /* drain */ }
+      }).rejects.toMatchObject({ code: 'AUTH_EXPIRED' });
+    });
+
+    it('throws ConnectorError on 429 (rate limited mid-sync)', async () => {
+      server.use(
+        http.get('https://www.googleapis.com/drive/v3/files', () =>
+          HttpResponse.json({ error: { code: 429 } }, { status: 429 }),
+        ),
+      );
+      const connector = makeConnector();
+      await expect(async () => {
+        for await (const _ of connector.sync({})) { /* drain */ }
+      }).rejects.toMatchObject({ code: 'RATE_LIMITED' });
+    });
+  });
+
+  describe('sync() — folders fixture', () => {
+    it('yields nested folder tree from folders fixture', async () => {
+      server.use(
+        http.get('https://www.googleapis.com/drive/v3/files', () =>
+          HttpResponse.json(foldersFixture),
+        ),
+      );
+      const connector = makeConnector();
+      const entities = [];
+      for await (const entity of connector.sync({ entityTypes: ['folder'] })) {
+        entities.push(entity);
+      }
+      expect(entities.length).toBe(3);
+      expect(entities.every(e => e.type === 'folder')).toBe(true);
+    });
+
+    it('nested folder has parent relationship edge', async () => {
+      server.use(
+        http.get('https://www.googleapis.com/drive/v3/files', () =>
+          HttpResponse.json(foldersFixture),
+        ),
+      );
+      const connector = makeConnector();
+      const entities = [];
+      for await (const entity of connector.sync({})) {
+        entities.push(entity);
+      }
+      const nested = entities.find(e => e.id === 'google-drive:folder:folder-q4-reports');
+      expect(nested).toBeDefined();
+      expect(nested?.relationships.some(r => r.targetId === 'google-drive:folder:folder-sales')).toBe(true);
     });
   });
 });

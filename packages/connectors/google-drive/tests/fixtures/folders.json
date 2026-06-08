@@ -1,0 +1,29 @@
+{
+  "files": [
+    {
+      "id": "folder-sales",
+      "name": "Sales",
+      "mimeType": "application/vnd.google-apps.folder",
+      "parents": ["root-folder-id"],
+      "modifiedTime": "2024-01-15T10:00:00.000Z",
+      "webViewLink": "https://drive.google.com/drive/folders/folder-sales"
+    },
+    {
+      "id": "folder-marketing",
+      "name": "Marketing",
+      "mimeType": "application/vnd.google-apps.folder",
+      "parents": ["root-folder-id"],
+      "modifiedTime": "2024-01-16T11:00:00.000Z",
+      "webViewLink": "https://drive.google.com/drive/folders/folder-marketing"
+    },
+    {
+      "id": "folder-q4-reports",
+      "name": "Q4 Reports",
+      "mimeType": "application/vnd.google-apps.folder",
+      "parents": ["folder-sales"],
+      "modifiedTime": "2024-01-17T12:00:00.000Z",
+      "webViewLink": "https://drive.google.com/drive/folders/folder-q4-reports"
+    }
+  ],
+  "nextPageToken": null
+}
