@@ -3851,6 +3851,97 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 - **Depends on**: Connector Instance Management API
 - **Added**: 2026-06-08
 
+---
+
+## Layer 64: Production Readiness & API Polish
+
+### Task: API Versioning & Deprecation Management System
+- **Layer**: 64 — Production Readiness & API Polish
+- **Status**: COMMITTED
+- **Priority**: High
+- **Description**: Implement comprehensive API versioning and deprecation tracking to support multiple API versions concurrently with smooth migration paths. Create packages/semantic-core/src/api-versioning.ts with ApiVersionManager: (1) defineEndpointVersion(path, version, status='active'|'deprecated'|'sunset'), (2) checkVersionSupport(version, minVersion) validating requested version against min/max, (3) parseApiVersionHeader() extracting X-API-Version header (default: v1), (4) validateVersionCompat(version, requiredFeatures) ensuring feature availability, (5) generateDeprecationWarning(oldPath, newPath, sunsetDate) for response headers. Create migration 128 (api_versions, endpoint_versions, deprecation_timeline). Add Hono middleware apps/api/src/middleware/api-version.ts that: injects version into request context, validates availability, adds `Deprecation: true` + `Sunset: <date>` + `API-Warn` headers to deprecated endpoints. Add REST GET /api/v1/admin/api-versions returning all versions with status + feature list, GET /api/v1/admin/endpoints/:version/deprecated returning deprecated endpoints with migration guide URLs. Add dashboard page /admin/api-versioning with version timeline, endpoint deprecation tracker, client adoption metrics per version, and migration playbook per deprecated endpoint. Include 28+ tests (16 unit versioning logic + 12 route coverage for deprecation warnings).
+- **Files**:
+  - packages/semantic-core/src/api-versioning.ts
+  - packages/semantic-core/src/__tests__/api-versioning.test.ts
+  - apps/api/src/middleware/api-version.ts
+  - apps/api/src/routes/api-version-admin.ts
+  - apps/api/src/__tests__/api-version-admin.test.ts
+  - apps/api/migrations/128_api_versions.sql
+  - apps/dashboard/app/admin/api-versioning/page.tsx
+  - apps/dashboard/components/version-timeline.tsx
+  - apps/dashboard/components/deprecation-tracker.tsx
+- **Depends on**: nothing
+- **Added**: 2026-06-08
+
+### Task: Content Negotiation & Response Format Support (JSON/CSV/Parquet)
+- **Layer**: 64 — Production Readiness & API Polish
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Implement HTTP content negotiation to serve context and entity data in multiple formats (JSON, CSV, Parquet) based on Accept headers, enabling downstream BI tools and data warehouses to consume Iris data efficiently. Create packages/semantic-core/src/response-serializer.ts with ResponseSerializer: (1) parseAcceptHeader(header) extracting preferred format + quality, (2) serializeAsJson(entities) standard JSON envelope, (3) serializeAsCsv(entities, schema) flat CSV with proper quoting/escaping, (4) serializeAsParquet(entities, schema) columnar Parquet with gzip compression for data warehouse compatibility, (5) selectFormat(acceptHeader, available=[json, csv, parquet]) choosing best match. Add Hono middleware apps/api/src/middleware/content-negotiation.ts that: intercepts response, checks Accept header, calls appropriate serializer, sets Content-Type + Content-Disposition headers. Extend entity/query/metric endpoints to support ?format=json|csv|parquet query param as override. Create migration 129 (response_format_audit) to track format usage. Add dashboard analytics widget showing format distribution by endpoint and client type. Include 32+ tests (18 serialization format accuracy + 14 middleware content-type validation).
+- **Files**:
+  - packages/semantic-core/src/response-serializer.ts
+  - packages/semantic-core/src/__tests__/response-serializer.test.ts
+  - apps/api/src/middleware/content-negotiation.ts
+  - apps/api/src/__tests__/content-negotiation.test.ts
+  - apps/api/migrations/129_response_format_audit.sql
+  - apps/dashboard/components/response-format-analytics.tsx
+- **Depends on**: nothing
+- **Added**: 2026-06-08
+
+### Task: Webhook Delivery Reliability & Dead-Letter Queue Management
+- **Layer**: 64 — Production Readiness & API Polish
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Enhance webhook delivery reliability with exponential backoff retries, dead-letter queue (DLQ) management, and inspection/replay capabilities. Create packages/semantic-core/src/webhook-reliability.ts with WebhookReliabilityManager: (1) enqueueWebhookWithRetry(event, endpoint, retryPolicy) queuing via BullMQ with exponential backoff (1s, 4s, 16s, 64s, 256s), (2) markWebhookFailed(webhookId, finalError) moving to DLQ after max retries exhausted, (3) inspectDlqEvent(eventId) returning full payload + error trace + retry history, (4) replayDlqEvent(eventId, patchPayload?) retrying a dead-lettered event with optional payload modification, (5) analyzeDlqPatterns() identifying systemic issues (bad endpoint URL, network issues, payload schema mismatch). Create migration 130 (webhook_retry_log, webhook_dlq, dlq_analysis). Add REST routes: GET /api/v1/admin/webhooks/dlq (cursor-paginated DLQ events with error classification), POST /api/v1/admin/webhooks/dlq/:id/retry (manual replay with optional patch), POST /api/v1/admin/webhooks/dlq/analyze (returns pattern analysis + remediation suggestions). Add dashboard page /admin/webhooks/dlq with table of failed deliveries, retry history graph, error breakdown pie chart, pattern alerts. Add automatic DLQ cleanup (events older than 30 days). Include 34+ tests (20 unit retry logic + 14 integration DLQ + replay scenarios).
+- **Files**:
+  - packages/semantic-core/src/webhook-reliability.ts
+  - packages/semantic-core/src/__tests__/webhook-reliability.test.ts
+  - packages/semantic-core/src/__tests__/webhook-reliability.integration.test.ts
+  - apps/api/src/routes/webhook-dlq-admin.ts
+  - apps/api/src/__tests__/webhook-dlq-admin.test.ts
+  - apps/api/migrations/130_webhook_dlq_management.sql
+  - apps/dashboard/app/admin/webhooks/dlq/page.tsx
+  - apps/dashboard/components/dlq-event-table.tsx
+  - apps/dashboard/components/dlq-pattern-analysis.tsx
+- **Depends on**: nothing
+- **Added**: 2026-06-08
+
+### Task: Connector Performance Optimization Dashboard & Auto-Tuning
+- **Layer**: 64 — Production Readiness & API Polish
+- **Status**: UNWORKED
+- **Priority**: Medium
+- **Description**: Build a comprehensive connector performance dashboard with observability for throughput, latency, and resource utilization, plus an auto-tuning engine that recommends and applies optimizations. Create packages/connector-sdk/src/performance-optimizer.ts with ConnectorPerformanceOptimizer: (1) analyzeConnectorMetrics(connectorId, window) computing throughput (records/sec), latency (API call p50/p95/p99), error rate, batch efficiency, (2) identifyPaginationPattern(connectorId) detecting cursor vs offset vs keyset pagination, (3) adaptiveBatchSize(currentBatchSize, errorRate, latency) recommending optimal batch size (50-500 range), (4) computeOptimalConcurrency(connectorId, throughput, errorRate) suggesting concurrency level (1-10), (5) suggestRateLimitAdjustment(apiLimitExceeded, currentDelay) recommending request delay, (6) predictConnectorCapacity(metrics, scalingFactor) estimating max sustainable throughput. Create migration 131 (connector_performance_metrics) storing batch/concurrency/rateLimit recommendations. Add REST routes: GET /api/v1/connectors/:id/performance-stats (throughput chart, latency p-tile distribution, error rate timeline), GET /api/v1/connectors/:id/optimization-recs (array of { recommendation, expectedBenefit, risk }), POST /api/v1/connectors/:id/apply-optimization (apply a recommended optimization). Add dashboard page /connectors/:id/performance with: throughput sparkline, latency heatmap, batch/concurrency gauges, optimization panel with before/after comparison. Include 30+ tests (18 unit optimizer logic + 12 route integration with perf data).
+- **Files**:
+  - packages/connector-sdk/src/performance-optimizer.ts
+  - packages/connector-sdk/src/__tests__/performance-optimizer.test.ts
+  - apps/api/src/routes/connector-performance.ts
+  - apps/api/src/__tests__/connector-performance.test.ts
+  - apps/api/migrations/131_connector_perf_metrics.sql
+  - apps/dashboard/app/connectors/[id]/performance/page.tsx
+  - apps/dashboard/components/throughput-chart.tsx
+  - apps/dashboard/components/latency-distribution.tsx
+  - apps/dashboard/components/optimization-recommender.tsx
+- **Depends on**: nothing
+- **Added**: 2026-06-08
+
+### Task: MCP Tool Coverage Expansion & Discovery
+- **Layer**: 64 — Production Readiness & API Polish
+- **Status**: UNWORKED
+- **Priority**: Medium
+- **Description**: Expand MCP tool coverage with additional utility tools for common AI agent patterns (bulk operations, temporal queries, multi-entity analysis) and implement a tool discovery endpoint that dynamically advertises available tools based on workspace configuration. Create apps/mcp-server/src/tools/bulk-entity-update.ts (update multiple entities by filter), apps/mcp-server/src/tools/entity-trend-analysis.ts (analyze metric trends over time windows), apps/mcp-server/src/tools/entity-dependency-graph.ts (discover all entities dependent on a given entity). Add MCP resource discovery endpoint POST /api/v1/mcp/tools/discover returning schema + usage examples for all registered tools filtered by workspace context (respects role-based tool filtering). Create apps/api/src/routes/mcp-tool-discovery.ts with: GET /api/v1/mcp/tools (all available tools with schemas), GET /api/v1/mcp/tools/:name/usage-stats (tool invocation count, avg latency, error rate), GET /api/v1/mcp/tools/:name/examples (curated usage examples per tool). Add dashboard page /mcp-tools with searchable tool catalog, tool schemas with field descriptions, usage examples, popularity metrics. Include 26+ tests (14 new tool logic + 12 discovery endpoint coverage).
+- **Files**:
+  - apps/mcp-server/src/tools/bulk-entity-update.ts
+  - apps/mcp-server/src/tools/entity-trend-analysis.ts
+  - apps/mcp-server/src/tools/entity-dependency-graph.ts
+  - apps/api/src/routes/mcp-tool-discovery.ts
+  - apps/api/src/__tests__/mcp-tool-discovery.test.ts
+  - apps/dashboard/app/mcp-tools/page.tsx
+  - apps/dashboard/components/tool-schema-viewer.tsx
+  - apps/dashboard/components/tool-usage-stats.tsx
+  - apps/dashboard/components/tool-examples-panel.tsx
+- **Depends on**: nothing
+- **Added**: 2026-06-08
+
 ### Task: Service-Level Objective (SLO) Monitoring & Alerting Engine
 - **Layer**: 63 — Hardening & Integration Completeness
 - **Status**: COMMITTED
