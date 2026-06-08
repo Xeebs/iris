@@ -65,6 +65,7 @@ export default defineConfig({
       '@iris/semantic-core/mcp-tool-generator': path.resolve(__dirname, '../../packages/semantic-core/src/mcp-tool-generator.ts'),
       '@iris/semantic-core/event-driven-sync-engine': path.resolve(__dirname, '../../packages/semantic-core/src/event-driven-sync-engine.ts'),
       '@iris/semantic-core/agent-feedback-engine': path.resolve(__dirname, '../../packages/semantic-core/src/agent-feedback-engine.ts'),
+      '@iris/semantic-core/smart-field-mapper': path.resolve(__dirname, '../../packages/semantic-core/src/smart-field-mapper.ts'),
       '@iris/semantic-core': path.resolve(__dirname, '../../packages/semantic-core/src/index.ts'),
       '@iris/cache/response-cache': path.resolve(__dirname, '../../packages/cache/src/response-cache.ts'),
       '@iris/compression': path.resolve(__dirname, '../../packages/compression/src/index.ts'),
