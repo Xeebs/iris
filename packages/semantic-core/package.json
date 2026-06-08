@@ -47,7 +47,8 @@
     "./data-lineage": "./dist/data-lineage.js",
     "./data-import-export": "./dist/data-import-export.js",
     "./resource-builder": "./dist/resource-builder.js",
-    "./sync-quality-monitor": "./dist/sync-quality-monitor.js"
+    "./sync-quality-monitor": "./dist/sync-quality-monitor.js",
+    "./entity-deduplicator": "./dist/entity-deduplicator.js"
   },
   "scripts": {
     "build": "tsc --build",
