@@ -1,0 +1,34 @@
+[
+  {
+    "id": 100001,
+    "name": "iris-core",
+    "full_name": "test-org/iris-core",
+    "description": "Core platform components for Iris",
+    "private": false,
+    "html_url": "https://github.com/test-org/iris-core",
+    "language": "TypeScript",
+    "stargazers_count": 128,
+    "forks_count": 14,
+    "open_issues_count": 7,
+    "default_branch": "main",
+    "topics": ["typescript", "mcp", "ai"],
+    "updated_at": "2026-06-01T12:00:00Z",
+    "owner": { "login": "test-org" }
+  },
+  {
+    "id": 100002,
+    "name": "iris-connectors",
+    "full_name": "test-org/iris-connectors",
+    "description": "Data source connectors for Iris",
+    "private": true,
+    "html_url": "https://github.com/test-org/iris-connectors",
+    "language": "TypeScript",
+    "stargazers_count": 0,
+    "forks_count": 0,
+    "open_issues_count": 3,
+    "default_branch": "main",
+    "topics": [],
+    "updated_at": "2026-05-28T08:30:00Z",
+    "owner": { "login": "test-org" }
+  }
+]

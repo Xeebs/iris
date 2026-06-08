@@ -1,0 +1,30 @@
+[
+  {
+    "id": 200001,
+    "number": 42,
+    "title": "Fix semantic cache miss on empty query",
+    "state": "open",
+    "user": { "login": "alice" },
+    "labels": [{ "name": "bug" }, { "name": "priority:high" }],
+    "assignees": [{ "login": "bob" }],
+    "milestone": { "title": "v1.0.0" },
+    "comments": 5,
+    "created_at": "2026-05-20T10:00:00Z",
+    "updated_at": "2026-06-01T14:22:00Z",
+    "closed_at": null
+  },
+  {
+    "id": 200002,
+    "number": 38,
+    "title": "Connector sync fails on empty page response",
+    "state": "closed",
+    "user": { "login": "carol" },
+    "labels": [{ "name": "bug" }],
+    "assignees": [],
+    "milestone": null,
+    "comments": 3,
+    "created_at": "2026-05-15T09:00:00Z",
+    "updated_at": "2026-05-25T16:00:00Z",
+    "closed_at": "2026-05-25T16:00:00Z"
+  }
+]

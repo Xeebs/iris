@@ -1,0 +1,32 @@
+[
+  {
+    "id": 300001,
+    "number": 55,
+    "title": "feat: add hybrid search with RRF",
+    "state": "closed",
+    "user": { "login": "dave" },
+    "head": { "ref": "feat/rrf-hybrid-search" },
+    "base": { "ref": "main" },
+    "labels": [{ "name": "enhancement" }],
+    "requested_reviewers": [{ "login": "alice" }, { "login": "bob" }],
+    "draft": false,
+    "merged_at": "2026-05-30T11:00:00Z",
+    "updated_at": "2026-05-30T11:00:00Z",
+    "closed_at": "2026-05-30T11:00:00Z"
+  },
+  {
+    "id": 300002,
+    "number": 60,
+    "title": "WIP: connector rate limit backoff",
+    "state": "open",
+    "user": { "login": "carol" },
+    "head": { "ref": "fix/rate-limit-backoff" },
+    "base": { "ref": "main" },
+    "labels": [],
+    "requested_reviewers": [],
+    "draft": true,
+    "merged_at": null,
+    "updated_at": "2026-06-02T09:15:00Z",
+    "closed_at": null
+  }
+]

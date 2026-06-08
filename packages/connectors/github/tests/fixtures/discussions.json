@@ -1,0 +1,24 @@
+[
+  {
+    "id": 400001,
+    "number": 12,
+    "title": "RFC: Token budget strategy for large data sets",
+    "user": { "login": "alice" },
+    "category": { "name": "RFC" },
+    "comments": 8,
+    "answer_html_url": "https://github.com/test-org/iris-core/discussions/12#discussioncomment-123",
+    "created_at": "2026-05-10T08:00:00Z",
+    "updated_at": "2026-05-28T12:00:00Z"
+  },
+  {
+    "id": 400002,
+    "number": 15,
+    "title": "How to configure custom embedding models?",
+    "user": { "login": "newcomer" },
+    "category": { "name": "Q&A" },
+    "comments": 2,
+    "answer_html_url": null,
+    "created_at": "2026-06-01T07:00:00Z",
+    "updated_at": "2026-06-01T18:30:00Z"
+  }
+]
