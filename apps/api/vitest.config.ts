@@ -51,6 +51,7 @@ export default defineConfig({
       '@iris/semantic-core/compliance-reporter': path.resolve(__dirname, '../../packages/semantic-core/src/compliance-reporter.ts'),
       '@iris/semantic-core/data-lineage': path.resolve(__dirname, '../../packages/semantic-core/src/data-lineage.ts'),
       '@iris/semantic-core/dedup-reconciliation': path.resolve(__dirname, '../../packages/semantic-core/src/dedup-reconciliation.ts'),
+      '@iris/semantic-core/proactive-context-engine': path.resolve(__dirname, '../../packages/semantic-core/src/proactive-context-engine.ts'),
     },
   },
   test: {

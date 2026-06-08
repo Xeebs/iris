@@ -61,7 +61,8 @@
     "./multi-provider-optimizer": "./dist/multi-provider-optimizer.js",
     "./provider-registry": "./dist/providers/provider-registry.js",
     "./compliance-reporter": "./dist/compliance-reporter.js",
-    "./dedup-reconciliation": "./dist/dedup-reconciliation.js"
+    "./dedup-reconciliation": "./dist/dedup-reconciliation.js",
+    "./proactive-context-engine": "./dist/proactive-context-engine.js"
   },
   "scripts": {
     "build": "tsc --build",
