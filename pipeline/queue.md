@@ -2806,7 +2806,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: MCP Streaming Context Tool & Progressive Expansion
 - **Layer**: 52 — MCP Tool Enhancements & Streaming
-- **Status**: IN_PROGRESS
+- **Status**: COMMITTED
 - **Priority**: High
 - **Description**: Implement a streaming MCP tool that progressively expands context as needed, reducing initial response token cost while allowing the client to request deeper context. Create apps/mcp-server/src/tools/streaming-context.ts with: (1) streamingQueryContext(query, initialBudget=500, maxBudget=2000, expansionLevels=['summary', 'detailed', 'full']) — returns initial compressed context, emits additional chunks on client request, (2) contextExpansionHeuristics that predict which expansion layer the client will request based on entity type and query complexity, (3) partial response tracking (partial: true, expansionKey) so client can later call getContextExpansion(expansionKey) to fill in skipped layers. Update apps/mcp-server/src/server.ts to register the new tool. Create comprehensive test suite (15+ tests) covering: initial budget enforcement, progressive expansion chunks, client-side state management, timeout handling if expansion not consumed. Integration tests: real query with multi-level expansion, verify total token cost < full context approach by 40%.
 - **Files**:
@@ -2869,7 +2869,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Entity Validation Engine with Data Quality Rules
 - **Layer**: 53 — Data Quality & Resilience
-- **Status**: UNWORKED
+- **Status**: IN_PROGRESS
 - **Priority**: High
 - **Description**: Build a comprehensive entity validation system that enforces data quality rules defined by users, catching malformed or incomplete data before indexing. Create packages/semantic-core/src/entity-validator.ts with EntityValidationEngine class: (1) define validation rules (required fields, field type constraints, regex patterns, cross-field dependencies e.g., "if status=closed, closedAt must be set"), (2) support both built-in rules (non-null, email format, phone format) and user-custom rules, (3) validate entities at sync time (reject/quarantine invalid records), (4) bulk re-validate indexed entities on-demand, (5) generate validation reports (# valid, # invalid, # warnings per entity type). Create apps/api/migrations/081_add_entity_validation_rules.sql with: validation_rules table (workspace_id, rule_id, entity_type, rule_name, rule_definition_json, is_blocking: boolean, created_by_user_id), validation_failures table (workspace_id, entity_id, rule_id, failure_reason, occurred_at, acknowledged: boolean). Expose REST: POST /api/v1/validation/rules (create rule), GET /api/v1/validation/rules (list rules), POST /api/v1/validation/validate-entity (test rule on sample entity), GET /api/v1/validation/failures (paginated list). Build dashboard page at apps/dashboard/app/admin/data-quality/rules/page.tsx with: rule builder UI, test panel, failure explorer. Add 18+ unit tests for rule evaluation, edge cases, cross-field dependencies. Integration tests with real entities from multiple connectors. Reference code-style.md for validation patterns.
 - **Files**:
