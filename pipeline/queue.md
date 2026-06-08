@@ -3521,7 +3521,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Connector Health Monitoring Dashboard Enhancement
 - **Layer**: 59 — Quality Assurance & Test Coverage Closure
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: Medium
 - **Description**: Enhance the connector health monitoring system with real-time alerts, detailed failure diagnostics, and recovery suggestions. Create packages/semantic-core/src/connector-health-monitor.ts with ConnectorHealthMonitor: (1) trackSyncMetrics(connectorId, syncDuration, recordCount, errorCount, throttledRequests) continuously measuring connector performance, (2) detectUnhealthyState(connectorId) identifying when sync success rate drops below 95% or latency exceeds threshold, (3) suggestRecovery(connectorId, failureType) recommending actions (retry, rotate credentials, check rate limits, update schema), (4) emitHealthAlert(connectorId, severity, message) triggering dashboard notifications, (5) getHealthScore(connectorId) computing 0-100 score from sync success, latency, error patterns, throttling. Create apps/api/migrations/109_add_health_monitoring.sql with: connector_health_scores (connector_id, score, last_sync_success_rate, last_sync_latency_ms, last_checked_at), health_alerts (connector_id, severity: 'critical'|'warning'|'info', failure_type, suggested_action, acknowledged_at). Expose REST: GET /api/v1/connectors/:id/health (current score + alerts), POST /api/v1/connectors/:id/health/acknowledge (mark alert as seen). Build dashboard: apps/dashboard/components/connector-health-scorecard.tsx with health meter, recent alerts, suggested fixes. Add 14+ tests for metric tracking, health state detection, recovery suggestions.
 - **Files**:
