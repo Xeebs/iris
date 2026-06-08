@@ -2498,7 +2498,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Real-Time Entity Updates via WebSocket Subscriptions
 - **Layer**: 48 — Real-Time Updates & Advanced Data Governance
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: High
 - **Description**: Implement WebSocket-based real-time entity subscription system to push live updates to dashboard clients whenever entities are indexed or modified. Create apps/api/src/websocket/entity-subscriptions.ts with EntitySubscriptionManager handling: (1) client subscriptions by entity ID or entity type (e.g., subscribe to all 'contact' entities), (2) broadcast updates when indexer persists changes to vector store, (3) optional filtering by workspace_id to prevent cross-workspace leaks, (4) heartbeat pings to detect stale connections. Update apps/mcp-server/src/server.ts to emit subscription events when entities are indexed. Build WebSocket endpoint at /ws/entities that accepts JSON subscribe/unsubscribe messages. Add dashboard hook at apps/dashboard/lib/use-entity-subscription.ts that manages subscriptions and optimistic updates. Update entity list pages (apps/dashboard/app/entities/page.tsx, connectors page, graph page) to use real-time subscriptions for live entity counts, status, and relationship changes. Add 14+ unit tests for subscription logic and connection management, integration tests with real WebSocket connections, E2E test verifying live updates on dashboard. Reference api-conventions.md for WebSocket patterns.
 - **Files**:
