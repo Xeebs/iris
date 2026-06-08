@@ -75,6 +75,7 @@ import { createLineageRoutes } from './routes/lineage.js';
 import { createDedupRoutes } from './routes/dedup-reconciliation.js';
 import { createProactiveContextRoutes } from './routes/proactive-context.js';
 import { createNlpConfigRoutes } from './routes/nlp-config.js';
+import { createSsoConfigRoutes } from './routes/sso-config.js';
 import { openApiSpec } from './openapi.js';
 
 export { createApp };
@@ -163,6 +164,7 @@ function createApp(
   authed.route('/workflow-templates', createWorkflowTemplateRoutes(sql));
   authed.route('/workspace', createWorkspaceBenchmarkingRoutes(sql));
   authed.route('/benchmarks', createBenchmarkingRoutes(sql));
+  authed.route('/sso', createSsoConfigRoutes(sql));
 
   if (redisUrl) {
     authed.route('/admin/dlq', createAdminDlqRoutes(sql, redisUrl));
