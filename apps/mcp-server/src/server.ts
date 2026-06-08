@@ -17,6 +17,9 @@ import { registerGetMetric } from './tools/get-metric.js';
 import { registerListGlossary } from './tools/list-glossary.js';
 import { registerSuggestContext } from './suggestions.js';
 import { registerAdvancedQueryContext } from './tools/advanced-query-context.js';
+import { registerEntityResource } from './resources/entity-resource.js';
+import { registerGraphResource } from './resources/graph-resource.js';
+import { registerDocumentResource } from './resources/document-resource.js';
 import { validateMcpApiKey, recordSessionStart, recordSessionEnd } from './auth.js';
 
 const log = logger.child({ service: 'mcp-server' });
@@ -55,6 +58,10 @@ export function createMcpServer(
   registerListGlossary(server, glossaryService, authenticatedWorkspaceId, responseCache);
   registerSuggestContext(server, authenticatedWorkspaceId);
   registerAdvancedQueryContext(server, vectorStore, openAiKey, authenticatedWorkspaceId);
+
+  registerEntityResource(server, vectorStore);
+  registerGraphResource(server, vectorStore);
+  registerDocumentResource(server);
 
   return server;
 }

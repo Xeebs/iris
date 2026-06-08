@@ -45,7 +45,8 @@
     "./vector-health": "./dist/vector-health.js",
     "./attribute-frequency": "./dist/attribute-frequency.js",
     "./data-lineage": "./dist/data-lineage.js",
-    "./data-import-export": "./dist/data-import-export.js"
+    "./data-import-export": "./dist/data-import-export.js",
+    "./resource-builder": "./dist/resource-builder.js"
   },
   "scripts": {
     "build": "tsc --build",

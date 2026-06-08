@@ -14,6 +14,8 @@ export default defineConfig({
       '@iris/semantic-core/glossary': path.resolve(__dirname, '../../packages/semantic-core/src/glossary.ts'),
       '@iris/semantic-core/metrics': path.resolve(__dirname, '../../packages/semantic-core/src/metrics.ts'),
       '@iris/semantic-core/proactive-suggester': path.resolve(__dirname, '../../packages/semantic-core/src/proactive-suggester.ts'),
+      '@iris/semantic-core/resource-builder': path.resolve(__dirname, '../../packages/semantic-core/src/resource-builder.ts'),
+      '@iris/semantic-core/advanced-query-engine': path.resolve(__dirname, '../../packages/semantic-core/src/advanced-query-engine.ts'),
       '@iris/semantic-core': path.resolve(__dirname, '../../packages/semantic-core/src/index.ts'),
       '@iris/cache/semantic-cache': path.resolve(__dirname, '../../packages/cache/src/semantic-cache.ts'),
       '@iris/cache/response-cache': path.resolve(__dirname, '../../packages/cache/src/response-cache.ts'),
