@@ -2515,7 +2515,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Data Lineage & Impact Analysis Engine
 - **Layer**: 48 — Real-Time Updates & Advanced Data Governance
-- **Status**: UNWORKED
+- **Status**: IN_PROGRESS
 - **Priority**: High
 - **Description**: Build a data lineage tracking system that traces entity data flow from source connectors through transformations and relationships, enabling impact analysis when data changes. Create packages/semantic-core/src/data-lineage.ts with DataLineageService: (1) track entity provenance (source connector, sync timestamp, source record ID), (2) model relationship dependencies (entityA references entityB, entityB's change impacts entityA), (3) compute impact scope (given entity X changed, what other entities are affected?), (4) build lineage graph (parents/ancestors and children/descendants up to depth N). Add apps/api/migrations/067_add_lineage_tables.sql with tables: entity_lineage (entity_id, source_connector, source_record_id, last_modified_at, sync_run_id), entity_dependencies (entity_id, depends_on_entity_id, relationship_type, confidence). Expose GET /api/v1/lineage/:entityId (fetch lineage for entity), POST /api/v1/lineage/:entityId/impact-analysis (compute change impact). Build dashboard page at apps/dashboard/app/data-lineage/page.tsx with: interactive lineage graph (upstream/downstream), impact analysis tool (select entity, see affected entities), sync history timeline. Add 18+ unit tests for graph traversal and impact computation, integration tests with synthetic lineage fixtures. Reference code-style.md for error handling.
 - **Files**:

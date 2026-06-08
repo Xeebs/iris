@@ -69,6 +69,7 @@ import { createStreamingContextRoutes } from './routes/streaming-context.js';
 import { createIndexCompositionRoutes } from './routes/index-composition.js';
 import { createAutoTuningRoutes } from './routes/auto-tuning.js';
 import { createProvidersRoutes } from './routes/providers.js';
+import { createComplianceRoutes } from './routes/compliance.js';
 import { openApiSpec } from './openapi.js';
 
 export { createApp };
@@ -209,6 +210,7 @@ function createApp(
   authed.route('/analytics/index', createIndexCompositionRoutes(sql));
   authed.route('/optimization', createAutoTuningRoutes(sql));
   authed.route('/providers', createProvidersRoutes(sql));
+  authed.route('/compliance', createComplianceRoutes(sql));
 
   // Webhook routes: inbound (unauthenticated) + events status (authenticated)
   app.route('/api/v1/webhooks', createWebhookRoutes(sql));

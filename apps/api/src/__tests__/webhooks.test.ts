@@ -370,7 +370,11 @@ describe('GET /api/v1/webhooks/events', () => {
   });
 
   it('returns 500 on database error', async () => {
-    const sql = vi.fn().mockRejectedValue(new Error('DB error')) as unknown as SqlClient;
+    const sql = vi.fn().mockImplementation((strings: TemplateStringsArray, ...values: unknown[]) => {
+      // Empty fragment calls (sql``) have one string and no values — return harmless value
+      if (strings.length === 1 && values.length === 0) return [];
+      return Promise.reject(new Error('DB error'));
+    }) as unknown as SqlClient;
     const app = makeEventsApp(sql);
     const res = await app.request('/api/v1/webhooks/events?workspaceId=ws-test');
     expect(res.status).toBe(500);

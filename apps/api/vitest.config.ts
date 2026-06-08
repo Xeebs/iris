@@ -48,6 +48,7 @@ export default defineConfig({
       '@iris/semantic-core/auto-tuning-optimizer': path.resolve(__dirname, '../../packages/semantic-core/src/auto-tuning-optimizer.ts'),
       '@iris/semantic-core/multi-provider-optimizer': path.resolve(__dirname, '../../packages/semantic-core/src/multi-provider-optimizer.ts'),
       '@iris/semantic-core/provider-registry': path.resolve(__dirname, '../../packages/semantic-core/src/providers/provider-registry.ts'),
+      '@iris/semantic-core/compliance-reporter': path.resolve(__dirname, '../../packages/semantic-core/src/compliance-reporter.ts'),
     },
   },
   test: {
