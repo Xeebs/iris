@@ -53,6 +53,7 @@ import { createMarketplaceRoutes } from './routes/marketplace.js';
 import { createCacheStatsRoutes } from './routes/cache-stats.js';
 import { createAdminResilienceRoutes } from './routes/admin-resilience.js';
 import { createAdminEmbeddingRoutes } from './routes/admin-embedding.js';
+import { createVectorHealthRoutes } from './routes/vector-health.js';
 import { openApiSpec } from './openapi.js';
 
 export { createApp };
@@ -176,6 +177,7 @@ function createApp(
   }
   authed.route('/admin/connectors/resilience', createAdminResilienceRoutes(sql));
   authed.route('/admin/embedding-config', createAdminEmbeddingRoutes(sql));
+  authed.route('/admin/vector-health', createVectorHealthRoutes(sql));
 
   // Webhook routes: inbound (unauthenticated) + events status (authenticated)
   app.route('/api/v1/webhooks', createWebhookRoutes(sql));

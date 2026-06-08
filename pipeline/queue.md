@@ -1839,7 +1839,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Advanced Connector Retry & Resilience Patterns
 - **Layer**: 37 — Response Caching & Query Optimization
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: High
 - **Description**: Implement sophisticated retry strategies and resilience patterns for all connectors to handle transient failures gracefully. Create packages/queue/src/connector-resilience.ts with ConnectorResilienceManager supporting: (1) configurable retry policies (max attempts, backoff strategy: exponential|linear|fibonacci with jitter), (2) circuit breaker pattern (fail-fast if error rate > threshold, reset after cooldown), (3) timeout configuration per connector (default 10s, configurable), (4) bulkhead pattern (limit concurrent requests per connector to avoid cascading failures). Store policies in connector_resilience_config table (connector_id, max_retries, backoff_strategy, circuit_breaker_threshold, timeout_ms, max_concurrent). Implement integration into sync-worker.ts: before invoking connector.sync(), wrap with resilience manager that enforces retry/timeout/circuit breaker logic. Add metrics tracking: retry_count, timeout_count, circuit_breaker_trips per connector. Expose GET /api/v1/admin/connectors/resilience returning resilience metrics and config. Build admin panel at apps/dashboard/components/connector-resilience-config.tsx allowing tuning of retry policies per connector with real-time metrics overlay. Add 25+ tests covering all retry scenarios, circuit breaker state transitions, timeout behavior, and bulkhead enforcement with synthetic workloads.
 - **Files**:
@@ -1899,7 +1899,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: LLM Provider Abstraction Layer & Multi-Embedding Model Support
 - **Layer**: 39 — LLM Provider Abstraction & Multi-Model Support
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: High
 - **Description**: Abstract embedding model selection to support multiple LLM providers (OpenAI, Azure OpenAI, Anthropic, local Ollama, Cohere) instead of hardcoding OpenAI text-embedding-3-small. Create packages/semantic-core/src/embedding-provider.ts with EmbeddingProvider interface: getEmbedding(text: string), batchEmbeddings(texts: string[]), getModelDimensions(), getModelId(). Implement concrete providers: OpenAIProvider, AzureOpenAIProvider, OllamaProvider, CohereProvider. Update embedding.ts to use the provider pattern. Add configuration in env vars: EMBEDDING_PROVIDER (openai|azure|ollama|cohere), EMBEDDING_MODEL_ID, and provider-specific credentials. Create database migration 046_add_embedding_metadata.sql with: embedding_metadata table (workspace_id, model_id, dimension, created_at) to track which model version indexed each entity. Update indexer to record model_id with embeddings. Add a re-indexing utility in packages/semantic-core/src/reindex-utils.ts to migrate embeddings between models (batch-convert old embeddings to new provider, store both during transition). Expose GET /api/v1/admin/embedding-config and PUT /api/v1/admin/embedding-config/migrate to change providers. Add 28+ unit tests for each provider, batch handling, and dimension mismatches. Reference embedding-patterns.md for cost control and token limits per model. See code-style.md for error handling and config validation rules.
 - **Files**:
@@ -1920,7 +1920,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Vector Index Health Monitoring & Drift Detection
 - **Layer**: 39 — LLM Provider Abstraction & Multi-Model Support
-- **Status**: UNWORKED
+- **Status**: IN_PROGRESS
 - **Priority**: High
 - **Description**: Implement health checks and drift detection for the vector index to ensure semantic quality over time. Create packages/semantic-core/src/vector-health.ts with VectorHealthService: (1) analyzeVectorDrift(workspaceId, sampleSize: 1000) computing vector statistics (centroid, variance, density) and detecting distribution shifts indicating stale or low-quality embeddings, (2) validateEmbeddingConsistency(entityIds) re-embedding a sample of entities and comparing similarity to stored embeddings (flag drifts > 0.05 as potential quality issues), (3) detectOutliers(workspaceId) finding entities with anomalous vectors via isolation forest or statistical bounds, (4) generateHealthReport(workspaceId) aggregating metrics into: overall_health_score (0–100), quality_issues_count, recommended_actions. Store health check results in vector_health_checks table (workspace_id, check_timestamp, drift_score, outlier_count, consistency_score, report_json). Expose GET /api/v1/admin/vector-health returning current status and historical trends. Build admin dashboard panel at apps/dashboard/components/vector-health-monitor.tsx showing: health trend chart, drift alerts, recommended re-indexing, manual health check trigger. Integrate health checks into sync completion workflow (after large syncs, run health check). Add 24+ tests covering drift detection, consistency validation, outlier detection with synthetic vector data. Reference embedding-patterns.md for quality thresholds and cost implications of re-indexing.
 - **Files**:
@@ -1972,4 +1972,63 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
   - apps/mcp-server/src/__tests__/resources.test.ts
   - apps/api/src/__tests__/mcp-resources.test.ts
 - **Depends on**: MCP Server Bootstrap, Entity Relationship Indexing
+- **Added**: 2026-06-07
+
+---
+
+## Layer 41: SIRA-Inspired Retrieval Improvements
+
+### Task: Hybrid BM25 + Vector Retrieval with Reciprocal Rank Fusion
+- **Layer**: 41 — SIRA-Inspired Retrieval Improvements
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Add a sparse BM25 retrieval layer alongside the existing dense vector search, then combine both ranked lists using Reciprocal Rank Fusion (RRF). Inspired by Meta's SIRA paper, which shows sparse lexical retrieval is highly complementary to dense search for exact-match lookups. Implementation: (1) add migration 049_add_fts_vector.sql adding a `fts_vector tsvector` column to the entities table, populated from entity label + all attribute values via a Postgres trigger; add a GIN index on `fts_vector`. (2) Add `bm25Search(workspaceId, queryText, topK, entityTypes?)` method to PgvectorStore in packages/semantic-core/src/vector-store.ts using `ts_rank_cd` and `plainto_tsquery`. (3) Update `retrieveContext` in packages/semantic-core/src/retrieval.ts to run BM25 and vector searches in parallel, then merge results with RRF: `rrf_score = 1/(k + rank_bm25) + 1/(k + rank_vector)` where k=60. Return top-K by combined score. (4) Expose `hybridSearch: boolean` option in RetrievalOptions (default true). Add unit tests for BM25 search, RRF merge logic, and integration tests verifying exact-match queries ("find invoice INV-2024-0312", "Acme Corp deal") rank correctly where vector search alone underperforms.
+- **Files**:
+  - apps/api/migrations/049_add_fts_vector.sql
+  - packages/semantic-core/src/vector-store.ts (update: add bm25Search method)
+  - packages/semantic-core/src/retrieval.ts (update: hybrid search + RRF merge)
+  - packages/semantic-core/src/__tests__/retrieval.test.ts (update)
+  - packages/semantic-core/src/__tests__/vector-store.integration.test.ts (update)
+- **Depends on**: Vector Store Interface, Retrieval Engine
+- **Added**: 2026-06-07
+
+### Task: Corpus-Discriminative Embedding Inputs via Attribute Frequency Filtering
+- **Layer**: 41 — SIRA-Inspired Retrieval Improvements
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Improve embedding quality by excluding high-frequency attribute values from embedding inputs at index time. Inspired by SIRA's corpus-discriminative filtering: attributes shared by >60% of same-type entities within a workspace carry no discriminative signal and dilute embedding similarity boundaries (e.g., `stage: Negotiation` on 65% of deals, `country: US` on 80% of contacts). Implementation: (1) add migration 050_add_attribute_frequency.sql with table `entity_attribute_frequency (workspace_id, entity_type, attr_key, attr_value_hash, occurrence_count, total_entities, frequency_ratio, updated_at)`. (2) Create packages/semantic-core/src/attribute-frequency.ts with AttributeFrequencyTracker: `recordAttributes(workspaceId, entityType, attrs)` updating frequency counts incrementally on each sync, and `isDiscriminative(workspaceId, entityType, attrKey, attrValue): Promise<boolean>` returning false when frequency_ratio > 0.6. (3) Update `buildEmbeddingInput()` in packages/semantic-core/src/embedding.ts to call `isDiscriminative()` and omit non-discriminative attribute values (keep the key but replace value with a placeholder, or drop the pair entirely). Cache frequency lookups in-memory per indexer run (LRU, 1000 entries). Add unit tests with synthetic high-frequency attribute data and integration tests verifying embedding inputs exclude corpus-common terms.
+- **Files**:
+  - apps/api/migrations/050_add_attribute_frequency.sql
+  - packages/semantic-core/src/attribute-frequency.ts
+  - packages/semantic-core/src/embedding.ts (update: discriminative input filter)
+  - packages/semantic-core/src/indexer.ts (update: wire AttributeFrequencyTracker)
+  - packages/semantic-core/src/__tests__/attribute-frequency.test.ts
+  - packages/semantic-core/src/__tests__/embedding.test.ts (update)
+- **Depends on**: Embedding Service, Indexer Implementation
+- **Added**: 2026-06-07
+
+### Task: Query Expansion with Corpus-Frequency Filtering
+- **Layer**: 41 — SIRA-Inspired Retrieval Improvements
+- **Status**: UNWORKED
+- **Priority**: Medium
+- **Description**: Extend the query decomposer to predict domain vocabulary missing from the user's query, then filter predicted terms using corpus statistics before embedding — mirroring SIRA's query-side LLM expansion. Implementation: (1) add `expandQuery(query, workspaceId, availableEntityTypes, apiKey): Promise<string>` to packages/semantic-core/src/query-decomposer.ts. The function prompts gpt-4o-mini with the query and a brief workspace schema summary to predict 5–8 additional domain terms (e.g., "what's our pipeline this quarter?" → ["deal stage", "forecast", "close date", "ARR", "Q3"]). (2) Filter predicted terms against the attribute frequency table: drop terms that appear in >70% of workspace entities (too common) or in <1% (too rare to match anything). (3) Concatenate surviving expansion terms to the original query before embedding in `retrieveContext`: `const embeddingInput = query + ' ' + expansions.join(' ')`. Gate behind `queryExpansion: boolean` option in RetrievalOptions (default false initially). Cache expansion results by query hash in Redis (TTL: 1 hour) to avoid repeated LLM calls on the same query. Add unit tests with mocked LLM responses and corpus frequency data, verifying filtering removes corpus-common and corpus-absent terms. Integration tests verifying expanded queries improve recall on sparse queries.
+- **Files**:
+  - packages/semantic-core/src/query-decomposer.ts (update: add expandQuery)
+  - packages/semantic-core/src/retrieval.ts (update: apply expansion before embedQuery)
+  - packages/semantic-core/src/__tests__/query-decomposer.test.ts (update)
+  - packages/semantic-core/src/__tests__/retrieval.test.ts (update)
+- **Depends on**: Corpus-Discriminative Embedding Inputs via Attribute Frequency Filtering, Query Decomposition & Entity Type Detection
+- **Added**: 2026-06-07
+
+### Task: Offline Entity Enrichment with LLM-Predicted Search Vocabulary
+- **Layer**: 41 — SIRA-Inspired Retrieval Improvements
+- **Status**: UNWORKED
+- **Priority**: Medium
+- **Description**: At index time, optionally augment entity embedding inputs with LLM-predicted domain vocabulary that is missing from the raw entity attributes — the corpus-side enrichment technique from SIRA. This improves recall for natural language queries that use different terminology than the raw data (e.g., a Jira issue titled "Q3-ENT-2204" would be enriched with predicted terms like "enterprise ticket Q3 bug sprint backlog"). Implementation: (1) create packages/semantic-core/src/entity-enricher.ts with EntityEnricher class: `enrichEntity(entity, workspaceId): Promise<string[]>` calls gpt-4o-mini with the entity's type, label, and attributes, asking it to predict 5–10 additional search terms a user might use to find this entity. Returns deduplicated predicted terms filtered against corpus frequency (drop terms with ratio > 0.7). (2) Cache enrichment results by entity content hash in Redis (TTL: 7 days — enrichment only changes if entity data changes). (3) Integrate into indexer.ts: when `enrichEntities: true` option is set in IndexerConfig, call enrichEntity() after building the embedding input and append surviving terms to the embedding string before the API call. (4) Gate by entity type allowlist in IndexerConfig (e.g., enrich only `issue`, `transaction`, `document` types — not `contact` or `deal` which already have rich attributes). Add unit tests with mocked LLM responses, cache hit/miss behavior. Integration tests comparing retrieval recall with and without enrichment on a synthetic sparse-attribute dataset.
+- **Files**:
+  - packages/semantic-core/src/entity-enricher.ts
+  - packages/semantic-core/src/indexer.ts (update: wire EntityEnricher, add enrichEntities config)
+  - packages/semantic-core/src/__tests__/entity-enricher.test.ts
+  - packages/semantic-core/src/__tests__/indexer.test.ts (update)
+- **Depends on**: Corpus-Discriminative Embedding Inputs via Attribute Frequency Filtering, Embedding Service
 - **Added**: 2026-06-07

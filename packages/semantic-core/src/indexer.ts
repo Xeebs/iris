@@ -25,6 +25,13 @@ export interface IndexerConfig {
   workspaceId?: string;
   /** Optional graph store for persisting entity relationships */
   graphStore?: RelationshipStore;
+  /**
+   * When set, called after large syncs (>= largeSync Threshold entities indexed) to
+   * trigger a vector index health check. The caller is responsible for running the check.
+   */
+  onLargeSyncComplete?: (workspaceId: string, entityCount: number) => void;
+  /** Minimum number of entities indexed before calling onLargeSyncComplete. Default: 500 */
+  largeSyncThreshold?: number;
 }
 
 export interface IndexResult {
@@ -100,6 +107,18 @@ export async function indexEntities(
 
   result.durationMs = Date.now() - startMs;
   log.info('Indexing complete', { ...result });
+
+  const indexedCount = result.created + result.updated;
+  const threshold = opts.largeSyncThreshold ?? 500;
+  if (opts.onLargeSyncComplete && opts.workspaceId && indexedCount >= threshold) {
+    log.info('Large sync detected — triggering health check callback', {
+      workspaceId: opts.workspaceId,
+      indexedCount,
+      threshold,
+    });
+    opts.onLargeSyncComplete(opts.workspaceId, indexedCount);
+  }
+
   return result;
 }
 

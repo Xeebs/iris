@@ -41,7 +41,8 @@
     "./billing-meter": "./dist/billing-meter.js",
     "./connector-marketplace": "./dist/connector-marketplace.js",
     "./embedding-provider": "./dist/embedding-provider.js",
-    "./reindex-utils": "./dist/reindex-utils.js"
+    "./reindex-utils": "./dist/reindex-utils.js",
+    "./vector-health": "./dist/vector-health.js"
   },
   "scripts": {
     "build": "tsc --build",
