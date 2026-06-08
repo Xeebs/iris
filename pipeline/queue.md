@@ -3433,7 +3433,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Smart Schema Field Mapping & Connector Auto-Configuration
 - **Layer**: 58 — Growth Phase II - Real-Time & Agent Learning
-- **Status**: IN_PROGRESS
+- **Status**: COMMITTED
 - **Priority**: Medium
 - **Description**: Build an intelligent field mapping system that learns connector field transformations from user behavior and suggests automatic entity attribute mappings during connector setup, reducing manual configuration. Create packages/semantic-core/src/smart-field-mapper.ts with SmartFieldMapper: (1) learnFieldMappings(connectorId, userMappings) analyzing confirmed field mappings (email_address → email, account_name → label) to identify patterns, (2) suggestEntityMapping(connectorSchema, targetEntityType) proposing likely attribute assignments with confidence scores via semantic matching and learned patterns, (3) detectCommonTransformations(sourceField, targetField) recognizing standard patterns (snake_case to camelCase, ISO dates to unix timestamps, concat two fields), (4) validateMappingLogic(mapping) ensuring mappings won't produce data loss (e.g., many-to-one mappings lose information), (5) generateMappingCode(mapping) outputting TypeScript transformation functions for use in connectors. Create apps/api/migrations/107_add_field_mappings.sql with: learned_mappings (source_connector_id, source_field_name, target_field_name, target_entity_type, mapping_count, user_confirmed_count, confidence_score), mapping_transformations (id, transformation_type: 'direct'|'aggregate'|'compute'|'lookup', source_fields, target_field, logic_expression, created_by_user_id). Integrate with connector setup flow: when user creates new connector instance, SmartFieldMapper suggests mappings based on schema introspection + learned patterns. Expose REST: POST /api/v1/connectors/:id/suggest-mapping (run mapping suggestion), GET /api/v1/connectors/:id/mapping-suggestions (get all suggestions with confidence), POST /api/v1/connectors/:id/mapping-suggestions/:suggestionId/confirm (accept and apply), POST /api/v1/mapping-analytics (track mapping success). Build dashboard: apps/dashboard/components/field-mapping-assistant.tsx (show suggested mappings, drag-drop confirmation, transformation preview). Add 12+ unit tests for: pattern learning, semantic field matching, transformation validation, code generation, confidence scoring. Integration test: load 5 different connector types with 200 total fields, learn mappings from 50 confirmed decisions, suggest new mappings for similar fields, achieve ≥85% accuracy vs. manual mappings. Reference code-style.md for code generation best practices.
 - **Files**:
@@ -3449,7 +3449,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Context Delta Streaming & Incremental MCP Responses
 - **Layer**: 58 — Growth Phase II - Real-Time & Agent Learning
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: Medium
 - **Description**: Build a system that tracks context state per MCP client and streams only what changed since the last query, reducing token consumption for agents that maintain state across multiple turns. Create packages/semantic-core/src/context-delta-streamer.ts with ContextDeltaStreamer: (1) captureContextSnapshot(clientId, query, context) hashing the context served to a client, (2) computeContextDelta(clientId, newContext, previousSnapshot) returning {added: Entity[], removed: Entity[], modified: {entity, changes: Delta[]}}, (3) streamDeltaAsChunks(delta, chunkSizeTokens) breaking deltas into token-bounded chunks for streaming, (4) encodeContextDelta(delta) optimizing delta encoding (references vs. full objects), (5) trackClientState(clientId, snapshot) maintaining client state across sessions with expiration. Create apps/api/migrations/108_add_context_deltas.sql with: mcp_client_context_state (client_id, workspace_id, last_query_hash, last_context_snapshot, entities_served, snapshot_created_at, expires_at), context_delta_audit (client_id, delta_id, entities_added_count, entities_removed_count, entities_modified_count, saved_tokens, stream_chunks, delivered_at). Integrate with MCP server query-context tool: check if client has prior context, compute delta, return {delta_mode: true, added, removed, modified} vs. full context. Expose REST: GET /api/v1/mcp-clients/:clientId/state (current context snapshot), GET /api/v1/mcp-clients/:clientId/context-history (cursor-paginated deltas), DELETE /api/v1/mcp-clients/:clientId/state (reset state, force full refresh). Build dashboard: apps/dashboard/components/context-delta-analyzer.tsx (show delta efficiency: tokens saved by deltas vs. full context, delta delivery timeline). Add 13+ unit tests for: delta computation accuracy, chunk encoding, client state tracking, token savings calculation, edge cases (null transitions, large deltas). Integration test: simulate agent with 20 sequential queries over 10 minutes, compute deltas for each, verify token savings ≥60% vs. full refresh, client state consistency. Reference compression pipeline.ts for serialization patterns.
 - **Files**:
@@ -3461,4 +3461,91 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
   - apps/api/migrations/108_add_context_deltas.sql
   - apps/dashboard/components/context-delta-analyzer.tsx
 - **Depends on**: Semantic Cache (completed), Context Compression Pipeline (completed)
+- **Added**: 2026-06-08
+
+---
+
+## Layer 59: Quality Assurance & Test Coverage Closure
+
+### Task: Complete Test Suite for Untested API Routes
+- **Layer**: 59 — Quality Assurance & Test Coverage Closure
+- **Status**: COMMITTED
+- **Priority**: High
+- **Description**: Write comprehensive test suites for 17 API routes that currently lack unit tests. These routes handle critical flows: audit-logs, query-analytics, schema-migrations, sso-config, entities, queries, and others. For each route, create test files that validate: (1) happy-path request validation and response format, (2) validation error handling (400), (3) auth errors (401/403), (4) not-found cases (404), (5) database/service failures (500). Use Vitest + Hono test utilities. Target 80%+ coverage per route file. Reference api-conventions.md for response envelope patterns.
+- **Files**:
+  - apps/api/src/__tests__/audit.test.ts
+  - apps/api/src/__tests__/entities.test.ts
+  - apps/api/src/__tests__/queries.test.ts
+  - apps/api/src/__tests__/audit-logs.test.ts
+  - apps/api/src/__tests__/cache-stats.test.ts
+  - apps/api/src/__tests__/data-quality.test.ts
+  - apps/api/src/__tests__/query-analytics.test.ts
+  - apps/api/src/__tests__/schema-migrations.test.ts
+  - apps/api/src/__tests__/sso-config.test.ts
+  - apps/api/src/__tests__/api-key-management.test.ts
+  - apps/api/src/__tests__/admin-cost-audit.test.ts
+  - apps/api/src/__tests__/admin-dedup.test.ts
+  - apps/api/src/__tests__/dsr.test.ts
+  - apps/api/src/__tests__/enrichment-config.test.ts
+  - apps/api/src/__tests__/index-optimization.test.ts
+  - apps/api/src/__tests__/pii-config.test.ts
+  - apps/api/src/__tests__/suggestions.test.ts
+  - apps/api/src/__tests__/workspace-costs.test.ts
+- **Depends on**: API Server Bootstrap (completed)
+- **Added**: 2026-06-08
+
+### Task: MCP Server Tool Integration Test Suite
+- **Layer**: 59 — Quality Assurance & Test Coverage Closure
+- **Status**: COMMITTED
+- **Priority**: High
+- **Description**: Build an end-to-end integration test suite for the MCP server's 13 tools that exercises real tool interactions and validates correctness. Create apps/mcp-server/src/__tests__/tools.integration.test.ts with tests for: (1) query-context with semantic cache hits/misses, (2) list-entities with pagination and filtering, (3) get-entity by ID with relationship expansion, (4) aggregation tools (sum, count, average) over entity sets, (5) comparison tools (entity diffs, schema changes), (6) anomaly detection over time-series metrics, (7) advanced-query-context with complex filter expressions, (8) streaming-context with token-bounded chunks, (9) federated-context queries across workspace boundaries. Each test should: mock the vector store and cache with realistic data, invoke the tool via the MCP server, validate response format matches tool schema, check token usage stays under budget, verify permission filtering is applied. Target 70%+ coverage of tool logic paths. Use Vitest with Mock Service Worker for API mocking.
+- **Files**:
+  - apps/mcp-server/src/__tests__/tools.integration.test.ts
+  - apps/mcp-server/src/__tests__/fixtures/mock-entities.json
+  - apps/mcp-server/src/__tests__/fixtures/mock-metrics.json
+  - apps/mcp-server/src/__tests__/fixtures/mock-relationships.json
+- **Depends on**: MCP Server Bootstrap (completed), Query Decomposition (completed)
+- **Added**: 2026-06-08
+
+### Task: Dashboard E2E Test Coverage for Admin & Settings Pages
+- **Layer**: 59 — Quality Assurance & Test Coverage Closure
+- **Status**: UNWORKED
+- **Priority**: Medium
+- **Description**: Extend the existing Playwright E2E test suite to cover the dashboard's 25+ admin and settings pages that manage critical system configuration. Create tests/e2e/dashboard-admin-pages.spec.ts covering: (1) admin console (view system status, start/stop sync jobs, inspect logs), (2) connector settings (add/remove connectors, configure OAuth, test connectivity), (3) role-based access control (create/modify/delete roles, assign permissions), (4) workspace config (edit name, billing info, retention policy), (5) API key management (generate/rotate/revoke keys), (6) SSO/SCIM setup (configure provider, test sync), (7) data export/import (trigger backup, restore from snapshot), (8) cost analytics (view spending trends, set budget alerts), (9) PII configuration (mask/redact sensitive fields, validate). Each test should: login as appropriate admin user, navigate to page, perform action, validate success message and database state, logout. Use test fixtures with preloaded workspace. Target 60+ test cases.
+- **Files**:
+  - tests/e2e/dashboard-admin-pages.spec.ts
+  - tests/e2e/fixtures/admin-user.json
+  - tests/e2e/fixtures/test-workspace-config.json
+- **Depends on**: API Server Bootstrap (completed), Dashboard Bootstrap (completed)
+- **Added**: 2026-06-08
+
+### Task: Connector Health Monitoring Dashboard Enhancement
+- **Layer**: 59 — Quality Assurance & Test Coverage Closure
+- **Status**: UNWORKED
+- **Priority**: Medium
+- **Description**: Enhance the connector health monitoring system with real-time alerts, detailed failure diagnostics, and recovery suggestions. Create packages/semantic-core/src/connector-health-monitor.ts with ConnectorHealthMonitor: (1) trackSyncMetrics(connectorId, syncDuration, recordCount, errorCount, throttledRequests) continuously measuring connector performance, (2) detectUnhealthyState(connectorId) identifying when sync success rate drops below 95% or latency exceeds threshold, (3) suggestRecovery(connectorId, failureType) recommending actions (retry, rotate credentials, check rate limits, update schema), (4) emitHealthAlert(connectorId, severity, message) triggering dashboard notifications, (5) getHealthScore(connectorId) computing 0-100 score from sync success, latency, error patterns, throttling. Create apps/api/migrations/109_add_health_monitoring.sql with: connector_health_scores (connector_id, score, last_sync_success_rate, last_sync_latency_ms, last_checked_at), health_alerts (connector_id, severity: 'critical'|'warning'|'info', failure_type, suggested_action, acknowledged_at). Expose REST: GET /api/v1/connectors/:id/health (current score + alerts), POST /api/v1/connectors/:id/health/acknowledge (mark alert as seen). Build dashboard: apps/dashboard/components/connector-health-scorecard.tsx with health meter, recent alerts, suggested fixes. Add 14+ tests for metric tracking, health state detection, recovery suggestions.
+- **Files**:
+  - packages/semantic-core/src/connector-health-monitor.ts
+  - packages/semantic-core/src/__tests__/connector-health-monitor.test.ts
+  - apps/api/src/routes/connector-health.ts
+  - apps/api/src/__tests__/connector-health.test.ts
+  - apps/api/migrations/109_add_health_monitoring.sql
+  - apps/dashboard/components/connector-health-scorecard.tsx
+- **Depends on**: Connector framework (completed), Sync Scheduling (completed)
+- **Added**: 2026-06-08
+
+### Task: Query Cost Estimation & Optimization Recommendation Engine
+- **Layer**: 59 — Quality Assurance & Test Coverage Closure
+- **Status**: UNWORKED
+- **Priority**: Medium
+- **Description**: Build an intelligent system that estimates LLM token costs for queries before execution and recommends optimizations to reduce cost. Create packages/semantic-core/src/query-cost-estimator.ts with QueryCostEstimator: (1) analyzeQueryStructure(query) extracting complexity features (entity types, filter depth, relationship traversals, requested context size), (2) estimateDeltaTokens(query, provider) predicting token consumption for query embedding + compression stages using historical regression model, (3) estimateContextTokens(entities, format) estimating tokens in final context delivery (different for JSON vs. prose), (4) rankOptimizations(query, context) suggesting 3-5 cost-reduction ideas: filter entities earlier, reduce relationship depth, increase cache TTL, use summarization, change serialization format, (5) predictCacheSavings(query) calculating likely token savings if result is cached. Create apps/api/migrations/110_add_query_cost_analysis.sql with: query_cost_estimates (query_hash, provider, estimated_delta_tokens, estimated_context_tokens, total_estimated_cost_cents, optimization_suggestions, created_at), cost_model_features (query_type: 'analytical'|'operational'|'reporting', entity_count_range, relationship_depth, model_accuracy_pct). Integrate: pass cost estimate + recommendations in query-context MCP response header. Expose REST: POST /api/v1/queries/estimate-cost (analyze hypothetical query), GET /api/v1/queries/cost-history (show actual vs. estimated for past queries). Build dashboard: apps/dashboard/components/query-cost-breakdown.tsx showing delta vs. context costs, optimization suggestions with impact estimates. Add 16+ tests for structure analysis, cost prediction accuracy, optimization ranking.
+- **Files**:
+  - packages/semantic-core/src/query-cost-estimator.ts
+  - packages/semantic-core/src/__tests__/query-cost-estimator.test.ts
+  - packages/semantic-core/src/__tests__/query-cost-estimator.integration.test.ts
+  - apps/api/src/routes/query-cost-analysis.ts
+  - apps/api/src/__tests__/query-cost-analysis.test.ts
+  - apps/api/migrations/110_add_query_cost_analysis.sql
+  - apps/dashboard/components/query-cost-breakdown.tsx
+- **Depends on**: Query Optimizer (completed), Multi-LLM Cost Optimizer (completed)
 - **Added**: 2026-06-08

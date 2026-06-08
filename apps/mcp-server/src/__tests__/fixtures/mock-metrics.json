@@ -1,0 +1,20 @@
+[
+  {
+    "id": "metric:monthly_revenue",
+    "type": "metric",
+    "label": "Monthly Revenue",
+    "attributes": { "value": 125000, "unit": "USD", "period": "2024-03" },
+    "relationships": [],
+    "lastModified": "2024-03-31T00:00:00.000Z",
+    "sourceId": "metric:monthly_revenue"
+  },
+  {
+    "id": "metric:churn_rate",
+    "type": "metric",
+    "label": "Churn Rate",
+    "attributes": { "value": 2.5, "unit": "percent", "period": "2024-03" },
+    "relationships": [],
+    "lastModified": "2024-03-31T00:00:00.000Z",
+    "sourceId": "metric:churn_rate"
+  }
+]

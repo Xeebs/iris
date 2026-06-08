@@ -1,0 +1,5 @@
+[
+  { "type": "belongs_to", "sourceId": "hubspot:contact:1", "targetId": "hubspot:company:1" },
+  { "type": "associated_with", "sourceId": "hubspot:deal:1", "targetId": "hubspot:company:1" },
+  { "type": "owned_by", "sourceId": "hubspot:deal:1", "targetId": "hubspot:contact:1" }
+]

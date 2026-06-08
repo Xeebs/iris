@@ -1,0 +1,38 @@
+[
+  {
+    "id": "hubspot:contact:1",
+    "type": "contact",
+    "label": "Alice Smith",
+    "attributes": { "email": "alice@example.com", "industry": "SaaS", "arr": 120000, "stage": "customer" },
+    "relationships": [{ "type": "belongs_to", "targetId": "hubspot:company:1" }],
+    "lastModified": "2024-01-15T00:00:00.000Z",
+    "sourceId": "hubspot:contact:1"
+  },
+  {
+    "id": "hubspot:contact:2",
+    "type": "contact",
+    "label": "Bob Jones",
+    "attributes": { "email": "bob@company.io", "industry": "FinTech", "arr": 80000, "stage": "lead" },
+    "relationships": [],
+    "lastModified": "2024-02-01T00:00:00.000Z",
+    "sourceId": "hubspot:contact:2"
+  },
+  {
+    "id": "hubspot:company:1",
+    "type": "company",
+    "label": "Acme Corp",
+    "attributes": { "industry": "SaaS", "revenue": 5000000, "employees": 200, "region": "north" },
+    "relationships": [],
+    "lastModified": "2024-01-10T00:00:00.000Z",
+    "sourceId": "hubspot:company:1"
+  },
+  {
+    "id": "hubspot:deal:1",
+    "type": "deal",
+    "label": "Enterprise Deal Q1",
+    "attributes": { "amount": 50000, "stage": "negotiation", "owner": "alice" },
+    "relationships": [{ "type": "associated_with", "targetId": "hubspot:company:1" }],
+    "lastModified": "2024-03-01T00:00:00.000Z",
+    "sourceId": "hubspot:deal:1"
+  }
+]
