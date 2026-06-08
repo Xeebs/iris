@@ -60,6 +60,7 @@ export default defineConfig({
       '@iris/semantic-core/federation-manager': path.resolve(__dirname, '../../packages/semantic-core/src/federation-manager.ts'),
       '@iris/semantic-core/context-versioner': path.resolve(__dirname, '../../packages/semantic-core/src/context-versioner.ts'),
       '@iris/semantic-core/context-summarizer': path.resolve(__dirname, '../../packages/semantic-core/src/context-summarizer.ts'),
+      '@iris/semantic-core/relationship-inference': path.resolve(__dirname, '../../packages/semantic-core/src/relationship-inference.ts'),
       '@iris/semantic-core': path.resolve(__dirname, '../../packages/semantic-core/src/index.ts'),
       '@iris/cache/response-cache': path.resolve(__dirname, '../../packages/cache/src/response-cache.ts'),
       '@iris/compression': path.resolve(__dirname, '../../packages/compression/src/index.ts'),
