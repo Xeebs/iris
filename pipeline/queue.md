@@ -3090,7 +3090,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Advanced Entity Search & Filtering Engine
 - **Layer**: 54 — Connector Expansion & V1 Features
-- **Status**: IN_PROGRESS
+- **Status**: COMMITTED
 - **Priority**: High
 - **Description**: Build a sophisticated entity search and filtering system enabling users to query entities by attribute values, relationships, and metadata. Create packages/semantic-core/src/entity-search.ts with EntitySearchEngine: (1) parseFilterQuery(filterString) supporting filters like "type:contact email:*@acme.com status:active", (2) buildSqlQuery(filters) generating safe parameterized SQL for Postgres, (3) searchEntities(workspaceId, query, filters, limit, cursor) combining full-text search and attribute filtering, (4) suggestFilters(query) returning applicable filters based on query context. Expose REST: POST /api/v1/entities/search with json body {query, filters, limit, cursor}, GET /api/v1/entities/search-suggestions (auto-complete filters). Build dashboard search page apps/dashboard/app/search/advanced/page.tsx with filter builder UI, multi-filter AND/OR logic, result counts, saved search ability. Support faceted search with counts per attribute value. Add 18+ unit tests for filter parsing, SQL generation safety (injection), complex filter combinations. Integration test: search 5000+ indexed entities with 10-filter combinations, verify accuracy and <500ms response. Reference code-style.md for SQL escaping patterns.
 - **Files**:
@@ -3125,7 +3125,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Webhook Management & Testing Dashboard
 - **Layer**: 54 — Connector Expansion & V1 Features
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: Medium
 - **Description**: Build a user-facing dashboard for managing webhooks, testing webhook delivery, and debugging payload issues. Create apps/dashboard/app/admin/webhooks/page.tsx with: (1) WebhookListTable showing all configured webhooks (URL, trigger events, active status, last delivery), (2) WebhookEventLog showing recent deliveries with status, latency, response code, (3) WebhookTestPanel allowing manual delivery of sample payloads and inspecting responses, (4) WebhookRetryQueue managing failed deliveries with manual retry. Add Webhook admin routes at apps/api/src/routes/webhook-admin.ts: GET /api/v1/admin/webhooks (list with pagination), GET /api/v1/admin/webhooks/:id/deliveries (event log), POST /api/v1/admin/webhooks/:id/test-delivery (test fire), POST /api/v1/admin/webhooks/:id/retry/:deliveryId (manual retry). Create packages/semantic-core/src/webhook-debugger.ts with WebhookDebugger: capturePayloads, comparePayloads (expected vs. actual), validateSignature (HMAC-SHA256). Build dashboard component WebhookDebugger showing request/response diff, signature validation status. Add 14+ tests for webhook debugging logic, signature validation, delivery retry logic. Integration test: send 10 webhooks, simulate 2 failures, retry, verify success. Reference api-conventions.md for REST design, code-style.md for error handling.
 - **Files**:

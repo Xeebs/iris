@@ -4,6 +4,8 @@ Completed tasks are logged here by the daemon after each successful commit.
 
 ---
 
+- 2026-06-08 | Webhook Management & Testing Dashboard | WebhookDebugger (semantic-core), webhook-admin routes (api), admin page + 5 dashboard components (list-table, event-log, test-panel, retry-queue, debugger); 23 tests pass
+
 - 2026-06-07: feat(semantic-core,api,dashboard): index snapshot export & disaster recovery — IndexSnapshotService (gzip compressed snapshots, pruneOldSnapshots, create/list/restore), migration 040, REST routes /api/v1/snapshots, SnapshotManager dashboard component, 8 tests
 - 2026-06-07: feat(semantic-core,api,dashboard): email template system & customization — EmailTemplateService (CRUD + render + variable interpolation), migration 041, REST routes /api/v1/email-templates, EmailTemplateEditor dashboard component with live preview, 21 tests
 - 2026-06-07: feat(semantic-core,api,dashboard): distributed tracing & performance profiling — PerformanceProfiler (p50/p95/p99 per operation, Prometheus export, connector breakdown), migration 042, REST /api/v1/performance, ProfilerDashboard with window selector, 11 tests
@@ -80,3 +82,4 @@ Custom Transformation Pipeline & Entity Mapping Language — TransformationDSLEn
 - feat(semantic-core,api,dashboard): end-to-end connector monitoring & health scoring system — 382e02d
 - feat(semantic-core,api,dashboard): end-to-end connector monitoring & health scoring system — 382e02d
 - feat(semantic-core,api,dashboard): API rate limiting & quota management system — 02fd1a7
+- feat(semantic-core,api,dashboard): advanced entity search & filtering engine — cb3d34d
