@@ -33,6 +33,18 @@ const inputSchema = {
     .max(50)
     .default(10)
     .describe('Maximum entities to retrieve before compression'),
+  expansionLevel: z
+    .enum(['summary', 'detailed', 'full'])
+    .optional()
+    .describe('Progressive expansion level: summary (compact), detailed (with attributes), full (with relationships)'),
+  fieldFilter: z
+    .array(z.string())
+    .optional()
+    .describe('Only include these attribute field names in entity representations'),
+  sessionId: z
+    .string()
+    .optional()
+    .describe('Existing session ID for continued expansion (returned from a previous call)'),
 };
 
 /**
