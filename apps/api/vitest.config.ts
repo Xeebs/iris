@@ -85,6 +85,7 @@ export default defineConfig({
       '@iris/semantic-core/nlp-config-engine': path.resolve(__dirname, '../../packages/semantic-core/src/nlp-config-engine.ts'),
       '@iris/semantic-core/query-optimizer': path.resolve(__dirname, '../../packages/semantic-core/src/query-optimizer.ts'),
       '@iris/semantic-core/query-learning-engine': path.resolve(__dirname, '../../packages/semantic-core/src/query-learning-engine.ts'),
+      '@iris/semantic-core/query-cost-estimator': path.resolve(__dirname, '../../packages/semantic-core/src/query-cost-estimator.ts'),
     },
   },
   test: {
