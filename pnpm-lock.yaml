@@ -100,7 +100,7 @@ importers:
         specifier: ^5.5.0
         version: 5.9.3
       vitest:
-        specifier: ^1.6.0
+        specifier: ^1.6.1
         version: 1.6.1(@types/node@20.19.41)(jsdom@29.1.1)
 
   apps/dashboard:
