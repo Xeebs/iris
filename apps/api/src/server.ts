@@ -51,6 +51,7 @@ import { createSessionRoutes } from './routes/sessions.js';
 import { createBillingRoutes } from './routes/billing.js';
 import { createMarketplaceRoutes } from './routes/marketplace.js';
 import { createCacheStatsRoutes } from './routes/cache-stats.js';
+import { createAdminResilienceRoutes } from './routes/admin-resilience.js';
 import { openApiSpec } from './openapi.js';
 
 export { createApp };
@@ -172,6 +173,7 @@ function createApp(
   if (redis) {
     authed.route('/cache', createCacheStatsRoutes(redis));
   }
+  authed.route('/admin/connectors/resilience', createAdminResilienceRoutes(sql));
 
   // Webhook routes: inbound (unauthenticated) + events status (authenticated)
   app.route('/api/v1/webhooks', createWebhookRoutes(sql));

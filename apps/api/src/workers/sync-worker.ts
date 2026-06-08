@@ -4,6 +4,7 @@ import type { Job } from 'bullmq';
 import { logger } from '@iris/core/logger';
 import { SYNC_QUEUE_NAME, SyncJobQueue } from '@iris/queue';
 import type { SyncJobData } from '@iris/queue';
+import { ConnectorResilienceManager } from '@iris/queue/connector-resilience';
 import { SyncJobDlqService } from '../services/dlq-service.js';
 import { registry } from '@iris/connector-sdk';
 import { indexEntities } from '@iris/semantic-core';
@@ -45,6 +46,8 @@ export function createSyncWorker(
   const dlqService = new SyncJobDlqService(sql, syncQueue);
   const connectorService = new ConnectorService(sql);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const resilienceManager = new ConnectorResilienceManager(sql as any);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const cdcManager = new ConnectorCDCManager(sql as any);
   const connection = parseRedisUrl(redisUrl);
 
@@ -74,54 +77,52 @@ export function createSyncWorker(
         const registration = registry.get(instance.connectorId);
         const connector = registration.factory(instance.config);
 
-        // 4. Connect
-        const connectResult = await connector.connect(instance.config);
-        if (connectResult.isErr()) {
-          throw connectResult.error;
-        }
-
-        // 5. Select CDC strategy for this connector
-        const manifest = registration.manifest;
-        const supportedStrategies = manifest.cdcStrategies ?? ['snapshot_diff'];
-        const cdcStrategy = cdcManager.selectStrategy(supportedStrategies);
-        const cdcConfig = { strategy: cdcStrategy };
-
-        // 6. Determine sync options from stored CDC state
-        const cdcState = (await cdcManager.getState(connectorInstanceId)).unwrapOr(null);
-        const syncOptions: import('@iris/connector-sdk').SyncOptions = instance.lastSyncedAt
-          ? {
-              lastSyncedAt: instance.lastSyncedAt,
-              ...(cdcState?.lastCursor ? { cursor: cdcState.lastCursor } : {}),
+        // 4–10. Run connect + sync + index under the resilience manager (retries, circuit breaker, bulkhead, timeout)
+        const { indexResult, cdcStrategy, allEntities, changedEntities } = await resilienceManager.execute(
+          instance.connectorId,
+          async () => {
+            const connectResult = await connector.connect(instance.config);
+            if (connectResult.isErr()) {
+              throw connectResult.error;
             }
-          : {};
 
-        // 7. Stream entities from the connector sync generator
-        const syncGenerator = connector.sync(syncOptions);
+            const manifest = registration.manifest;
+            const supportedStrategies = manifest.cdcStrategies ?? ['snapshot_diff'];
+            const cdcStrategy = cdcManager.selectStrategy(supportedStrategies);
+            const cdcConfig = { strategy: cdcStrategy };
 
-        // 8. Collect entities and compute CDC deltas (reduces re-indexing unchanged data)
-        const allEntities: import('@iris/connector-sdk').SemanticEntity[] = [];
-        for await (const entity of syncGenerator) {
-          allEntities.push(entity);
-        }
+            const cdcState = (await cdcManager.getState(connectorInstanceId)).unwrapOr(null);
+            const syncOptions: import('@iris/connector-sdk').SyncOptions = instance.lastSyncedAt
+              ? {
+                  lastSyncedAt: instance.lastSyncedAt,
+                  ...(cdcState?.lastCursor ? { cursor: cdcState.lastCursor } : {}),
+                }
+              : {};
 
-        const deltasResult = await cdcManager.computeDeltas(connectorInstanceId, allEntities, cdcConfig);
-        const deltas = deltasResult.unwrapOr(allEntities.map((e) => ({ entity: e, changeType: 'updated' as const })));
-        const changedEntities = deltas
-          .filter((d) => d.changeType !== 'unchanged')
-          .map((d) => d.entity);
+            const syncGenerator = connector.sync(syncOptions);
+            const allEntities: import('@iris/connector-sdk').SemanticEntity[] = [];
+            for await (const entity of syncGenerator) {
+              allEntities.push(entity);
+            }
 
-        // 9. Index changed entities only
-        async function* changedEntityGenerator() {
-          for (const entity of changedEntities) yield entity;
-        }
-        const indexResult = await indexEntities(changedEntityGenerator(), vectorStore, {
-          openAiApiKey,
-        });
+            const deltasResult = await cdcManager.computeDeltas(connectorInstanceId, allEntities, cdcConfig);
+            const deltas = deltasResult.unwrapOr(allEntities.map((e) => ({ entity: e, changeType: 'updated' as const })));
+            const changedEntities = deltas
+              .filter((d) => d.changeType !== 'unchanged')
+              .map((d) => d.entity);
 
-        // 10. Record CDC metrics
-        const runResult = cdcManager.buildRunResult(deltas);
-        runResult.strategy = cdcStrategy;
-        await cdcManager.updateState(connectorInstanceId, workspaceId, runResult, cdcConfig);
+            async function* changedEntityGenerator() {
+              for (const entity of changedEntities) yield entity;
+            }
+            const indexResult = await indexEntities(changedEntityGenerator(), vectorStore, { openAiApiKey });
+
+            const runResult = cdcManager.buildRunResult(deltas);
+            runResult.strategy = cdcStrategy;
+            await cdcManager.updateState(connectorInstanceId, workspaceId, runResult, cdcConfig);
+
+            return { indexResult, cdcStrategy, allEntities, changedEntities };
+          },
+        );
 
         log.info('Sync indexing complete', {
           connectorInstanceId,
