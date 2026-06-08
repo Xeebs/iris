@@ -63,7 +63,8 @@
     "./compliance-reporter": "./dist/compliance-reporter.js",
     "./dedup-reconciliation": "./dist/dedup-reconciliation.js",
     "./proactive-context-engine": "./dist/proactive-context-engine.js",
-    "./metric-formula-engine": "./dist/metric-formula-engine.js"
+    "./metric-formula-engine": "./dist/metric-formula-engine.js",
+    "./nlp-config-engine": "./dist/nlp-config-engine.js"
   },
   "scripts": {
     "build": "tsc --build",

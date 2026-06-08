@@ -53,6 +53,7 @@ export default defineConfig({
       '@iris/semantic-core/dedup-reconciliation': path.resolve(__dirname, '../../packages/semantic-core/src/dedup-reconciliation.ts'),
       '@iris/semantic-core/proactive-context-engine': path.resolve(__dirname, '../../packages/semantic-core/src/proactive-context-engine.ts'),
       '@iris/semantic-core/metric-formula-engine': path.resolve(__dirname, '../../packages/semantic-core/src/metric-formula-engine.ts'),
+      '@iris/semantic-core/nlp-config-engine': path.resolve(__dirname, '../../packages/semantic-core/src/nlp-config-engine.ts'),
     },
   },
   test: {

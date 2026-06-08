@@ -2590,7 +2590,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Cross-Company Benchmarking with Anonymized Insights & Analytics
 - **Layer**: 49 — V2 Intelligence & Business Optimization
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: Medium
 - **Description**: Build an opt-in benchmarking system allowing customers to compare their Iris usage metrics and data patterns anonymously against industry peers, enabling data-driven optimization decisions. Create packages/semantic-core/src/benchmarking-service.ts with BenchmarkingService class: (1) collectMetrics(workspaceId) gathering anonymized stats: entity count by type, query patterns (top entity types queried), cache hit rates, token spend per entity type, connector diversity (how many connectors indexed), (2) hashWorkspaceId(workspaceId) to create permanent anonymous identifier (consistent across months), (3) uploadAnonMetrics(metrics, cohort) to central aggregation service (requires explicit opt-in), (4) retrieveBenchmarks(workspaceId, cohort) returning percentile rankings: "Your cache hit rate (45%) is at 60th percentile vs. similar-sized companies", "Entity count per connector: 10K (30th percentile)", "Token spend trending up 15% MoM (vs. peer 3% avg trend)". Create apps/api/migrations/069_add_benchmarking_data.sql with: workspace_benchmarks table (workspace_id, cohort, metric_type, value, submitted_at, percentile_rank, industry). Expose: GET /api/v1/benchmarks/opt-in (status), POST /api/v1/benchmarks/opt-in (join), GET /api/v1/benchmarks/peers (your rank vs. peers with insights). Build dashboard page at apps/dashboard/app/analytics/[workspaceId]/benchmarks/page.tsx with: peer comparison charts (histogram of entity counts, distribution of cache hit rates, cost per entity), personalized insights (areas to optimize based on peer patterns), monthly trends. Add regulatory UI: prominently show "You can opt out anytime" and describe data anonymization (workspace_id is hashed, only aggregated metrics shared). Add 12+ unit tests for metrics collection and anonymization logic, integration tests with synthetic multi-workspace data. Reference code-style.md for logging and api-conventions.md for endpoint patterns.
 - **Files**:
@@ -2608,7 +2608,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Natural Language Index Configuration & Intent-Based Setup
 - **Layer**: 49 — V2 Intelligence & Business Optimization
-- **Status**: UNWORKED
+- **Status**: IN_PROGRESS
 - **Priority**: Medium
 - **Description**: Enable non-technical users to configure and optimize the semantic index using natural language commands and intent-based setup flows (e.g., "our fiscal year starts in February", "hide PII from sales team", "prioritize recent data"). Extend packages/semantic-core/src/nlp-config-parser.ts (if exists, else create packages/semantic-core/src/nlp-config-engine.ts): (1) parseConfigIntent(userInput, workspaceId) using gpt-4o-mini to detect intent categories: temporal ("fiscal year in Feb" → set fiscal_year_start: 2), retention ("archive data older than 6 months" → auto_archive_age_days: 180), access_control ("hide SSN from finance viewers" → PII masking rule), entity_merging ("contacts and people are the same" → dedup rule), (2) generateConfigDiff(intent) returning a diff of what would change with explanations, (3) applyConfigIntent(diff) persisting changes to index_configuration table. Integrate into a conversational UI: apps/dashboard/app/settings/[workspaceId]/nlp-config/page.tsx with: input chat box, intent confirmation ("I understood: archive entities older than 6 months. Is that right?"), preview of affected data (show 5 sample entities that would be archived), apply button. Create apps/api/migrations/070_add_nlp_config.sql with: nlp_intents table (workspace_id, intent, natural_text, interpreted_config_json, confirmed_by_user_id, applied_at). Implement safety: (1) all NLP-generated configs require user confirmation before application, (2) maintain rollback: track before/after snapshots, (3) limit scope: only allow intents for: temporal policies, retention rules, access control, and dedup rules (not destructive index operations). Add 16+ unit tests for intent parsing (temporal formats, retention ranges, access control semantics), 10+ integration tests with diverse user inputs. Reference code-style.md for error handling and api-conventions.md for config change patterns.
 - **Files**:
@@ -2641,4 +2641,101 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
   - apps/dashboard/components/workflow-installer.tsx
   - apps/api/src/__tests__/workflow-templates.test.ts
 - **Depends on**: Connector Template & Workflow Recipe System, Multi-Tenant Support & Workspace Isolation
+- **Added**: 2026-06-08
+
+---
+
+## Layer 50: Advanced MCP Capabilities & Enterprise Features
+
+### Task: MCP Resource Streaming with Progressive Context Expansion
+- **Layer**: 50 — Advanced MCP Capabilities & Enterprise Features
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Implement MCP resource streaming to progressively expand context within a single MCP response, enabling AI agents to request minimal context first and expand incrementally. Create apps/mcp-server/src/resource-streaming.ts with ResourceStreamManager class: (1) define hierarchical resource types (context.summary → context.detailed → context.full-with-relationships), (2) support client-requested expansion depth and field selection, (3) stream results line-by-line where each line is a complete JSON result (no incomplete chunks mid-result), (4) respect context budget across streaming chunks (fail gracefully if exceeding budget), (5) add client cancellation support. Extend the query-context MCP tool to support optional fields: {query, expansionLevel: 'summary'|'detailed'|'full', maxTokens, fieldFilter: string[]}. Implement server-side caching of streaming sessions to avoid re-computing intermediate levels. Create apps/api/migrations/071_add_mcp_resource_sessions.sql with: mcp_resource_sessions table (session_id, workspace_id, client_id, query, expansion_level, cached_results_json, created_at, expires_at) for session-based caching. Add 14+ unit tests for streaming logic and budget enforcement, integration tests verifying multi-level expansion correctness, E2E test simulating agent interaction with progressive expansion. Reference api-conventions.md for MCP protocol patterns and embedding-patterns.md for token budgeting.
+- **Files**:
+  - apps/mcp-server/src/resource-streaming.ts
+  - apps/mcp-server/src/__tests__/resource-streaming.test.ts
+  - apps/mcp-server/src/__tests__/resource-streaming.integration.test.ts
+  - apps/mcp-server/src/tools/query-context.ts (update)
+  - apps/api/migrations/071_add_mcp_resource_sessions.sql
+  - apps/api/src/__tests__/resource-streaming.test.ts
+- **Depends on**: Streaming Context Response API for Real-Time Agent Integration
+- **Added**: 2026-06-08
+
+### Task: Enterprise SSO Integration (SAML 2.0 & OpenID Connect)
+- **Layer**: 50 — Advanced MCP Capabilities & Enterprise Features
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Implement SAML 2.0 and OpenID Connect (OIDC) authentication for enterprise customers requiring federated identity and SSO integration. Replace/extend Clerk with custom auth backend in apps/api/src/auth/enterprise-sso.ts supporting: (1) SAML 2.0 SP (service provider) implementation with signed assertion validation, attribute mapping (email, name, groups/roles), (2) OIDC provider configuration (Azure AD, Okta, Google Workspace, generic OIDC), (3) automatic user provisioning (JIT user creation on first login), (4) group/role synchronization from SAML attributes or OIDC claims into Iris role system, (5) session lifecycle management (single logout/SLO support). Create apps/api/migrations/072_add_enterprise_sso.sql with: sso_configurations table (workspace_id, provider: 'saml'|'oidc', provider_name, metadata_url, entity_id, acs_url, issuer, signing_cert, client_id, client_secret, attribute_mappings_json, enabled), sso_users table (user_id, workspace_id, external_id, external_email, sso_provider, synced_groups_json, last_sync_at). Build admin UI at apps/dashboard/app/admin/sso/page.tsx: (1) provider setup wizard (choose provider type, paste metadata XML or OIDC discovery URL), (2) attribute mapping editor (show expected SAML attributes/OIDC claims, allow user to map to Iris fields), (3) test login button, (4) sync logs showing successful/failed user provisions. Add 16+ unit tests for SAML assertion parsing and validation, OIDC token verification, user provisioning logic. Integration tests with mock SAML IdP and OIDC provider. Reference code-style.md for error handling and api-conventions.md for authentication patterns.
+- **Files**:
+  - apps/api/src/auth/enterprise-sso.ts
+  - apps/api/src/auth/saml-handler.ts
+  - apps/api/src/auth/oidc-handler.ts
+  - apps/api/src/auth/__tests__/enterprise-sso.test.ts
+  - apps/api/src/auth/__tests__/saml-handler.test.ts
+  - apps/api/src/auth/__tests__/oidc-handler.test.ts
+  - apps/api/migrations/072_add_enterprise_sso.sql
+  - apps/api/src/routes/sso-config.ts
+  - apps/dashboard/app/admin/sso/page.tsx
+  - apps/dashboard/app/admin/sso/setup/page.tsx
+  - apps/dashboard/components/sso-provider-selector.tsx
+  - apps/dashboard/components/attribute-mapping-editor.tsx
+  - apps/api/src/__tests__/sso-config.test.ts
+- **Depends on**: MCP Server API Key Authentication & Workspace Isolation
+- **Added**: 2026-06-08
+
+### Task: Advanced Entity Enrichment Engine with External Data Integration
+- **Layer**: 50 — Advanced MCP Capabilities & Enterprise Features
+- **Status**: UNWORKED
+- **Priority**: Medium
+- **Description**: Build an entity enrichment system that augments indexed entities with external data sources (company firmographics from Clearbit/Hunter, credit scores from Experian, social sentiment from Twitter/LinkedIn) to provide business context. Create packages/semantic-core/src/enrichment-engine.ts with EnrichmentEngine class: (1) define enrichment sources as plugins, each implementing: fetchEnrichmentData(entityId, entityAttributes), (2) rule-based enrichment triggers (auto-enrich contacts with firmographic data, auto-enrich companies with financial metrics), (3) async enrichment pipeline with rate limiting and failure handling (enrich in background, not on hot path), (4) versioning of enrichment data (track when data was added, refresh stale data). Create apps/api/migrations/073_add_entity_enrichment.sql with: entity_enrichments table (entity_id, enrichment_source, enrichment_data_json, confidence_score, added_at, expires_at, refresh_triggered_at), enrichment_sources table (source_id, name, api_endpoint, api_key_encrypted, enabled, rate_limit_rps). Implement built-in enrichers: (1) CompanyEnricher using a free API (e.g., company domain → company details via Crunchbase or similar), (2) PersonEnricher (email domain → company, LinkedIn profile URL if available), (3) SentimentEnricher (entity name → recent news/mentions via API). Expose: GET /api/v1/entities/:id/enrichments (view enrichment data), POST /api/v1/enrichments/configure/:source (setup new enrichment source), POST /api/v1/enrichments/refresh/:entityId (force refresh). Build admin panel at apps/dashboard/components/enrichment-sources-manager.tsx showing: enabled sources, rate limits, last refresh timestamp, enrichment coverage (% of entities enriched per source). Add 14+ unit tests for enrichment logic and rate limiting, integration tests with mock enrichment APIs. Reference embedding-patterns.md for data structuring.
+- **Files**:
+  - packages/semantic-core/src/enrichment-engine.ts
+  - packages/semantic-core/src/__tests__/enrichment-engine.test.ts
+  - packages/semantic-core/src/__tests__/enrichment-engine.integration.test.ts
+  - packages/semantic-core/src/enrichers/company-enricher.ts
+  - packages/semantic-core/src/enrichers/person-enricher.ts
+  - packages/semantic-core/src/enrichers/sentiment-enricher.ts
+  - apps/api/migrations/073_add_entity_enrichment.sql
+  - apps/api/src/routes/enrichment-config.ts
+  - apps/api/src/__tests__/enrichment-engine.test.ts
+  - apps/dashboard/components/enrichment-sources-manager.tsx
+  - apps/dashboard/app/admin/enrichment-setup/page.tsx
+- **Depends on**: Entity Relationship Indexing, Knowledge Graph Service (Neo4j)
+- **Added**: 2026-06-08
+
+### Task: Schema Evolution & Backwards-Compatible Connector Updates
+- **Layer**: 50 — Advanced MCP Capabilities & Enterprise Features
+- **Status**: UNWORKED
+- **Priority**: Medium
+- **Description**: Implement schema versioning and migration support to handle connector schema changes (new fields, renamed fields, deprecated entity types) without breaking existing indexes or client subscriptions. Create packages/semantic-core/src/schema-evolution.ts with SchemaEvolutionManager class: (1) track connector schema versions (version timestamp, fields, breaking vs non-breaking changes), (2) support field remapping (old_field_name → new_field_name with transformation function), (3) entity type versioning (mark entity type as deprecated, suggest replacement), (4) backward-compatible retrieval (clients requesting old schema get transformed results), (5) schema migration strategies (additive-only, with safe deprecation periods). Create apps/api/migrations/074_add_schema_versions.sql with: connector_schema_versions table (connector_id, version, schema_json, released_at, breaking_changes_json, migration_guide), schema_migrations table (workspace_id, source_schema_version, target_schema_version, migration_status: 'pending'|'in_progress'|'completed', started_at, completed_at, affected_entity_count). Implement automatic schema update checks: periodic GET to connector to detect schema changes, prompt admin with change summary and migration plan. Build admin UI at apps/dashboard/app/admin/schema-migrations/page.tsx showing: pending schema updates, migration impact (# entities affected, breaking changes), one-click apply migration. Add 16+ unit tests for schema transformation logic and backward compatibility, integration tests with real schema change scenarios. Reference connector-patterns.md for schema semantics.
+- **Files**:
+  - packages/semantic-core/src/schema-evolution.ts
+  - packages/semantic-core/src/__tests__/schema-evolution.test.ts
+  - packages/semantic-core/src/__tests__/schema-evolution.integration.test.ts
+  - apps/api/migrations/074_add_schema_versions.sql
+  - apps/api/src/routes/schema-migrations.ts
+  - apps/api/src/__tests__/schema-evolution.test.ts
+  - apps/dashboard/app/admin/schema-migrations/page.tsx
+  - apps/dashboard/components/schema-migration-planner.tsx
+- **Depends on**: Connector Instance Management API, Database Schema Migrations
+- **Added**: 2026-06-08
+
+### Task: Query Analytics & Intelligent Query Caching with Hit Prediction
+- **Layer**: 50 — Advanced MCP Capabilities & Enterprise Features
+- **Status**: UNWORKED
+- **Priority**: Medium
+- **Description**: Implement advanced query analytics to track query patterns, predict cache hits, and learn user behavior for proactive cache warming. Create packages/semantic-core/src/query-analytics-engine.ts with QueryAnalyticsEngine class: (1) trackQuery(workspaceId, query, results, cacheHit, latencyMs, tokensSpent) recording all queries with metadata, (2) computeQuerySignatures(query) using query fingerprinting (normalize entity names, operators) to group semantically similar queries, (3) detectQueryPatterns(workspaceId) identifying: time-based patterns (queries spike at month-end), user-based patterns (user X always queries for Y entity type), (4) predictCacheHit(query, cacheState) using learned patterns to predict if a query will hit cache, (5) warmCache(workspaceId, predictions) proactively computing queries likely to be requested. Create apps/api/migrations/075_add_query_analytics.sql with: query_events table (query_id, workspace_id, user_id, query_text, query_signature, entity_types, cache_hit, latency_ms, tokens_spent, timestamp), query_patterns table (workspace_id, pattern_type: 'temporal'|'user'|'entity_type', pattern_definition_json, confidence_score, discovered_at), cache_warming_jobs table (workspace_id, warming_job_id, triggered_query_signatures, executed_at, cache_hit_improvement_rate). Expose: GET /api/v1/analytics/queries (query history with patterns), POST /api/v1/analytics/cache-warming/trigger (manual warm), GET /api/v1/analytics/query-patterns (show discovered patterns). Build dashboard page at apps/dashboard/app/analytics/[workspaceId]/queries/page.tsx with: query heatmap (time × query type showing frequency), cache performance (hit rate, latency improvement from caching), pattern visualization (top patterns, predicted hot queries). Add 16+ unit tests for fingerprinting, pattern detection, and hit prediction, integration tests with real query logs. Reference embedding-patterns.md for caching patterns.
+- **Files**:
+  - packages/semantic-core/src/query-analytics-engine.ts
+  - packages/semantic-core/src/__tests__/query-analytics-engine.test.ts
+  - packages/semantic-core/src/__tests__/query-analytics-engine.integration.test.ts
+  - apps/api/migrations/075_add_query_analytics.sql
+  - apps/api/src/routes/query-analytics.ts
+  - apps/api/src/__tests__/query-analytics.test.ts
+  - apps/dashboard/app/analytics/[workspaceId]/queries/page.tsx
+  - apps/dashboard/components/query-heatmap-chart.tsx
+  - apps/dashboard/components/cache-performance-dashboard.tsx
+  - apps/dashboard/components/query-pattern-explorer.tsx
+- **Depends on**: Semantic Cache, Semantic Response Cache
 - **Added**: 2026-06-08
