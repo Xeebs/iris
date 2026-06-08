@@ -2768,7 +2768,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Multi-Tenant Workspace Isolation & Cost Attribution
 - **Layer**: 51 — Post-MVP Hardening & Scale
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: High
 - **Description**: Implement comprehensive multi-tenant support with workspace isolation guarantees and per-workspace cost attribution. Create packages/semantic-core/src/multi-tenant-manager.ts with: (1) enforceWorkspaceIsolation() middleware for all API/MCP routes — verify JWT workspace claim against resource workspace_id before any query (prevents data leakage), (2) validateWorkspaceBoundaries(workspaceId, entityId) — ensure entities returned to a query belong to the requested workspace, (3) computeWorkspaceCosts(workspaceId, periodStart, periodEnd) — aggregate: embeddings_cost (# embeddings × $0.02/1M tokens), cache_hits_saved (# hits × baseline_tokens), compression_savings, mcp_query_cost (# queries × per-query cost). Create apps/api/migrations/078_multi_tenant_cost_tracking.sql with: workspace_cost_attribution table (workspace_id, date, cost_category: 'embeddings'|'queries'|'storage'|'cache_miss', amount_cents, metadata_json), workspace_query_counts table (workspace_id, date, query_type: 'vector_search'|'graph_expansion'|'compression', count, avg_latency_ms). Build REST routes: GET /api/v1/workspaces/:id/costs (period-aware, currency conversion), GET /api/v1/workspaces/:id/cost-breakdown (pie chart data: % by category), POST /api/v1/admin/cost-audit (export all costs for a workspace). Build dashboard page at apps/dashboard/app/workspaces/[id]/costs/page.tsx showing: daily cost trend (line chart), cost breakdown by category (pie), top-10 most expensive queries, cost per entity type. Add 13 unit tests: workspace isolation enforcement, cost calculation accuracy (with known sample data), currency conversions, edge cases (empty period, single-entity cost). Integration tests: multi-workspace queries with isolation verification, cost aggregation over 30 days, cost rollup across connector types.
 - **Files**:
@@ -2786,7 +2786,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Connector Performance Optimization & Batching Improvements
 - **Layer**: 51 — Post-MVP Hardening & Scale
-- **Status**: UNWORKED
+- **Status**: IN_PROGRESS
 - **Priority**: Medium
 - **Description**: Optimize connector sync performance for large-scale data sources through advanced batching, pagination tuning, and concurrency control. Create packages/connector-sdk/src/performance-optimizer.ts with: (1) adaptiveBatchSize(connectorType, recordsProcessedSoFar, avgRecordSize, maxMemory=512MB) — auto-tune batch size based on actual record size and available memory (start at 100, scale to 500 if records < 1KB), (2) identifyPaginationPattern(previousRequests) — detect if API uses offset/cursor/keyset pagination and recommend most efficient (cursor > keyset > offset), (3) computeOptimalConcurrency(connectorType, rateLimit, avgLatency, errorRate) — auto-scale parallel request concurrency (start at 3, scale to 10 if error_rate < 1%), (4) estimateSyncDuration(connectorId, totalRecords, currentThroughput) — predict when sync will complete and alert if > configured max_duration. Create apps/api/migrations/079_connector_performance_metrics.sql with: connector_sync_metrics table (connector_id, sync_run_id, metric_name: 'batch_size'|'concurrency'|'pagination_type'|'total_records'|'duration_ms'|'throughput_records_per_sec', value, recorded_at). Expose REST: GET /api/v1/connectors/:id/performance-stats (show trends in batch size, concurrency, throughput over last 30 syncs), POST /api/v1/connectors/:id/optimize (trigger analysis and recommend config changes). Build admin dashboard page at apps/dashboard/app/admin/connector-optimization/page.tsx with: performance leaderboard (fastest/slowest connectors by throughput), performance metrics over time (batch size evolution, concurrency ramp), optimization recommendations. Add 11 unit tests: batch size adaptation with varying record sizes, pagination pattern detection (offset vs cursor APIs), concurrency scaling logic, sync duration estimation accuracy. Integration tests: full sync with adaptive batching on HubSpot connector, concurrent sync of 3 connectors without resource contention.
 - **Files**:
@@ -2798,4 +2798,67 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
   - apps/dashboard/app/admin/connector-optimization/page.tsx
   - apps/dashboard/components/connector-performance-leaderboard.tsx
 - **Depends on**: Connector Framework (completed), Sync Scheduling (completed)
+- **Added**: 2026-06-08
+
+---
+
+## Layer 52: MCP Tool Enhancements & Streaming
+
+### Task: MCP Streaming Context Tool & Progressive Expansion
+- **Layer**: 52 — MCP Tool Enhancements & Streaming
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Implement a streaming MCP tool that progressively expands context as needed, reducing initial response token cost while allowing the client to request deeper context. Create apps/mcp-server/src/tools/streaming-context.ts with: (1) streamingQueryContext(query, initialBudget=500, maxBudget=2000, expansionLevels=['summary', 'detailed', 'full']) — returns initial compressed context, emits additional chunks on client request, (2) contextExpansionHeuristics that predict which expansion layer the client will request based on entity type and query complexity, (3) partial response tracking (partial: true, expansionKey) so client can later call getContextExpansion(expansionKey) to fill in skipped layers. Update apps/mcp-server/src/server.ts to register the new tool. Create comprehensive test suite (15+ tests) covering: initial budget enforcement, progressive expansion chunks, client-side state management, timeout handling if expansion not consumed. Integration tests: real query with multi-level expansion, verify total token cost < full context approach by 40%.
+- **Files**:
+  - apps/mcp-server/src/tools/streaming-context.ts
+  - apps/mcp-server/src/__tests__/streaming-context.test.ts
+  - apps/mcp-server/src/__tests__/streaming-context.integration.test.ts
+- **Depends on**: MCP Server Bootstrap (completed), Query Context Tool (completed)
+- **Added**: 2026-06-08
+
+### Task: Query Anomaly Detection & Metrics Forecasting Engine
+- **Layer**: 52 — MCP Tool Enhancements & Streaming
+- **Status**: UNWORKED
+- **Priority**: Medium
+- **Description**: Build an anomaly detection and forecasting service for metrics to help teams surface unexpected business changes. Create packages/semantic-core/src/metrics-anomaly-detector.ts with: (1) detectAnomalies(metricId, lookbackDays=30, sensitivityLevel='medium') using Z-score (|value - mean| > sensitivityLevel * stdDev) on historical metric values, (2) forecastMetricValue(metricId, daysAhead=7) using exponential smoothing (alpha=0.3) to predict future values, (3) anomalyContext(metricId, timestamp) to retrieve contextual entities that changed around the anomaly time (from lineage_events). Persist anomalies to new migration 080_metric_anomalies.sql table (metric_id, anomaly_date, severity: 'low'|'medium'|'high', detected_at, acknowledged_at, notes). Expose REST GET /api/v1/metrics/:id/anomalies and POST /api/v1/metrics/:id/anomalies/:anomalyId/acknowledge. Add MCP tool detect-anomalies for query-time context enrichment ("metric X had an anomaly 2 days ago"). Create 18 unit tests for Z-score calculation, exponential smoothing, edge cases (zero variance, single data point). Integration tests: historical anomaly detection against real database, forecast accuracy on 30-day dataset.
+- **Files**:
+  - packages/semantic-core/src/metrics-anomaly-detector.ts
+  - packages/semantic-core/src/__tests__/metrics-anomaly-detector.test.ts
+  - packages/semantic-core/src/__tests__/metrics-anomaly-detector.integration.test.ts
+  - apps/api/migrations/080_metric_anomalies.sql
+  - apps/api/src/routes/metrics-anomalies.ts
+  - apps/api/src/__tests__/metrics-anomalies.test.ts
+  - apps/mcp-server/src/tools/detect-anomalies.ts
+  - apps/dashboard/components/anomaly-timeline.tsx
+- **Depends on**: Metric Registry (completed), Data Lineage (completed)
+- **Added**: 2026-06-08
+
+### Task: Advanced MCP Aggregation & Comparison Tools
+- **Layer**: 52 — MCP Tool Enhancements & Streaming
+- **Status**: UNWORKED
+- **Priority**: Medium
+- **Description**: Implement aggregation and entity comparison MCP tools to enable complex business questions ("compare top 5 customers by ARR and show their churn risk"). Create apps/mcp-server/src/tools/aggregate-entities.ts with: (1) aggregateEntities(entityType, groupByAttribute, aggregations=['count', 'sum', 'avg', 'max', 'min'], filters, topK=10) returning grouped results with token budget enforcement, (2) compareEntities(entityIds=[], attributes=['all'|specific list], diffHighlight=true) showing side-by-side attributes with changes highlighted. Implement token-efficient comparison by: only including differing attributes if diffHighlight=true, using abbreviated labels, respecting context budget. Register both tools in server.ts. Create 16 unit tests covering: aggregation correctness, budget enforcement on large result sets, attribute filtering, edge cases (no results, single entity). Integration tests: compare 3 HubSpot contacts across 8 attributes within 300-token budget.
+- **Files**:
+  - apps/mcp-server/src/tools/aggregate-entities.ts
+  - apps/mcp-server/src/tools/compare-entities.ts
+  - apps/mcp-server/src/__tests__/aggregate-entities.test.ts
+  - apps/mcp-server/src/__tests__/compare-entities.test.ts
+  - apps/mcp-server/src/__tests__/mcp-aggregation.integration.test.ts
+- **Depends on**: Query Context Tool (completed), Advanced Query Context (completed)
+- **Added**: 2026-06-08
+
+### Task: CLI Tooling & Developer Experience Enhancements
+- **Layer**: 52 — MCP Tool Enhancements & Streaming
+- **Status**: UNWORKED
+- **Priority**: Medium
+- **Description**: Enhance the CLI tool (scripts/iris) with developer-friendly commands for local testing and debugging. Extend scripts/iris to support: (1) iris connector:test <name> [--watch] — run connector tests with live reload, (2) iris mcp:debug — start MCP server in debug mode with verbose logging to stdout, (3) iris index:inspect — interactive CLI to query the local vector index (search by text, see similarity scores, view entity embeddings), (4) iris sync:simulate <connectorId> — dry-run a sync without persisting to DB, validate schema mapping, show token estimates. Build these as TypeScript CLI utilities in scripts/cli/, use commander.js for argument parsing, ensure all commands have --help and examples. Create comprehensive CLI tests (8+) covering: argument parsing, error handling, command execution validation. Document all commands in a new CLI_GUIDE.md.
+- **Files**:
+  - scripts/cli/test-connector.ts
+  - scripts/cli/debug-mcp.ts
+  - scripts/cli/inspect-index.ts
+  - scripts/cli/simulate-sync.ts
+  - scripts/cli/index.ts
+  - scripts/cli/__tests__/cli.test.ts
+  - docs/CLI_GUIDE.md
+- **Depends on**: Local Infrastructure (completed), MCP Server Bootstrap (completed)
 - **Added**: 2026-06-08

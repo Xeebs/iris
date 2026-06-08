@@ -12,7 +12,8 @@
     "./test-utils": "./dist/test-utils.js",
     "./user-connector-loader": "./dist/user-connector-loader.js",
     "./webhook-validator": "./dist/webhook-validator.js",
-    "./testing": "./dist/testing/connector-test-harness.js"
+    "./testing": "./dist/testing/connector-test-harness.js",
+    "./performance-optimizer": "./dist/performance-optimizer.js"
   },
   "scripts": {
     "build": "tsc --build",
