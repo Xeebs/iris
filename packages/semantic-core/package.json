@@ -54,7 +54,8 @@
     "./cost-optimizer": "./dist/cost-optimizer.js",
     "./document-indexer": "./dist/document-indexer.js",
     "./relevance-tuner": "./dist/relevance-tuner.js",
-    "./connector-recipes": "./dist/connector-recipes.js"
+    "./connector-recipes": "./dist/connector-recipes.js",
+    "./index-maintenance": "./dist/index-maintenance.js"
   },
   "scripts": {
     "build": "tsc --build",
