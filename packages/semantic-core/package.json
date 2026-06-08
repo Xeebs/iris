@@ -64,7 +64,8 @@
     "./dedup-reconciliation": "./dist/dedup-reconciliation.js",
     "./proactive-context-engine": "./dist/proactive-context-engine.js",
     "./metric-formula-engine": "./dist/metric-formula-engine.js",
-    "./nlp-config-engine": "./dist/nlp-config-engine.js"
+    "./nlp-config-engine": "./dist/nlp-config-engine.js",
+    "./workflow-service": "./dist/workflow-service.js"
   },
   "scripts": {
     "build": "tsc --build",

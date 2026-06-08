@@ -21,6 +21,7 @@ export default defineConfig({
       '@iris/semantic-core/osi-exporter': path.resolve(__dirname, '../../packages/semantic-core/src/osi-exporter.ts'),
       '@iris/semantic-core/nlp-config-parser': path.resolve(__dirname, '../../packages/semantic-core/src/nlp-config-parser.ts'),
       '@iris/semantic-core/workflow-templates': path.resolve(__dirname, '../../packages/semantic-core/src/workflow-templates.ts'),
+      '@iris/semantic-core/workflow-service': path.resolve(__dirname, '../../packages/semantic-core/src/workflow-service.ts'),
       '@iris/semantic-core/index-optimizer': path.resolve(__dirname, '../../packages/semantic-core/src/index-optimizer.ts'),
       '@iris/semantic-core/benchmarking': path.resolve(__dirname, '../../packages/semantic-core/src/benchmarking.ts'),
       '@iris/semantic-core/connector-marketplace': path.resolve(__dirname, '../../packages/semantic-core/src/connector-marketplace.ts'),
