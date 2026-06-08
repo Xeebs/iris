@@ -88,6 +88,8 @@ export default defineConfig({
       '@iris/semantic-core/query-cost-estimator': path.resolve(__dirname, '../../packages/semantic-core/src/query-cost-estimator.ts'),
       '@iris/semantic-core/dedup-inspector': path.resolve(__dirname, '../../packages/semantic-core/src/dedup-inspector.ts'),
       '@iris/semantic-core/budget-monitor': path.resolve(__dirname, '../../packages/semantic-core/src/budget-monitor.ts'),
+      '@iris/semantic-core/query-explainer': path.resolve(__dirname, '../../packages/semantic-core/src/query-explainer.ts'),
+      '@iris/semantic-core/vector-store': path.resolve(__dirname, '../../packages/semantic-core/src/vector-store.ts'),
     },
   },
   test: {
