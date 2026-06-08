@@ -3364,7 +3364,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Intelligent Query Clustering & Adaptive Cache TTL Engine
 - **Layer**: 57 — Scale Phase III - Advanced Intelligence & Context Optimization
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: Medium
 - **Description**: Build an intelligent query clustering system that groups semantically similar queries and learns optimal cache TTL policies per cluster, improving cache hit rates through smarter invalidation. Create packages/semantic-core/src/query-cluster-engine.ts with QueryClusteringEngine: (1) clusterQueriesBySemanticSimilarity(workspaceId, days=7) using query embeddings + k-means (k=10-50 adaptive) to group similar queries, (2) extractClusterSignature(cluster) identifying: dominant entity types, query intent, update frequency patterns, (3) predictOptimalCacheTtl(cluster) learning from historical cache hit rates and data freshness: clusters querying stable reference data get longer TTL (24h), clusters querying high-velocity data get shorter TTL (5min), (4) detectCacheInvalidationPatterns(cluster) identifying: when updates to entity types in cluster trigger cascading invalidation, (5) adaptiveTtlAssignment(query) assigning TTL based on which cluster the query belongs to. Create apps/api/migrations/103_add_query_clustering.sql with: query_clusters (workspace_id, cluster_id, cluster_signature, member_count, dominant_entity_types, update_frequency_percentile, optimal_ttl_seconds, confidence_score, created_at), query_membership (query_hash, cluster_id, similarity_score), cache_invalidation_events (workspace_id, trigger_entity_type, affected_clusters, cascade_depth). Integrate with SemanticCache: on cache miss, use clustering to check sibling queries in cluster for recent hits. Expose REST: GET /api/v1/cache/clusters (show active clusters), GET /api/v1/cache/clusters/:id (cluster members + TTL strategy). Build dashboard: apps/dashboard/components/query-clustering-analysis.tsx (show clusters, member queries, TTL distribution, cache hit improvement). Add 14+ unit tests for: query clustering quality (silhouette score ≥0.6), TTL prediction accuracy, invalidation pattern detection, edge cases (single-query clusters, volatile data). Integration test: run 5000 queries over 7 days, cluster automatically, measure cache hit rate improvement (target ≥15% vs. uniform TTL). Reference embedding-patterns.md for query embedding generation.
 - **Files**:
@@ -3380,7 +3380,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: MCP Tool Auto-Generation & Dynamic Schema Binding from Connectors
 - **Layer**: 57 — Scale Phase III - Advanced Intelligence & Context Optimization
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: Medium
 - **Description**: Build a system that automatically generates MCP tools from connector schemas, enabling dynamic query capabilities without manual tool definition. Create packages/semantic-core/src/mcp-tool-generator.ts with MCPToolGenerator: (1) generateToolsFromConnectorSchema(connectorId, schema) creating tools for each entity type: query-<connector>-<entity> (e.g., query-hubspot-contact), list-<connector>-<entity>-metrics, (2) buildToolInputSchema(entitySchema) converting connector schema to zod validation, (3) bindToolToRetrieval(tool) connecting auto-gen tool to query-context retrieval engine with semantic filtering, (4) versionToolDefinition(toolId, newSchema) managing schema changes with backward-compatibility warnings, (5) validateToolUsage(toolId, input) runtime validation and error mapping. Create apps/api/migrations/104_add_auto_mcp_tools.sql with: auto_generated_tools (workspace_id, tool_id, source_connector_id, entity_type, tool_definition_json, version, generated_at, last_invoked_at), tool_version_history (tool_id, version, schema_changes, is_backward_compatible, deprecation_warning). Integrate with MCP server: on workspace load, scan enabled connectors, auto-generate tools, register in MCP server, emit schema to Claude. Expose REST: GET /api/v1/mcp/auto-tools (list auto-generated tools), GET /api/v1/mcp/auto-tools/:toolId/schema (tool schema), POST /api/v1/mcp/auto-tools/:toolId/test (dry-run tool with sample input). Build dashboard: apps/dashboard/components/auto-tool-registry.tsx (show all auto-generated tools, source connector, usage stats). Add 14+ unit tests for: schema-to-tool conversion, zod validation generation, backward-compatibility detection, tool registration, version migration. Integration test: enable 5 connectors with 40+ entity types total, auto-generate tools, invoke 50 different auto-gen tools via MCP, verify all succeed and schema validation blocks invalid inputs. Reference api-conventions.md for MCP tool patterns, code-style.md for schema validation.
 - **Files**:
@@ -3393,4 +3393,72 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
   - apps/mcp-server/src/tools/auto-tool-registry.ts
   - apps/dashboard/components/auto-tool-registry.tsx
 - **Depends on**: MCP Tool Versioning & Backwards Compatibility Manager (completed)
+- **Added**: 2026-06-08
+
+---
+
+## Layer 58: Growth Phase II - Real-Time & Agent Learning
+
+### Task: Event-Driven Real-Time Sync Engine with Pub/Sub Integration
+- **Layer**: 58 — Growth Phase II - Real-Time & Agent Learning
+- **Status**: IN_PROGRESS
+- **Priority**: High
+- **Description**: Build a full event-driven real-time sync system that allows connectors to emit change events that are immediately processed and indexed, eliminating polling delays. Create packages/semantic-core/src/event-driven-sync-engine.ts with EventDrivenSyncEngine: (1) createPublisher(connectorId, workspaceId) establishing a connector-scoped pub/sub channel for emitting EntityChangeEvent, (2) subscribeToConnectorEvents(connectorId, handler) setting up Redis pub/sub subscription with auto-reconnect, (3) processChangeEvent(event) immediately: validating against connector schema, enriching with relationships, indexing to vector store, invalidating related cache keys, (4) batchProcessEvents(events, timeWindowMs) for handling bursts of events (coalesce by entity type), (5) deliverWebhookNotifications(events) emitting events to registered webhooks post-indexing. Create apps/api/migrations/105_add_event_streams.sql with: connector_event_streams (connector_id, enabled, event_types: 'entity_created'|'entity_updated'|'entity_deleted'|'relationship_changed', config_json), event_delivery_queue (event_id, status: 'pending'|'delivered'|'failed', retry_count, next_retry_at), event_audit_log (timestamp, connector_id, entity_id, change_type, change_summary, delivered_at, latency_ms). Integrate with webhook-driven sync: webhooks now trigger EventDrivenSyncEngine instead of full connector sync. Expose REST: GET /api/v1/connectors/:id/event-config (stream settings), PUT /api/v1/connectors/:id/event-config (enable/configure), GET /api/v1/events/audit (cursor-paginated event history with latency metrics), POST /api/v1/events/:id/retry (manual retry failed event). Build dashboard: apps/dashboard/components/event-stream-monitor.tsx (real-time event ingestion rate, latency percentiles p50/p95/p99, event type breakdown). Add 16+ unit tests for: event publication, subscription lifecycle, change processing, batch coalescing, webhook delivery, error handling with retry. Integration test: configure 3 connectors with event streaming, emit 1000 randomized change events over 10 seconds, verify all indexed within 2s, cache invalidation cascades correctly, audit log complete. Reference connector-patterns.md for webhook patterns, code-style.md for async/error handling.
+- **Files**:
+  - packages/semantic-core/src/event-driven-sync-engine.ts
+  - packages/semantic-core/src/__tests__/event-driven-sync-engine.test.ts
+  - packages/semantic-core/src/__tests__/event-driven-sync-engine.integration.test.ts
+  - apps/api/src/routes/event-streams.ts
+  - apps/api/src/__tests__/event-streams.test.ts
+  - apps/api/migrations/105_add_event_streams.sql
+  - apps/dashboard/components/event-stream-monitor.tsx
+- **Depends on**: Webhook Management & Testing Dashboard (completed), CDC support in connectors
+- **Added**: 2026-06-08
+
+### Task: Multi-LLM Agent Context Learning & Feedback Loop
+- **Layer**: 58 — Growth Phase II - Real-Time & Agent Learning
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Build a closed-loop system where agents that use Iris context provide feedback on result quality, which is automatically incorporated into relevance ranking, cache policies, and entity recommendations. Create packages/semantic-core/src/agent-feedback-engine.ts with AgentFeedbackEngine: (1) recordAgentUsage(agentId, query, contextServed, agentResponse, metadata) logging what context was served to an agent and what it responded with, (2) recordUserFeedback(usageId, rating, comments, correctedContext) capturing explicit feedback (1-5 star rating, optional comment, corrected context if agent was wrong), (3) inferFeedback(usageId) detecting implicit positive/negative feedback: same agent re-querying same question = negative feedback on previous context; agent quoting served context in final response = positive feedback, (4) updateRelevanceWeights(entityType, rating) adjusting semantic relevance scores for entity types based on aggregated feedback, (5) suggestContextExpansion(agentId, query) detecting common missing context patterns per agent. Create apps/api/migrations/106_add_agent_feedback.sql with: agent_context_usage (agent_id, query_hash, context_ids, context_budget_used, served_at), agent_feedback (usage_id, rating: 1-5, comment, corrected_context_json, created_at, feedback_source: 'explicit'|'implicit'|'inferred'), relevance_adjustments (entity_type_id, positive_feedback_count, negative_feedback_count, weight_adjustment, last_updated_at). Integrate with query-context MCP tool: include feedback_key in response so agents can score their use; periodically call updateRelevanceWeights. Expose REST: POST /api/v1/agents/:id/feedback (submit usage rating), GET /api/v1/agents/:id/insights (aggregated feedback, most/least useful context types), GET /api/v1/entities/:id/feedback-score (entity quality score from agent feedback). Build dashboard: apps/dashboard/components/agent-feedback-dashboard.tsx (feedback timeline per agent, top useful/unhelpful entities, suggested context adjustments). Add 14+ unit tests for: usage logging, feedback recording, weight adjustment calculations, expansion suggestion, implicit feedback detection. Integration test: simulate 10 agents querying with context over 100 interactions, provide mixed feedback, verify relevance weights update correctly, new queries show improved ranking. Reference query-learning-engine.ts for pattern extraction.
+- **Files**:
+  - packages/semantic-core/src/agent-feedback-engine.ts
+  - packages/semantic-core/src/__tests__/agent-feedback-engine.test.ts
+  - packages/semantic-core/src/__tests__/agent-feedback-engine.integration.test.ts
+  - apps/api/src/routes/agent-feedback.ts
+  - apps/api/src/__tests__/agent-feedback.test.ts
+  - apps/api/migrations/106_add_agent_feedback.sql
+  - apps/dashboard/components/agent-feedback-dashboard.tsx
+- **Depends on**: Query Learning Engine (completed), Semantic Query Learning (completed)
+- **Added**: 2026-06-08
+
+### Task: Smart Schema Field Mapping & Connector Auto-Configuration
+- **Layer**: 58 — Growth Phase II - Real-Time & Agent Learning
+- **Status**: UNWORKED
+- **Priority**: Medium
+- **Description**: Build an intelligent field mapping system that learns connector field transformations from user behavior and suggests automatic entity attribute mappings during connector setup, reducing manual configuration. Create packages/semantic-core/src/smart-field-mapper.ts with SmartFieldMapper: (1) learnFieldMappings(connectorId, userMappings) analyzing confirmed field mappings (email_address → email, account_name → label) to identify patterns, (2) suggestEntityMapping(connectorSchema, targetEntityType) proposing likely attribute assignments with confidence scores via semantic matching and learned patterns, (3) detectCommonTransformations(sourceField, targetField) recognizing standard patterns (snake_case to camelCase, ISO dates to unix timestamps, concat two fields), (4) validateMappingLogic(mapping) ensuring mappings won't produce data loss (e.g., many-to-one mappings lose information), (5) generateMappingCode(mapping) outputting TypeScript transformation functions for use in connectors. Create apps/api/migrations/107_add_field_mappings.sql with: learned_mappings (source_connector_id, source_field_name, target_field_name, target_entity_type, mapping_count, user_confirmed_count, confidence_score), mapping_transformations (id, transformation_type: 'direct'|'aggregate'|'compute'|'lookup', source_fields, target_field, logic_expression, created_by_user_id). Integrate with connector setup flow: when user creates new connector instance, SmartFieldMapper suggests mappings based on schema introspection + learned patterns. Expose REST: POST /api/v1/connectors/:id/suggest-mapping (run mapping suggestion), GET /api/v1/connectors/:id/mapping-suggestions (get all suggestions with confidence), POST /api/v1/connectors/:id/mapping-suggestions/:suggestionId/confirm (accept and apply), POST /api/v1/mapping-analytics (track mapping success). Build dashboard: apps/dashboard/components/field-mapping-assistant.tsx (show suggested mappings, drag-drop confirmation, transformation preview). Add 12+ unit tests for: pattern learning, semantic field matching, transformation validation, code generation, confidence scoring. Integration test: load 5 different connector types with 200 total fields, learn mappings from 50 confirmed decisions, suggest new mappings for similar fields, achieve ≥85% accuracy vs. manual mappings. Reference code-style.md for code generation best practices.
+- **Files**:
+  - packages/semantic-core/src/smart-field-mapper.ts
+  - packages/semantic-core/src/__tests__/smart-field-mapper.test.ts
+  - packages/semantic-core/src/__tests__/smart-field-mapper.integration.test.ts
+  - apps/api/src/routes/field-mappings.ts
+  - apps/api/src/__tests__/field-mappings.test.ts
+  - apps/api/migrations/107_add_field_mappings.sql
+  - apps/dashboard/components/field-mapping-assistant.tsx
+- **Depends on**: Schema auto-discovery (completed), Connector framework (completed)
+- **Added**: 2026-06-08
+
+### Task: Context Delta Streaming & Incremental MCP Responses
+- **Layer**: 58 — Growth Phase II - Real-Time & Agent Learning
+- **Status**: UNWORKED
+- **Priority**: Medium
+- **Description**: Build a system that tracks context state per MCP client and streams only what changed since the last query, reducing token consumption for agents that maintain state across multiple turns. Create packages/semantic-core/src/context-delta-streamer.ts with ContextDeltaStreamer: (1) captureContextSnapshot(clientId, query, context) hashing the context served to a client, (2) computeContextDelta(clientId, newContext, previousSnapshot) returning {added: Entity[], removed: Entity[], modified: {entity, changes: Delta[]}}, (3) streamDeltaAsChunks(delta, chunkSizeTokens) breaking deltas into token-bounded chunks for streaming, (4) encodeContextDelta(delta) optimizing delta encoding (references vs. full objects), (5) trackClientState(clientId, snapshot) maintaining client state across sessions with expiration. Create apps/api/migrations/108_add_context_deltas.sql with: mcp_client_context_state (client_id, workspace_id, last_query_hash, last_context_snapshot, entities_served, snapshot_created_at, expires_at), context_delta_audit (client_id, delta_id, entities_added_count, entities_removed_count, entities_modified_count, saved_tokens, stream_chunks, delivered_at). Integrate with MCP server query-context tool: check if client has prior context, compute delta, return {delta_mode: true, added, removed, modified} vs. full context. Expose REST: GET /api/v1/mcp-clients/:clientId/state (current context snapshot), GET /api/v1/mcp-clients/:clientId/context-history (cursor-paginated deltas), DELETE /api/v1/mcp-clients/:clientId/state (reset state, force full refresh). Build dashboard: apps/dashboard/components/context-delta-analyzer.tsx (show delta efficiency: tokens saved by deltas vs. full context, delta delivery timeline). Add 13+ unit tests for: delta computation accuracy, chunk encoding, client state tracking, token savings calculation, edge cases (null transitions, large deltas). Integration test: simulate agent with 20 sequential queries over 10 minutes, compute deltas for each, verify token savings ≥60% vs. full refresh, client state consistency. Reference compression pipeline.ts for serialization patterns.
+- **Files**:
+  - packages/semantic-core/src/context-delta-streamer.ts
+  - packages/semantic-core/src/__tests__/context-delta-streamer.test.ts
+  - packages/semantic-core/src/__tests__/context-delta-streamer.integration.test.ts
+  - apps/api/src/routes/context-deltas.ts
+  - apps/api/src/__tests__/context-deltas.test.ts
+  - apps/api/migrations/108_add_context_deltas.sql
+  - apps/dashboard/components/context-delta-analyzer.tsx
+- **Depends on**: Semantic Cache (completed), Context Compression Pipeline (completed)
 - **Added**: 2026-06-08
