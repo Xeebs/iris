@@ -99,6 +99,18 @@ export type {
   TestSetQuery,
   SearchExperiment,
 } from './search-quality-evaluator.js';
+export type {
+  RecommendationType,
+  ImplementationEffort,
+  CostRecommendation,
+  SpendPattern,
+} from './cost-optimizer.js';
+export {
+  CostOptimizationAdvisor,
+  estimateMonthlySavings,
+  rankRecommendations,
+  filterLowEffort,
+} from './cost-optimizer.js';
 export {
   SearchQualityEvaluator,
   precisionAtK,
