@@ -69,6 +69,7 @@ export default defineConfig({
       '@iris/semantic-core/context-delta-streamer': path.resolve(__dirname, '../../packages/semantic-core/src/context-delta-streamer.ts'),
       '@iris/semantic-core/streaming-context': path.resolve(__dirname, '../../packages/semantic-core/src/streaming-context.ts'),
       '@iris/semantic-core/batch-operations': path.resolve(__dirname, '../../packages/semantic-core/src/batch-operations.ts'),
+      '@iris/semantic-core/osi-interchange': path.resolve(__dirname, '../../packages/semantic-core/src/osi-interchange.ts'),
       '@iris/semantic-core': path.resolve(__dirname, '../../packages/semantic-core/src/index.ts'),
       '@iris/cache/response-cache': path.resolve(__dirname, '../../packages/cache/src/response-cache.ts'),
       '@iris/compression': path.resolve(__dirname, '../../packages/compression/src/index.ts'),

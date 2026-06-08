@@ -3710,3 +3710,85 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
   - apps/dashboard/components/export-builder.tsx
 - **Depends on**: Indexer Implementation, Connector Instance Management API
 - **Added**: 2026-06-09
+
+---
+
+## Layer 62: Advanced Features & Polish
+
+### Task: Natural Language Workspace Configuration Engine
+- **Layer**: 62 — Advanced Features & Polish
+- **Status**: COMMITTED
+- **Priority**: High
+- **Description**: Implement a natural language configuration system that accepts business rules in plain English (e.g., "our fiscal year starts in February", "ARR is MRR * 12", "a deal is qualified if amount > $50K"). Use OpenAI GPT-4o to parse intent and auto-generate configuration code for glossary terms, metrics, and entity attributes. Store parsed configurations in migration 119 (nl_config_statements, nl_config_results). Provide REST POST /api/v1/workspace/nlp-config/parse-statement, GET /api/v1/workspace/nlp-config/statements. Add dashboard page /settings/[workspaceId]/nlp-config with statement history and confidence scores. Include 28+ tests (16 unit parsing + 12 route + compliance checks).
+- **Files**:
+  - packages/semantic-core/src/nlp-config-parser.ts
+  - packages/semantic-core/src/__tests__/nlp-config-parser.test.ts
+  - apps/api/src/routes/nlp-config.ts
+  - apps/api/src/__tests__/nlp-config.test.ts
+  - apps/dashboard/app/settings/[workspaceId]/nlp-config/page.tsx
+  - apps/api/migrations/119_nlp_config_statements.sql
+- **Depends on**: None
+- **Added**: 2026-06-08
+
+### Task: Agent Workflow Template Registry & Pre-Configuration
+- **Layer**: 62 — Advanced Features & Polish
+- **Status**: COMMITTED
+- **Priority**: High
+- **Description**: Build a registry of AI agent workflow templates pre-configured with Iris MCP context. Each template specifies: agent role, required tools (query-context, list-entities, get-metric), suggested system prompt, context budget, entity type filters, and caching strategy. Store in migration 120 (workflow_templates, template_tool_config). Implement WorkflowTemplateService with create/list/clone/export methods. Provide REST endpoints GET /api/v1/workflows, POST /api/v1/workflows/:id/clone (personalizes template for workspace). Add marketplace page /workflows showing templates with preview and one-click apply. Support templates for: sales-insights-agent, ops-qa-agent, financial-analyst-agent, customer-success-agent. Include 32+ tests (20 unit + 12 route).
+- **Files**:
+  - packages/semantic-core/src/workflow-template-registry.ts
+  - packages/semantic-core/src/__tests__/workflow-template-registry.test.ts
+  - apps/api/src/routes/workflow-templates.ts
+  - apps/api/src/__tests__/workflow-templates.test.ts
+  - apps/dashboard/app/workflows/page.tsx
+  - apps/dashboard/components/workflow-template-card.tsx
+  - apps/api/migrations/120_workflow_templates.sql
+- **Depends on**: None
+- **Added**: 2026-06-08
+
+### Task: OSI (Open Semantic Interchange) Standard Export & Import
+- **Layer**: 62 — Advanced Features & Polish
+- **Status**: COMMITTED
+- **Priority**: Medium
+- **Description**: Implement full OSI standard export/import for entity graphs, glossary terms, and metric definitions per the OSI 2.0 spec. Export should produce JSON-LD documents with @context URIs, semantic types, and relationship links compatible with other semantic layer tools. Implement OsiExportService (exportWorkspaceToOsi, importFromOsi) with validation against OSI schema. Add REST POST /api/v1/workspace/export/osi and POST /api/v1/workspace/import/osi. Update data-exporter.ts to include OSI as an export format option. Provide dashboard bulk export UI. Support round-trip lossless export/import. Include 24+ tests (16 unit + 8 integration).
+- **Files**:
+  - packages/semantic-core/src/osi-interchange.ts
+  - packages/semantic-core/src/__tests__/osi-interchange.test.ts
+  - apps/api/src/routes/osi-interchange.ts
+  - apps/api/src/__tests__/osi-interchange.test.ts
+  - apps/dashboard/components/osi-export-wizard.tsx
+- **Depends on**: None
+- **Added**: 2026-06-08
+
+### Task: Industry Benchmarking & Cross-Company Insights (Anonymized, Opt-In)
+- **Layer**: 62 — Advanced Features & Polish
+- **Status**: UNWORKED
+- **Priority**: Medium
+- **Description**: Complete the benchmarking system (BenchmarkingService stub exists) with anonymized peer comparison. Implement: (1) metrics collection (entity count, query latency p95, token savings %, cache hit rate) from opt-in workspaces, (2) anonymization pipeline (hash workspace ID, remove names/emails, aggregate by industry+company-size), (3) percentile calculation (p25, p50, p75, p90 per cohort), (4) comparative API endpoint GET /api/v1/benchmarks/peer-comparison returning workspace metrics vs. peers with percentile ranks. Add dashboard page /analytics/[workspaceId]/benchmarks with charts showing percentile position, peer count, and opt-in toggle. Ensure GDPR/CCPA compliance via consent management. Include 36+ tests (22 unit + 14 integration covering aggregation logic + consent).
+- **Files**:
+  - packages/semantic-core/src/benchmarking-service.ts
+  - packages/semantic-core/src/__tests__/benchmarking-service.test.ts
+  - apps/api/src/routes/benchmarking.ts
+  - apps/api/src/__tests__/benchmarking.test.ts
+  - apps/dashboard/app/analytics/[workspaceId]/benchmarks/page.tsx
+  - apps/dashboard/components/peer-comparison-chart.tsx
+  - apps/api/migrations/121_benchmarking_metrics.sql
+- **Depends on**: None
+- **Added**: 2026-06-08
+
+### Task: Fine-Grained PII Field Masking UI & Audit Dashboard
+- **Layer**: 62 — Advanced Features & Polish
+- **Status**: UNWORKED
+- **Priority**: Medium
+- **Description**: Enhance the existing PII masking system (pii-masker.ts exists with redact/hash/tokenize strategies) with a comprehensive admin dashboard. Implement: (1) field-level masking strategy selector (redact, hash, tokenize, keep-last-4), (2) audit trail of PII access attempts (which user/agent accessed which PII field when), (3) bulk masking rules editor (apply mask to all email fields across connectors), (4) test mode showing before/after masked output. Create REST GET /api/v1/admin/pii-access-audit (cursor-paginated) and PUT /api/v1/admin/pii-fields/:workspaceId/:connectorId/:fieldName/mask-strategy. Add dashboard page /admin/pii-config with 3 tabs: field strategies, access audit log, bulk rule editor. Include 28+ tests (16 unit + 12 route + audit compliance).
+- **Files**:
+  - packages/semantic-core/src/pii-masking-audit.ts
+  - packages/semantic-core/src/__tests__/pii-masking-audit.test.ts
+  - apps/api/src/routes/pii-masking-audit.ts
+  - apps/api/src/__tests__/pii-masking-audit.test.ts
+  - apps/dashboard/app/admin/pii-config/page.tsx
+  - apps/dashboard/components/pii-field-editor.tsx
+  - apps/dashboard/components/pii-access-audit-table.tsx
+  - apps/api/migrations/122_pii_access_audit.sql
+- **Depends on**: None
+- **Added**: 2026-06-08
