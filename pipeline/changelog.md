@@ -5,6 +5,7 @@ Completed tasks are logged here by the daemon after each successful commit.
 ---
 
 - 2026-06-08 | Webhook Management & Testing Dashboard | WebhookDebugger (semantic-core), webhook-admin routes (api), admin page + 5 dashboard components (list-table, event-log, test-panel, retry-queue, debugger); 23 tests pass
+- 2026-06-08 | Comprehensive Load Testing & Performance Baseline Suite | 4 k6-style Node.js load scripts (api-stress, mcp-throughput, sync-concurrency, index-query), load-test-config.ts with thresholds, 21 unit tests, CI workflow, PERFORMANCE_BASELINE.md
 
 - 2026-06-07: feat(semantic-core,api,dashboard): index snapshot export & disaster recovery — IndexSnapshotService (gzip compressed snapshots, pruneOldSnapshots, create/list/restore), migration 040, REST routes /api/v1/snapshots, SnapshotManager dashboard component, 8 tests
 - 2026-06-07: feat(semantic-core,api,dashboard): email template system & customization — EmailTemplateService (CRUD + render + variable interpolation), migration 041, REST routes /api/v1/email-templates, EmailTemplateEditor dashboard component with live preview, 21 tests

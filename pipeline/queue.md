@@ -3108,7 +3108,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Comprehensive Load Testing & Performance Baseline Suite
 - **Layer**: 54 — Connector Expansion & V1 Features
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: High
 - **Description**: Create a load testing and performance benchmarking suite to establish baseline metrics and validate system capacity. Build tests/load/ with k6 or Artillery scripts: (1) api-stress-test.js — concurrent requests to /api/v1/query-context, measure p50/p95/p99 latencies at 10, 50, 100, 500 RPS, (2) mcp-throughput-test.js — parallel MCP tool invocations, measure tool response latencies and cache hit rates under load, (3) sync-concurrency-test.js — parallel connector syncs (3+ connectors), measure queue throughput and peak memory, (4) index-query-test.js — vector search performance on 100K+ indexed entities with varying query complexities. Create monitoring dashboard tracking test results over time. Output performance report with: latency percentiles, throughput, error rates, memory/CPU peak, cache effectiveness. Establish baseline thresholds: p95 API latency <2s (cache miss), p95 MCP tool latency <500ms (cached), sync throughput ≥100 entities/sec. Create CI/CD integration to run on merges and alert on regressions. Document baseline results in docs/PERFORMANCE_BASELINE.md. Add recommendations for scaling (batch sizes, parallelism, caching). Reference connector-patterns.md for sync generator patterns during load.
 - **Files**:
@@ -3140,4 +3140,78 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
   - packages/semantic-core/src/webhook-debugger.ts
   - packages/semantic-core/src/__tests__/webhook-debugger.test.ts
 - **Depends on**: Webhook-driven Real-Time Sync (completed)
+- **Added**: 2026-06-08
+
+---
+
+## Layer 55: Growth Phase V2 Features & Advanced Analytics
+
+### Task: Data Lineage Tracking & Impact Analysis Engine
+- **Layer**: 55 — Growth Phase V2 Features & Advanced Analytics
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Implement comprehensive data lineage tracking to show where entities originate, how they transform, and downstream impacts. Create packages/semantic-core/src/data-lineage.ts with DataLineageEngine: (1) trackEntityOrigin(entityId) returning source connector and ingestion timestamp, (2) buildTransformationChain(entityId) showing all transformations applied (enrichment, linking, deduplication), (3) getDownstreamImpact(entityId) finding all entities that reference this entity and MCP queries that return it, (4) analyzeChangePropagation(entityId, changeType) modeling impact if entity is deleted/updated. Create apps/api/migrations/091_add_data_lineage.sql with: entity_lineage (entity_id, source_connector_id, source_record_id, ingestion_at), entity_transformations (entity_id, transformation_type, input_entity_ids, output_attributes, applied_at), query_entity_map (query_id, entity_id, context_position, accessed_at) for audit. Expose REST: GET /api/v1/entities/:id/lineage (full lineage chain), GET /api/v1/entities/:id/impact (what depends on this), POST /api/v1/lineage/change-impact (simulate change and show impact). Build dashboard page apps/dashboard/app/admin/data-lineage/page.tsx with: interactive lineage flow diagram (source → transformations → usage), impact radius visualization showing affected queries/entities, change impact simulator with preview. Add 16+ unit tests for lineage chain building, impact calculation, transformation tracking. Integration test: index 500 entities with cross-connector relationships, verify lineage traces correctly through 3+ transformation steps. Reference code-style.md for structured logging.
+- **Files**:
+  - packages/semantic-core/src/data-lineage.ts
+  - packages/semantic-core/src/__tests__/data-lineage.test.ts
+  - packages/semantic-core/src/__tests__/data-lineage.integration.test.ts
+  - apps/api/migrations/091_add_data_lineage.sql
+  - apps/api/src/routes/data-lineage.ts
+  - apps/api/src/__tests__/data-lineage.test.ts
+  - apps/dashboard/app/admin/data-lineage/page.tsx
+  - apps/dashboard/components/lineage-flow-diagram.tsx
+  - apps/dashboard/components/impact-visualizer.tsx
+- **Depends on**: Entity Schema & Transformation (completed), Semantic Index (completed)
+- **Added**: 2026-06-08
+
+### Task: Intelligent Query Optimizer & Execution Planner
+- **Layer**: 55 — Growth Phase V2 Features & Advanced Analytics
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Build query optimization engine that analyzes incoming requests and automatically selects optimal execution strategy (vector search vs. graph expansion vs. cache vs. hybrid). Create packages/semantic-core/src/query-optimizer.ts with QueryOptimizer: (1) analyzeQueryPattern(query, filters, context) estimating selectivity, expected result set size, likelihood of cache hit, (2) selectExecutionStrategy(analysis) choosing between: vector_search_only, graph_expansion_first, cache_check_first, parallel_hybrid (execute multiple in parallel), (3) estimateCost(strategy, workspaceId) predicting tokens, API calls, latency based on historical metrics, (4) buildExecutionPlan(query, strategy) returning ordered steps with fallbacks. Create apps/api/migrations/092_add_query_optimization.sql with: query_execution_plans (query_hash, strategy_chosen, estimated_cost_tokens, actual_cost_tokens, latency_ms, cache_hit, created_at) for learning. Integrate with retrieval engine to use plans. Expose REST: POST /api/v1/queries/optimize (explain query plan), GET /api/v1/query-optimizer/stats (show optimizer effectiveness). Build dashboard panel apps/dashboard/components/query-optimizer-panel.tsx showing: current queries being optimized, execution strategy breakdown (% using each strategy), cost prediction vs. actual histogram, slowest queries and their plans. Add 18+ unit tests for selectivity estimation, strategy selection, cost prediction accuracy. Integration test: run 1000 queries with diverse patterns, verify optimizer selections improve latency/cost by ≥15% vs. default strategy. Reference code-style.md for logging decisions.
+- **Files**:
+  - packages/semantic-core/src/query-optimizer.ts
+  - packages/semantic-core/src/__tests__/query-optimizer.test.ts
+  - packages/semantic-core/src/__tests__/query-optimizer.integration.test.ts
+  - apps/api/migrations/092_add_query_optimization.sql
+  - apps/api/src/routes/query-optimization.ts
+  - apps/api/src/__tests__/query-optimization.test.ts
+  - apps/dashboard/components/query-optimizer-panel.tsx
+- **Depends on**: Retrieval Engine (completed), Advanced Query Engine (completed)
+- **Added**: 2026-06-08
+
+### Task: Semantic Query Learning & Proactive Suggestion Engine
+- **Layer**: 55 — Growth Phase V2 Features & Advanced Analytics
+- **Status**: UNWORKED
+- **Priority**: Medium
+- **Description**: Build a learning system that observes successful queries and suggests optimizations, new queries users might want, and potential data enrichments. Create packages/semantic-core/src/query-learning-engine.ts with QueryLearningEngine: (1) learnFromSuccessfulQueries(workspaceId, queryHistory) analyzing patterns (entity types queried together, filters commonly applied, time-of-day patterns) and building a query suggestion model, (2) suggestRelatedQueries(currentQuery) returning semantically similar queries other users ran that succeeded, (3) suggestMissingContext(query, results) identifying attributes frequently co-queried with the current entity type that weren't in the result, (4) recommendIndexExpansion(workspaceId) suggesting new entity types or connectors to onboard based on gap analysis of queries. Create apps/api/migrations/093_add_query_learning.sql with: query_patterns (workspace_id, query_hash, entity_types_queried, filters_used, avg_result_size, success_rate, similar_queries), missing_context_candidates (workspace_id, entity_type, attribute, suggestion_confidence, use_case). Expose REST: GET /api/v1/queries/suggestions (suggest next query), GET /api/v1/queries/:id/missing-context (show gaps), GET /api/v1/workspaces/:id/index-expansion-recommendations (suggest connectors). Build dashboard page apps/dashboard/app/insights/query-recommendations/page.tsx with: suggested queries widget (your team's top patterns), potential context additions (missing attributes), connector expansion recommendations with ROI estimates. Add 14+ unit tests for pattern detection, similarity scoring, suggestion ranking. Integration test: simulate 500 diverse queries, verify suggestions include relevant patterns from first 100 queries when predicting queries 101-500. Reference embedding-patterns.md for semantic similarity calculation.
+- **Files**:
+  - packages/semantic-core/src/query-learning-engine.ts
+  - packages/semantic-core/src/__tests__/query-learning-engine.test.ts
+  - packages/semantic-core/src/__tests__/query-learning-engine.integration.test.ts
+  - apps/api/migrations/093_add_query_learning.sql
+  - apps/api/src/routes/query-learning.ts
+  - apps/api/src/__tests__/query-learning.test.ts
+  - apps/dashboard/app/insights/query-recommendations/page.tsx
+  - apps/dashboard/components/query-suggestions-widget.tsx
+  - apps/dashboard/components/missing-context-advisor.tsx
+- **Depends on**: Advanced Entity Search (completed), Query Analytics Engine (completed)
+- **Added**: 2026-06-08
+
+### Task: Enterprise Compliance & Fine-Grained Audit Export
+- **Layer**: 55 — Growth Phase V2 Features & Advanced Analytics
+- **Status**: UNWORKED
+- **Priority**: Medium
+- **Description**: Enhance audit capabilities for enterprise compliance (SOC 2, HIPAA, GDPR) with structured export, signed timestamps, and detailed access tracking. Create packages/semantic-core/src/compliance-auditor.ts with ComplianceAuditor: (1) generateAuditReport(workspaceId, startDate, endDate, includeFieldAccessPatterns) exporting CSV/JSON with: user_id, entity_ids accessed, timestamp, ip_address, user_agent, query_text, result_count, pii_fields_accessed (yes/no), action (read/write/delete), (2) signAuditLog(report) using RSA-2048 to sign report, prevent tampering, (3) detectAnomalousAccess(workspaceId, days=30) flagging suspicious patterns (off-hours access, bulk entity downloads, repeated PII field access by non-authorized users), (4) exportToComplianceFormat(workspaceId, format) supporting SOC 2 template, GDPR access request format, HIPAA audit requirements. Create apps/api/migrations/094_add_compliance_audit.sql with: signed_audit_exports (workspace_id, export_id, date_range, signature, signed_at, requested_by_user_id, tamper_check_status), anomalous_access_alerts (workspace_id, alert_type: 'bulk_access'|'off_hours'|'pii_overaccess', user_id, entity_ids_involved, confidence, flagged_at). Expose REST: POST /api/v1/compliance/audit-export (generate report with signature), GET /api/v1/compliance/audit-exports (list historical exports), GET /api/v1/compliance/anomalies (suspicious access patterns), GET /api/v1/compliance/verify-export/:exportId (verify signature). Build dashboard page apps/dashboard/app/admin/compliance/page.tsx with: audit export wizard, signature verification UI, anomaly alerts list with investigation tools, GDPR data access report generator. Add 15+ unit tests for audit generation, signature verification, anomaly detection heuristics. Integration test: generate 1000 audit entries with seeded anomalies, verify detection catches 95%+ of synthetic anomalies, signature verification succeeds on authentic reports and fails on tampered. Reference code-style.md for crypto handling.
+- **Files**:
+  - packages/semantic-core/src/compliance-auditor.ts
+  - packages/semantic-core/src/__tests__/compliance-auditor.test.ts
+  - packages/semantic-core/src/__tests__/compliance-auditor.integration.test.ts
+  - apps/api/migrations/094_add_compliance_audit.sql
+  - apps/api/src/routes/compliance-audit.ts
+  - apps/api/src/__tests__/compliance-audit.test.ts
+  - apps/dashboard/app/admin/compliance/page.tsx
+  - apps/dashboard/components/audit-export-wizard.tsx
+  - apps/dashboard/components/anomaly-alerts-list.tsx
+- **Depends on**: Audit Logger (completed), Role-Based Context Segmentation (completed)
 - **Added**: 2026-06-08

@@ -1,0 +1,125 @@
+name: Load Testing
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      rps_override:
+        description: 'Override RPS cap (default: 100)'
+        required: false
+        default: '100'
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  unit-tests:
+    name: Load Test Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+      - run: npm ci
+      - name: Run load test unit tests
+        run: npx vitest run tests/load/__tests__/load-test-results.test.ts --reporter=verbose
+
+  integration-load-tests:
+    name: Integration Load Tests
+    runs-on: ubuntu-latest
+    needs: unit-tests
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_PASSWORD: iris_test
+          POSTGRES_USER: iris
+          POSTGRES_DB: iris_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+      qdrant:
+        image: qdrant/qdrant:latest
+        ports:
+          - 6333:6333
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+      - run: npm ci
+      - name: Run database migrations
+        run: npm run db:migrate
+        env:
+          DATABASE_URL: postgresql://iris:iris_test@localhost:5432/iris_test
+      - name: Start API server
+        run: npm run start:api &
+        env:
+          DATABASE_URL: postgresql://iris:iris_test@localhost:5432/iris_test
+          REDIS_URL: redis://localhost:6379
+          QDRANT_URL: http://localhost:6333
+          PORT: 3001
+          NODE_ENV: test
+      - name: Start MCP server
+        run: npm run start:mcp &
+        env:
+          DATABASE_URL: postgresql://iris:iris_test@localhost:5432/iris_test
+          REDIS_URL: redis://localhost:6379
+          QDRANT_URL: http://localhost:6333
+          PORT: 3000
+          NODE_ENV: test
+      - name: Wait for servers to be ready
+        run: |
+          until curl -sf http://localhost:3001/health; do sleep 2; done
+          until curl -sf http://localhost:3000/health; do sleep 2; done
+        timeout-minutes: 2
+      - name: Run API stress test
+        id: api_stress
+        run: node --experimental-vm-modules tests/load/api-stress-test.js
+        env:
+          LOAD_TEST_BASE_URL: http://localhost:3001
+          LOAD_TEST_API_KEY: ${{ secrets.LOAD_TEST_API_KEY || 'ci-test-key' }}
+        continue-on-error: true
+      - name: Run MCP throughput test
+        id: mcp_throughput
+        run: node --experimental-vm-modules tests/load/mcp-throughput-test.js
+        env:
+          LOAD_TEST_BASE_URL: http://localhost:3001
+          LOAD_TEST_MCP_URL: http://localhost:3000
+          LOAD_TEST_API_KEY: ${{ secrets.LOAD_TEST_API_KEY || 'ci-test-key' }}
+        continue-on-error: true
+      - name: Run index query test
+        id: index_query
+        run: node --experimental-vm-modules tests/load/index-query-test.js
+        env:
+          LOAD_TEST_BASE_URL: http://localhost:3001
+          LOAD_TEST_API_KEY: ${{ secrets.LOAD_TEST_API_KEY || 'ci-test-key' }}
+        continue-on-error: true
+      - name: Check threshold results
+        run: |
+          FAILED=0
+          [ "${{ steps.api_stress.outcome }}" = "failure" ] && FAILED=1 && echo "FAIL: API stress test exceeded thresholds"
+          [ "${{ steps.mcp_throughput.outcome }}" = "failure" ] && FAILED=1 && echo "FAIL: MCP throughput test exceeded thresholds"
+          [ "${{ steps.index_query.outcome }}" = "failure" ] && FAILED=1 && echo "FAIL: Index query test exceeded thresholds"
+          [ "$FAILED" = "1" ] && exit 1 || echo "All load tests passed"
