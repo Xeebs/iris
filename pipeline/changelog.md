@@ -69,3 +69,7 @@ Index Rebuild & Corruption Recovery Tools — IndexRepairService + integrity_sca
 Custom Transformation Pipeline & Entity Mapping Language — TransformationDSLEngine with 11 op types + REST API + live test panel
 - feat(semantic-core,api,mcp-server,dashboard): query anomaly detection & metrics forecasting engine — Z-score detector, exponential smoothing forecast, REST routes, MCP tool detect-anomalies, anomaly-timeline.tsx
 - feat(mcp-server): advanced MCP aggregation & comparison tools with server registration
+- feat(scripts): CLI tooling & developer experience enhancements — iris-cli with connector:test, mcp:debug, index:inspect, sync:simulate
+- feat(connector-google-drive): complete Google Drive connector with folder tree, pagination, error handling tests
+- feat(connector-postgres): PostgreSQL direct connector with sql-query-builder, transformers, 27 tests
+- feat(semantic-core,api,dashboard): schema auto-discovery with human-in-the-loop confirmation — dd4e65a

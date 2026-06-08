@@ -2849,7 +2849,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: CLI Tooling & Developer Experience Enhancements
 - **Layer**: 52 — MCP Tool Enhancements & Streaming
-- **Status**: IN_PROGRESS
+- **Status**: COMMITTED
 - **Priority**: Medium
 - **Description**: Enhance the CLI tool (scripts/iris) with developer-friendly commands for local testing and debugging. Extend scripts/iris to support: (1) iris connector:test <name> [--watch] — run connector tests with live reload, (2) iris mcp:debug — start MCP server in debug mode with verbose logging to stdout, (3) iris index:inspect — interactive CLI to query the local vector index (search by text, see similarity scores, view entity embeddings), (4) iris sync:simulate <connectorId> — dry-run a sync without persisting to DB, validate schema mapping, show token estimates. Build these as TypeScript CLI utilities in scripts/cli/, use commander.js for argument parsing, ensure all commands have --help and examples. Create comprehensive CLI tests (8+) covering: argument parsing, error handling, command execution validation. Document all commands in a new CLI_GUIDE.md.
 - **Files**:
@@ -2926,7 +2926,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Google Drive Connector Implementation
 - **Layer**: 54 — Connector Expansion & V1 Features
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: High
 - **Description**: Implement a Google Drive connector in packages/connectors/google-drive/ for syncing files, folders, and shared drives as queryable entities. Implement connect() with OAuth2 (scopes: 'drive.readonly', 'drive.metadata.readonly'), sync() as AsyncGenerator yielding File and Folder entities, getSchema() exposing file metadata (name, mimeType, owner, sharedWith, createdTime, modifiedTime, webViewLink), healthCheck(). Use cursor-based pagination via pageToken for incremental sync. Transform raw Google Drive API responses into SemanticEntity format with relationships (file_in_folder, shared_with). Create apps/connectors/google-drive/ with connector.ts, manifest.ts, transformers.ts. Include ConnectorManifest with OAuth config. Add 16+ tests using MSW to mock Google Drive API (list files, folder traversal, shared drives). Integration test: sync a folder tree with 50+ files, verify relationship edges and workspace isolation. Reference connector-patterns.md for transform patterns and code-style.md for error handling.
 - **Files**:
@@ -2942,7 +2942,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: PostgreSQL Direct Connector Implementation
 - **Layer**: 54 — Connector Expansion & V1 Features
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: High
 - **Description**: Implement a PostgreSQL direct database connector in packages/connectors/postgres/ for syncing tables and views as entity types. Implement connect() with SSL/TLS support, sync() as AsyncGenerator discovering tables via information_schema and yielding rows as SemanticEntity objects, getSchema() returning table definitions (columns, types, pk, fk), healthCheck(). Support incremental sync via timestamp/sequence columns (auto-detection). Transform each table row into a SemanticEntity with attributes mapped from columns; create relationships for foreign keys. Handle type coercion (SQL types → JSON/attribute types). Create packages/connectors/postgres/ with connector.ts, manifest.ts, sql-query-builder.ts, transformers.ts. Include ConnectorManifest with configSchema (host, port, database, username, password, sslMode). Add 18+ unit tests with containerized postgres (docker) for real SQL tests. Integration test: sync a 3-table schema with FK relationships, verify edge creation and query-time graph expansion. Reference connector-patterns.md for pagination patterns.
 - **Files**:
@@ -2958,7 +2958,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Schema Auto-Discovery & Human-in-the-Loop Confirmation
 - **Layer**: 54 — Connector Expansion & V1 Features
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: High
 - **Description**: Build a schema discovery and user confirmation workflow for automating entity type and relationship detection. Create packages/semantic-core/src/schema-discovery.ts with SchemaDiscoveryEngine: (1) detectEntityTypes(connectorId) automatically discovering entity types from sync metadata, (2) suggestRelationships(entityType1, entityType2) using heuristics (FK patterns, id suffix matches, name similarity), (3) generateMappingReport() showing discovered types, fields, confidence scores. Create apps/api/migrations/084_add_schema_discovery.sql with entity_type_suggestions and relationship_suggestions tables. Expose REST: POST /api/v1/connectors/:id/discover-schema (triggers discovery + stores suggestions), GET /api/v1/connectors/:id/schema-suggestions (lists all suggestions with confidence), POST /api/v1/schema-suggestions/:id/confirm (user confirms suggestion, applies to workspace). Build dashboard page at apps/dashboard/app/admin/schema-discovery/page.tsx with discovery wizard: (1) trigger discovery button, (2) interactive suggestions table (entity types + fields), (3) confirmation checkboxes, (4) relationship mapping preview with visual graph. Add 16+ unit tests for discovery heuristics, confidence scoring, conflict resolution. Integration test: run discovery on HubSpot connector, verify detected entity types, confirm suggestions, verify in retrieval. Reference embedding-patterns.md for semantic similarity checks in relationship detection.
 - **Files**:
@@ -2977,7 +2977,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Batch Sync Optimization & Performance Tuning
 - **Layer**: 54 — Connector Expansion & V1 Features
-- **Status**: UNWORKED
+- **Status**: IN_PROGRESS
 - **Priority**: Medium
 - **Description**: Build a performance optimization suite for connector syncs, reducing latency and token costs for large-scale ingestion. Create packages/semantic-core/src/sync-optimizer.ts with SyncOptimizer class: (1) analyzeHistoricalSyncMetrics(connectorId, days=30) calculating P50/P95/P99 latencies, entity/token throughput, failure rates, (2) recommendOptimalBatchSize(connectorId, targetDurationMs=300_000) using linear regression to predict optimal batch size (default 100), (3) recommendParallelism(connectorId, cpuCount) computing safe concurrency given connector rate limits, (4) getOptimizationReport(connectorId) showing bottlenecks (API rate limit vs. processing time). Create apps/api/migrations/085_add_sync_metrics.sql with sync_metrics table (connector_id, sync_id, batch_size, entity_count, token_count, durationMs, entity_throughput). Expose REST: GET /api/v1/connectors/:id/sync-metrics, POST /api/v1/connectors/:id/optimize (triggers analyzer). Build dashboard panel at apps/dashboard/components/sync-optimization-panel.tsx with metric charts (throughput over time), optimization recommendations. Update SyncWorker to log metrics to new table. Add 14+ unit tests for regression analysis, batch size tuning, parallelism calculation. Integration test: simulate 1000+ entity sync, verify metrics logged, run optimizer, confirm recommendation improves throughput by ≥10%. Reference code-style.md for structured logging.
 - **Files**:
