@@ -3853,7 +3853,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Service-Level Objective (SLO) Monitoring & Alerting Engine
 - **Layer**: 63 — Hardening & Integration Completeness
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: Medium
 - **Description**: Implement SLO tracking for key operational metrics with automated alerting when thresholds are breached. Create packages/semantic-core/src/slo-monitor.ts with SloService: (1) defineSlo(name, metric, target, window, severity) registering SLOs for: MCP query latency p95 < 2s (99%), API availability (99.9%), connector sync success rate > 95%, index staleness < 6h (95%), (2) calculateSloAttainment(metric, window) computing percentage of time SLO was met using event log, (3) detectSloViolation() comparing attainment against target with grace period (e.g., 5min before alerting), (4) suggestCorrectiveAction() using rule engine (increase cache TTL, upgrade vector-store, throttle indexing, etc.). Create migration 126 (slo_definitions, slo_events, slo_violations, slo_alerts). Add REST GET /api/v1/admin/slos returning all SLOs with current attainment%, GET /api/v1/admin/slos/:name/violations (historical). Add dashboard page /admin/slos with SLO cards (green if >= target, yellow if 95-99%, red if < 95%), trend sparkline, violation timeline, alert history. Integrate with existing AlertingService for alert delivery (email, Slack, PagerDuty via webhook). Include 34+ tests (20 unit SLO math + 14 integration covering violation detection + corrective actions).
 - **Files**:
