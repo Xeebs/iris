@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { IndexCorruptionDetector } from '@/components/index-corruption-detector';
+import { RebuildProgressPanel } from '@/components/rebuild-progress-panel';
 
 type JobType = 'deduplicate' | 'prune_stale' | 'rebalance' | 'integrity_check';
 type JobStatus = 'pending' | 'running' | 'completed' | 'failed';
@@ -242,6 +244,14 @@ export default function IndexHealthPage(): React.JSX.Element {
             </div>
           </>
         )}
+
+        <hr style={{ margin: '32px 0', borderColor: '#e5e7eb' }} />
+
+        <IndexCorruptionDetector workspaceId={WORKSPACE_ID} />
+
+        <hr style={{ margin: '32px 0', borderColor: '#e5e7eb' }} />
+
+        <RebuildProgressPanel workspaceId={WORKSPACE_ID} />
       </div>
     </div>
   );

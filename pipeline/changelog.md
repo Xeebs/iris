@@ -59,3 +59,9 @@ feat(api): webhook-driven real-time sync (HubSpot + Slack HMAC validation, 10 te
 feat(dashboard,api): admin dashboard pages & system monitoring suite (Layer 44)
 feat(semantic-core,api,dashboard): native document indexing from connector sources (Layer 45)
 feat(semantic-core,api,dashboard): search relevance tuning & scoring UI (Layer 45)
+ae4d218 feat(semantic-core,api,dashboard): entity enrichment engine with external data integration
+8778e5b feat(semantic-core,api,dashboard): schema evolution manager with backwards-compatible migration
+fe1aa1e feat(semantic-core,api,dashboard): query analytics engine with cache hit prediction
+4ceb035 feat(semantic-core): proactive context engine integration tests and suggestion cache migration
+f57c456 feat(semantic-core): data lineage integration tests and enhanced lineage schema migration
+Entity Validation Engine with Data Quality Rules — entity-validator + rules/failures DB + REST API + dashboard UI
