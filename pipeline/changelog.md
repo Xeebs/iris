@@ -140,3 +140,4 @@ Custom Transformation Pipeline & Entity Mapping Language — TransformationDSLEn
 - feat(semantic-core,api,dashboard): production error handling & resilience middleware (circuit breaker, retry, graceful degradation, 25 tests)
 - feat(mcp-server,api,dashboard): entity change stream MCP resource, subscription management REST routes, monitor UI, migration 157 (26 tests)
 - feat(api,dashboard): query plan visualization & execution metrics (plan explorer, strategy matrix, connector heatmap, anomaly detection, migration 158, 12 tests)
+- feat(api,dashboard): NL query session persistence & learning UI (session list, detail, favorites, word cloud, confidence scatter, migration 159, 14 tests)

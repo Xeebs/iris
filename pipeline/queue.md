@@ -4565,7 +4565,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Natural Language Query Session Persistence & Learning UI
 - **Layer**: 71 — Advanced Integration & Production Hardening
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: Medium
 - **Description**: Build a full query session management system and learning interface for NL query generation (Layer 70's nl-query-generator). Create apps/dashboard/app/admin/query-sessions/page.tsx with: (1) sessions-list: table of all NL query sessions (user, count of questions, favorite count, last queried timestamp) with drill-down; (2) session-detail: expandable view showing session history (question → context-query → result with execution time), feedback (thumbs), suggested refinements, copy-to-clipboard; (3) favorites-panel: bookmark queries for team reuse, add descriptions, export as snippet; (4) learning-dashboard: trending question patterns (word cloud), low-quality sessions flagged (with hints for improvement), model confidence vs actual accuracy scatter. Create REST endpoints: GET /api/v1/nl-queries/sessions (paginated), GET /api/v1/nl-queries/sessions/:id (full session + history), POST /api/v1/nl-queries/sessions/:id/favorite (bookmark), DELETE /api/v1/nl-queries/sessions/:id/question/:qid (delete specific Q). Create 3 dashboard components: session-list.tsx (sortable/filterable), session-detail.tsx (timeline view + feedback), learning-insights.tsx (word cloud + scatter). Enhance migration 155 (nlquery_sessions + nlquery_feedback) with is_favorite boolean if missing. Include 18+ tests (8 component + 10 route).
 - **Files**:
