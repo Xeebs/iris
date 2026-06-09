@@ -1,4 +1,18 @@
 -- Migration 153: Query Execution Plans for Multi-Connector Optimizer
+-- Supersedes the narrower query_execution_plans table from migration 092.
+-- If the 092 schema exists (identified by the query_hash column), rename it
+-- to preserve historical data before creating the new schema.
+
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'query_execution_plans'
+      AND column_name = 'query_hash'
+  ) THEN
+    ALTER TABLE query_execution_plans RENAME TO query_execution_plans_legacy;
+  END IF;
+END $$;
 
 CREATE TABLE IF NOT EXISTS query_execution_plans (
   plan_id          TEXT        NOT NULL,
