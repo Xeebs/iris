@@ -159,3 +159,7 @@ Custom Transformation Pipeline & Entity Mapping Language — TransformationDSLEn
 - 2026-06-09: feat(semantic-core,api,dashboard): MCP client SDK generation & developer portal [SHA: 439971d]
 - 2026-06-09: feat(api,dashboard): connector health score & SLA tracking system [SHA: a015534]
 feat(semantic-core,api,dashboard): workflow service test suite & curated catalog UI — 26 unit tests, 17 route tests, migration 170, catalog UI with execute form and session history
+- 2026-06-09: chore: remove stray src build artifacts + gitignore rule [SHA: 140e86a]
+- 2026-06-09: test(dashboard): unit tests for 9 dashboard components — 79 tests, completes Dashboard Component Unit Test Suite (Layer 76) [SHA: cf0613e]
+- 2026-06-09: chore: add core vitest config, admin-console e2e spec, local researcher script [SHA: f9861ef]
+- 2026-06-09: fix(api): mount orphaned permission, granular-permission & entity-search routes (were 404; dashboard permissions page was broken) [SHA: pending]
