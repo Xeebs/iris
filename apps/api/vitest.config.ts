@@ -85,6 +85,7 @@ export default defineConfig({
       '@iris/semantic-core/query-templates': path.resolve(__dirname, '../../packages/semantic-core/src/query-templates.ts'),
       '@iris/semantic-core/team-context-recommender': path.resolve(__dirname, '../../packages/semantic-core/src/team-context-recommender.ts'),
       '@iris/semantic-core/insight-generator': path.resolve(__dirname, '../../packages/semantic-core/src/insight-generator.ts'),
+      '@iris/semantic-core/business-rule-engine': path.resolve(__dirname, '../../packages/semantic-core/src/business-rule-engine.ts'),
       '@iris/semantic-core': path.resolve(__dirname, '../../packages/semantic-core/src/index.ts'),
       '@iris/cache/response-cache': path.resolve(__dirname, '../../packages/cache/src/response-cache.ts'),
       '@iris/compression': path.resolve(__dirname, '../../packages/compression/src/index.ts'),
