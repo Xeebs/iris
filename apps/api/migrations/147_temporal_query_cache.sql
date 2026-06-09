@@ -18,8 +18,7 @@ CREATE INDEX IF NOT EXISTS idx_temporal_cache_hash_date
   ON temporal_query_cache (query_hash, as_of_date DESC);
 
 CREATE INDEX IF NOT EXISTS idx_temporal_cache_expires
-  ON temporal_query_cache (expires_at)
-  WHERE expires_at > NOW();
+  ON temporal_query_cache (expires_at);
 
 CREATE TABLE IF NOT EXISTS cache_hit_analysis (
   id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
