@@ -19,9 +19,9 @@ import { registerListGlossary } from './tools/list-glossary.js';
 import { registerSuggestContext } from './suggestions.js';
 import { registerAdvancedQueryContext } from './tools/advanced-query-context.js';
 import { registerStreamingContext } from './tools/streaming-context.js';
-import { aggregateEntitiesTool, aggregateEntitiesToolDefinition } from './tools/aggregate-entities.js';
-import { compareEntitiesTool, compareEntitiesToolDefinition } from './tools/compare-entities.js';
-import { detectAnomalyTool, detectAnomaliesToolDefinition } from './tools/detect-anomalies.js';
+import { aggregateEntitiesTool, aggregateEntitiesToolDefinition, aggregateEntitiesZodSchema } from './tools/aggregate-entities.js';
+import { compareEntitiesTool, compareEntitiesToolDefinition, compareEntitiesZodSchema } from './tools/compare-entities.js';
+import { detectAnomalyTool, detectAnomaliesToolDefinition, detectAnomaliesZodSchema } from './tools/detect-anomalies.js';
 import { registerEntityResource } from './resources/entity-resource.js';
 import { registerGraphResource } from './resources/graph-resource.js';
 import { registerDocumentResource } from './resources/document-resource.js';
@@ -81,7 +81,7 @@ export function createMcpServer(
     server.tool(
       aggregateEntitiesToolDefinition.name,
       aggregateEntitiesToolDefinition.description,
-      aggregateEntitiesToolDefinition.inputSchema,
+      aggregateEntitiesZodSchema.shape,
       async (input) => {
         const result = await aggregateEntitiesTool(
           { ...input, workspaceId: authenticatedWorkspaceId ?? (input as { workspaceId: string }).workspaceId } as Parameters<typeof aggregateEntitiesTool>[0],
@@ -94,7 +94,7 @@ export function createMcpServer(
     server.tool(
       compareEntitiesToolDefinition.name,
       compareEntitiesToolDefinition.description,
-      compareEntitiesToolDefinition.inputSchema,
+      compareEntitiesZodSchema.shape,
       async (input) => {
         const result = await compareEntitiesTool(
           { ...input, workspaceId: authenticatedWorkspaceId ?? (input as { workspaceId: string }).workspaceId } as Parameters<typeof compareEntitiesTool>[0],
@@ -107,7 +107,7 @@ export function createMcpServer(
     server.tool(
       detectAnomaliesToolDefinition.name,
       detectAnomaliesToolDefinition.description,
-      detectAnomaliesToolDefinition.inputSchema,
+      detectAnomaliesZodSchema.shape,
       async (input) => {
         const result = await detectAnomalyTool(input as Parameters<typeof detectAnomalyTool>[0], sqlFn);
         return result.isOk() ? result.value : { content: [{ type: 'text' as const, text: 'Detection error' }] };

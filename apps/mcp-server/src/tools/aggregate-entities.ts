@@ -10,7 +10,7 @@ type SqlFn = (strings: TemplateStringsArray, ...values: unknown[]) => Promise<un
 
 // ─── Input schema ─────────────────────────────────────────────────────────────
 
-const aggregateSchema = z.object({
+export const aggregateEntitiesZodSchema = z.object({
   entityType: z.string().min(1),
   groupByAttribute: z.string().min(1),
   aggregations: z
@@ -24,7 +24,7 @@ const aggregateSchema = z.object({
   contextBudget: z.number().int().min(100).default(2000),
 });
 
-type AggregateInput = z.infer<typeof aggregateSchema>;
+type AggregateInput = z.infer<typeof aggregateEntitiesZodSchema>;
 
 type AggregateGroup = {
   groupValue: string;
@@ -136,7 +136,7 @@ export async function aggregateEntitiesTool(
   input: AggregateInput,
   sql: SqlFn
 ): Promise<Result<ToolResult, Error>> {
-  const parsed = aggregateSchema.safeParse(input);
+  const parsed = aggregateEntitiesZodSchema.safeParse(input);
   if (!parsed.success) {
     return ok({ content: [{ type: 'text', text: JSON.stringify({ error: parsed.error.flatten() }) }] });
   }

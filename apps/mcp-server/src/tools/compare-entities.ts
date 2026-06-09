@@ -10,7 +10,7 @@ type SqlFn = (strings: TemplateStringsArray, ...values: unknown[]) => Promise<un
 
 // ─── Input schema ─────────────────────────────────────────────────────────────
 
-const compareSchema = z.object({
+export const compareEntitiesZodSchema = z.object({
   entityIds: z.array(z.string()).min(2).max(10),
   attributes: z.union([z.literal('all'), z.array(z.string())]).default('all'),
   diffHighlight: z.boolean().default(true),
@@ -18,7 +18,7 @@ const compareSchema = z.object({
   contextBudget: z.number().int().min(100).default(2000),
 });
 
-type CompareInput = z.infer<typeof compareSchema>;
+type CompareInput = z.infer<typeof compareEntitiesZodSchema>;
 
 type EntityRow = {
   entity_id: string;
@@ -114,7 +114,7 @@ export async function compareEntitiesTool(
   input: CompareInput,
   sql: SqlFn
 ): Promise<Result<ToolResult, Error>> {
-  const parsed = compareSchema.safeParse(input);
+  const parsed = compareEntitiesZodSchema.safeParse(input);
   if (!parsed.success) {
     return ok({ content: [{ type: 'text', text: JSON.stringify({ error: parsed.error.flatten() }) }] });
   }

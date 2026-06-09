@@ -8,7 +8,7 @@ import { logger } from '@iris/core/logger';
 
 const log = logger.child({ tool: 'detect-anomalies' });
 
-const inputSchema = z.object({
+export const detectAnomaliesZodSchema = z.object({
   metricId: z.string().min(1).describe('The metric ID to analyze for anomalies'),
   lookbackDays: z.number().int().min(1).max(365).optional().default(30)
     .describe('Number of historical days to analyze (default: 30)'),
@@ -18,7 +18,7 @@ const inputSchema = z.object({
     .describe('Whether to include a 7-day forecast alongside anomaly detection'),
 });
 
-type DetectAnomaliesInput = z.infer<typeof inputSchema>;
+type DetectAnomaliesInput = z.infer<typeof detectAnomaliesZodSchema>;
 
 type ToolResult = {
   content: { type: 'text'; text: string }[];
@@ -47,7 +47,7 @@ export async function detectAnomalyTool(
   input: DetectAnomaliesInput,
   sql: ConstructorParameters<typeof MetricsAnomalyDetector>[0]
 ): Promise<Result<ToolResult, Error>> {
-  const parsed = inputSchema.safeParse(input);
+  const parsed = detectAnomaliesZodSchema.safeParse(input);
   if (!parsed.success) {
     return ok({
       content: [{
