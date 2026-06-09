@@ -143,3 +143,4 @@ Custom Transformation Pipeline & Entity Mapping Language — TransformationDSLEn
 - feat(api,dashboard): NL query session persistence & learning UI (session list, detail, favorites, word cloud, confidence scatter, migration 159, 14 tests)
 - 2026-06-09: feat(semantic-core,api,dashboard): connector performance benchmarking & comparison suite [SHA: 8def96e]
 - 2026-06-09: feat(api,dashboard): enterprise data governance & compliance dashboard [SHA: 9577ee7]
+- 2026-06-09: feat(semantic-core,api,dashboard): MCP client SDK generation & developer portal [SHA: 439971d]
