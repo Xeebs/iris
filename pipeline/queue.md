@@ -50,7 +50,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: VS-1b Deterministic embedding provider for CI/demo
 - **Layer**: 78 — Vertical Slice
-- **Status**: IN_PROGRESS
+- **Status**: COMMITTED
 - **Priority**: High
 - **Description**: Create a `DeterministicHashProvider` in `packages/semantic-core/src/providers/` that generates reproducible 1536-dimensional embeddings from entity text using a seeded hash function (e.g., `crypto.createHmac('sha256', seed)` repeated/expanded to fill 1536 dimensions). This provider is used in demo/test mode (`EMBEDDING_PROVIDER=hash-deterministic` env var) to avoid any dependency on external API keys or services in scripts/slice-demo.sh. Register it in `createEmbeddingProvider()` factory in embedding-provider.ts. The provider must be stable across runs (same input text always produces same vector) so the demo is reproducible. Tests: verify same entity consistently produces same embedding across multiple calls, and embedding dimensions match 1536.
 - **Files**:

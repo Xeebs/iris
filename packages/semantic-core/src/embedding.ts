@@ -4,6 +4,7 @@ import { logger } from '@iris/core/logger';
 import { IndexerError } from '@iris/core/errors';
 
 import type { EmbeddingProvider } from './embedding-provider.js';
+import { createDefaultProvider } from './embedding-provider.js';
 
 export const EMBEDDING_MODEL_SMALL = 'text-embedding-3-small' as const;
 export const EMBEDDING_MODEL_LARGE = 'text-embedding-3-large' as const;
@@ -140,11 +141,17 @@ export async function generateEmbeddings(
     return extraTerms && extraTerms.length > 0 ? `${base} ${extraTerms.join(' ')}` : base;
   });
 
-  if (options.provider) {
+  // An explicitly passed provider wins; otherwise an explicit EMBEDDING_PROVIDER
+  // env var selects one (callers like the sync worker don't pass providers).
+  // With neither, the legacy Azure path below is unchanged.
+  const provider =
+    options.provider ?? (process.env['EMBEDDING_PROVIDER'] ? createDefaultProvider() : undefined);
+
+  if (provider) {
     const start = Date.now();
-    const vectors = await options.provider.batchEmbeddings(inputs);
+    const vectors = await provider.batchEmbeddings(inputs);
     log.info('Embedding batch complete (provider)', {
-      provider: options.provider.getModelId(),
+      provider: provider.getModelId(),
       entityCount: entities.length,
       durationMs: Date.now() - start,
     });

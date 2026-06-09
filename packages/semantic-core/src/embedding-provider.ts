@@ -4,8 +4,9 @@ import { OpenAIProvider } from './providers/openai-provider.js';
 import { AzureOpenAIProvider } from './providers/azure-openai-provider.js';
 import { OllamaProvider } from './providers/ollama-provider.js';
 import { CohereProvider } from './providers/cohere-provider.js';
+import { DeterministicHashProvider } from './providers/deterministic-hash-provider.js';
 
-export type EmbeddingProviderType = 'openai' | 'azure' | 'ollama' | 'cohere';
+export type EmbeddingProviderType = 'openai' | 'azure' | 'ollama' | 'cohere' | 'hash-deterministic';
 
 export type EmbeddingProviderConfig = {
   provider: EmbeddingProviderType;
@@ -58,6 +59,9 @@ export function createEmbeddingProvider(config: EmbeddingProviderConfig): Embedd
         config.apiKey ?? process.env['COHERE_API_KEY'] ?? '',
         config.modelId ?? process.env['EMBEDDING_MODEL_ID'] ?? 'embed-english-v3.0',
       );
+    case 'hash-deterministic':
+      // Offline demo/CI provider — no API keys or network (see slice-demo).
+      return new DeterministicHashProvider(process.env['EMBEDDING_HASH_SEED'] ?? 'iris-demo');
     default: {
       const _exhaustive: never = config.provider;
       throw new IndexerError(`Unknown embedding provider: ${String(_exhaustive)}`);
@@ -74,4 +78,4 @@ export function createDefaultProvider(): EmbeddingProvider {
   return createEmbeddingProvider({ provider: providerType });
 }
 
-export { OpenAIProvider, AzureOpenAIProvider, OllamaProvider, CohereProvider };
+export { OpenAIProvider, AzureOpenAIProvider, OllamaProvider, CohereProvider, DeterministicHashProvider };
