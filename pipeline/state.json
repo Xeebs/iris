@@ -1,6 +1,6 @@
 {
   "current_phase": "COMMITTED",
-  "active_task": null,
+  "active_task": "VS-6 Slice in CI + double-run stability + flip the milestone",
   "active_layer": 78,
   "last_cycle": "2026-06-09",
   "last_research": "2026-06-09",
@@ -8,5 +8,7 @@
   "cycle_count": 346,
   "rate_limit_hit": false,
   "mode": "SLICE",
-  "session_tasks_committed": 1
+  "session_tasks_committed": 3,
+  "awaiting_ci": "slice-demo workflow (.github/workflows/slice-demo.yml) — first run; if red, diagnose from `gh run view --log-failed` (no local Docker here). If green twice, only the owner's local run remains before flipping docs/VERTICAL_SLICE.md to ACHIEVED.",
+  "note": "VS-5 committed (token-savings measure phase). VS-6 IN_PROGRESS: CI job added + fixed slice-demo.ts counts (22) and root postgres dep. Slice is code-complete; remaining work is runtime verification only."
 }
