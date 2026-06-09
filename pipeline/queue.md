@@ -39,7 +39,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: VS-1 Slice path audit — map and verify every link in the chain
 - **Layer**: 78 — Vertical Slice
-- **Status**: UNWORKED
+- **Status**: IN_PROGRESS
 - **Priority**: Critical
 - **Description**: Before writing any new code, trace the actual end-to-end path and document what exists, what is wired, and what is broken. The chain: (1) REST API creates workspace + HubSpot connector instance (which route? is it mounted in `apps/api/src/server.ts`? what auth does it need?), (2) sync is triggered (route or job? does it reach `HubspotConnector.sync()`? can the connector run against fixtures in `packages/connectors/hubspot/tests/fixtures/` without real OAuth — if not, what is the smallest fixture/sandbox mode to add?), (3) entities flow into `packages/semantic-core/src/indexer.ts` and embeddings land in the vector store (which store is actually used — pgvector or Qdrant? does indexing require a real OpenAI key, and if so does `.env.local` have one; otherwise add a deterministic local embedding fallback for demo mode), (4) MCP server starts and authenticates (does `apps/mcp-server` share the API-key store with the REST API? is `/api/v1/api-keys` mounted?), (5) `query-context` retrieves indexed entities. Write the findings as a status table (link → exists / mounted / works / broken+why) directly into `docs/VERTICAL_SLICE.md` under a new "## Path audit" section. Mount any slice-critical routes found unmounted (small batches per Layer 77 rules). Do NOT fix non-blocking issues — record them as new Layer 78 tasks instead.
 - **Files**:
@@ -50,7 +50,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: VS-1b Deterministic embedding provider for CI/demo
 - **Layer**: 78 — Vertical Slice
-- **Status**: UNWORKED
+- **Status**: IN_PROGRESS
 - **Priority**: High
 - **Description**: Create a `DeterministicHashProvider` in `packages/semantic-core/src/providers/` that generates reproducible 1536-dimensional embeddings from entity text using a seeded hash function (e.g., `crypto.createHmac('sha256', seed)` repeated/expanded to fill 1536 dimensions). This provider is used in demo/test mode (`EMBEDDING_PROVIDER=hash-deterministic` env var) to avoid any dependency on external API keys or services in scripts/slice-demo.sh. Register it in `createEmbeddingProvider()` factory in embedding-provider.ts. The provider must be stable across runs (same input text always produces same vector) so the demo is reproducible. Tests: verify same entity consistently produces same embedding across multiple calls, and embedding dimensions match 1536.
 - **Files**:
