@@ -19,6 +19,21 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ---
 
+## Layer 77: API Surface Wiring (Critical Product Gap)
+
+### Task: Mount orphaned API route modules in server.ts
+- **Layer**: 77 — API Surface Wiring
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: ~80 route factories in `apps/api/src/routes/*.ts` are exported and have passing unit tests but are NEVER mounted in `apps/api/src/server.ts`, so their endpoints return 404 in the running server. The pipeline generates a route module + test but does not wire it into `createApp`. This means many "implemented" features (including core flows like `/api/v1/api-keys` MCP key management, which the e2e fixtures depend on) are unreachable. Fix incrementally: (1) enumerate unmounted factories — for each `export function (create*Routes|make*Router)` in routes/, check it is referenced in server.ts; (2) for each, determine its constructor dependencies (sql / sql+redis / sql+vectorStore / sql+masterSecret) and the prefix asserted by its own test file (`app.route('<prefix>', ...)`); (3) mount in `createApp` under that prefix on the `authed` router (or `app` for unauthenticated webhooks), resolving any prefix collisions and sourcing required secrets from env; (4) build (`pnpm --filter @iris/api build`), commit a small BATCH (5–10 routes), push, and watch the Load Testing *Integration* job (boots the server, hits /health) to confirm boot. NEVER mount all at once — a single bad constructor (I/O at construction) or route collision breaks server boot and turns CI red. First batch already done (commit 342ce53): entity-search, granular-permissions, permission-management. Highest-value next: api-keys (needs a master secret — confirm the MCP auth-verify path uses the same key store first), search, usage, workflows, mcp-tools, query-analytics. Each batch must keep CI green before the next.
+- **Files**:
+  - apps/api/src/server.ts (route mounts)
+  - any route factory whose signature/types need a small fix to mount
+- **Depends on**: nothing
+- **Added**: 2026-06-09
+
+---
+
 ## Layer 0: Foundation
 
 ### Task: Package Manifests
