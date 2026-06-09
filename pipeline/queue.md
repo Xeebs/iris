@@ -4780,3 +4780,88 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
   - apps/dashboard/components/context-search-panel.tsx
 - **Depends on**: Semantic Cache
 - **Added**: 2026-06-09
+
+---
+
+## Layer 74: Post-MVP Scale - Developer Experience & Advanced Analytics
+
+### Task: Workflow Service Test Suite & Dashboard UI
+- **Layer**: 74 — Post-MVP Scale - Developer Experience & Advanced Analytics
+- **Status**: IN_PROGRESS
+- **Priority**: High
+- **Description**: Build a complete test suite and dashboard UI for the workflow service, enabling users to discover, preview, and execute pre-configured MCP workflows. The WorkflowService already exists in packages/semantic-core/src/workflow-service.ts but lacks integration tests and UI. Create packages/semantic-core/src/__tests__/workflow-service.test.ts (18+ tests covering): (1) getWorkflowTemplate(id) returns correct template metadata, (2) listWorkflowsByCategory(category) with filtering and pagination, (3) getContextPreview(workflowId) estimating token usage for workflow MCP calls, (4) saveWorkflowSession(userId, workflowId) persisting execution history with parameters, (5) getSessionHistory(userId) paginated workflow runs with results, (6) applyWorkflowTemplate(workflowId, customParams) modifying template for one-off execution. Create apps/dashboard/app/workflows/page.tsx with: (a) workflow-catalog-grid showing all 5 starter templates (sales-pipeline-review, financial-forecast, ops-pipeline-review, customer-success-review, engineering-sprint-review) as cards with category badge, description, recommended connectors, MCP tool count; (b) workflow-detail-panel (modal or sidebar) showing template details, context budget estimate, MCP tools used, example output; (c) execute-workflow-form for launching workflow with parameter input (connector selection, date range, entity type filters), real-time context budget calculation, preview MCP tool call sequence; (d) recent-workflows-list showing user's last 10 executed workflows with result summary, execution time, token usage. Expose REST routes in apps/api/src/routes/workflows.ts: GET /api/v1/workflows (list templates), GET /api/v1/workflows/:id (get detail), POST /api/v1/workflows/:id/execute (async job), GET /api/v1/workflows/sessions/:userId (history), GET /api/v1/workflows/sessions/:sessionId/result (fetch result). Create migration 170 (workflow_sessions, workflow_execution_logs) if not exists. Add 14+ route tests covering happy path execution, missing parameters, token budget exceeding limits.
+- **Files**:
+  - packages/semantic-core/src/__tests__/workflow-service.test.ts
+  - packages/semantic-core/src/__tests__/workflow-service.integration.test.ts
+  - apps/api/src/routes/workflows.ts
+  - apps/api/src/__tests__/workflows.test.ts
+  - apps/api/migrations/170_workflow_sessions.sql
+  - apps/dashboard/app/workflows/page.tsx
+  - apps/dashboard/components/workflow-catalog-grid.tsx
+  - apps/dashboard/components/workflow-detail-panel.tsx
+  - apps/dashboard/components/execute-workflow-form.tsx
+  - apps/dashboard/components/recent-workflows-list.tsx
+- **Depends on**: nothing
+- **Added**: 2026-06-09
+
+### Task: Streaming Context Endpoint & Integration Tests
+- **Layer**: 74 — Post-MVP Scale - Developer Experience & Advanced Analytics
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Complete the streaming-context.ts module (currently 53 lines without tests) by adding full integration tests and REST/MCP endpoint wiring. The module handles large context responses via SSE (Server-Sent Events) chunking. Create packages/semantic-core/src/__tests__/streaming-context.test.ts (16+ tests): (1) createStreamContext(query, contextBudget, chunkSize) returns a stream instance with correct headers, (2) streamChunk(chunk, estimatedTokens) properly formats SSE chunks with field boundaries, (3) estimateChunkTokenCount(chunk) accurately counts tokens per chunk, (4) handleStreamError(error) gracefully sends error chunk and closes stream, (5) trackStreamMetrics(streamId) logging bytes/chunks/latency to audit table, (6) closeStream(streamId) finalizes stream and records completion stats. Integrate into apps/api/src/routes/queries.ts as POST /api/v1/queries/:id/stream endpoint supporting: Accept header for stream format selection, contextBudget as query param, optional entity type filters for progressive loading. Create apps/api/migrations/171_stream_metrics.sql with: streaming_sessions (stream_id, workspace_id, query_id, started_at, closed_at, total_chunks, total_bytes, latency_p95_ms), stream_errors (stream_id, error_type, error_message, chunk_index, occurred_at). Add 12+ integration tests with mock HTTP client simulating SSE consumption. Create dashboard component apps/dashboard/components/stream-progress-monitor.tsx showing real-time stream progress (bytes received, chunks, ETA, cancel button). Include handler for streaming scenarios: (a) entity-heavy queries returning 100K+ entities, (b) relationship-dense contexts needing incremental loading, (c) token-budget exhaustion mid-stream with graceful truncation.
+- **Files**:
+  - packages/semantic-core/src/__tests__/streaming-context.test.ts
+  - packages/semantic-core/src/__tests__/streaming-context.integration.test.ts
+  - apps/api/src/routes/streaming-queries.ts
+  - apps/api/src/__tests__/streaming-queries.test.ts
+  - apps/api/migrations/171_stream_metrics.sql
+  - apps/dashboard/components/stream-progress-monitor.tsx
+- **Depends on**: Context Streaming Infrastructure (exists in mcp-server)
+- **Added**: 2026-06-09
+
+### Task: Vector Store Integration Tests & Performance Tuning
+- **Layer**: 74 — Post-MVP Scale - Developer Experience & Advanced Analytics
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Complete the vector-store.ts module with comprehensive integration tests against real Postgres/pgvector and Qdrant backends, and implement performance tuning (index optimization, batch operation profiling). The VectorStore interface exists but lacks integration coverage. Create packages/semantic-core/src/__tests__/vector-store.integration.test.ts (20+ tests): (1) insertVectors (single, batch of 100, batch of 1000) measuring throughput (vectors/sec) and latency p95/p99, (2) searchSimilar with various similarity thresholds (0.70, 0.85, 0.92) validating recall/precision, (3) deleteVectors by connector (cascade test: delete 500 contact vectors, verify related entities unindexed), (4) upsertVectors preserving existing embeddings if hash unchanged (test atomic updates), (5) getVectorStats returning count/dimensionality/index_status, (6) tunePgvectorIndex(tableName) automatically computing optimal IVFFlat lists parameter based on table size (lists = sqrt(row_count)). Add packages/semantic-core/src/vector-store-tuner.ts with VectorStoreTuner: (1) analyzeIndexHealth(vectorStore) returning fragmentation %, query latency trend, inefficient index configs, (2) recommendIndexStrategy(rowCount, queryLatencySla) suggesting IVFFlat vs HNSW parameters, (3) executeReindexing(tableName) vacuuming and rebuilding indices in background job. Create performance benchmarks in apps/api/src/__tests__/vector-store-performance.test.ts using k6 patterns: 1K vectors search QPS, 100K vector batch insert time, similarity search latency distribution. Expose REST route GET /api/v1/admin/vector-store/health returning: index_status, fragmentation%, recommendations. Add 18+ tests covering edge cases: empty vector search, out-of-range thresholds, concurrent operations (thread safety).
+- **Files**:
+  - packages/semantic-core/src/__tests__/vector-store.integration.test.ts
+  - packages/semantic-core/src/vector-store-tuner.ts
+  - packages/semantic-core/src/__tests__/vector-store-tuner.test.ts
+  - apps/api/src/__tests__/vector-store-performance.test.ts
+  - apps/api/src/routes/vector-store-admin.ts
+  - apps/api/src/__tests__/vector-store-admin.test.ts
+- **Depends on**: Vector Store Interface (exists)
+- **Added**: 2026-06-09
+
+### Task: Sync Events Listener & Event-Driven Connector Updates
+- **Layer**: 74 — Post-MVP Scale - Developer Experience & Advanced Analytics
+- **Status**: UNWORKED
+- **Priority**: Medium
+- **Description**: Complete the sync-events.ts module (currently 22 lines) by building a full event-driven sync coordinator. Currently the system polls on a schedule; this task adds real-time event handling for connector changes from webhooks (HubSpot, Slack, Stripe, etc.) and Postgres LISTEN/NOTIFY. Create packages/semantic-core/src/__tests__/sync-events.test.ts (14+ tests): (1) registerSyncEventListener(connectorId, eventType) subscribing to 'contact.updated', 'deal.created', 'user.removed' events, (2) emitSyncEvent(event) broadcasting to Redis pub/sub with event deduplication (within 5sec window), (3) debounceSyncEvents(events, windowMs=5000) coalescing 20 contact updates into single sync batch, (4) prioritizeSyncEvents() high-priority-first (user.removed > contact.updated > deal.updated), (5) trackEventMetrics(connectorId) recording events/sec, dedup ratio, batch sizes. Create packages/semantic-core/src/sync-event-coordinator.ts with SyncEventCoordinator: (1) subscribeToPgNotifications(pgClient, connectorId) using Postgres LISTEN for table changes, (2) registerWebhookHandler(connectorId, webhookUrl) for providers with native webhooks, (3) startEventLoop() continuously consuming Redis events, batching, and triggering sync jobs via BullMQ, (4) getEventMetrics(connectorId) returning events/hour, avg batch size, latency. Create apps/api/migrations/172_sync_events.sql with: sync_events (event_id, connector_id, event_type, entity_type, entity_id, timestamp, processed: bool), event_batches (batch_id, connector_id, events_json, batch_size, sync_job_id, created_at). Add 10+ integration tests with mock Redis and Postgres LISTEN. Integrate into server.ts to auto-start event loop on startup.
+- **Files**:
+  - packages/semantic-core/src/__tests__/sync-events.test.ts
+  - packages/semantic-core/src/__tests__/sync-events.integration.test.ts
+  - packages/semantic-core/src/sync-event-coordinator.ts
+  - packages/semantic-core/src/__tests__/sync-event-coordinator.test.ts
+  - apps/api/migrations/172_sync_events.sql
+  - apps/api/src/routes/sync-events-admin.ts
+  - apps/api/src/__tests__/sync-events-admin.test.ts
+- **Depends on**: nothing
+- **Added**: 2026-06-09
+
+### Task: Intelligent Query Recommendation Engine with User Behavior Learning
+- **Layer**: 74 — Post-MVP Scale - Developer Experience & Advanced Analytics
+- **Status**: UNWORKED
+- **Priority**: Medium
+- **Description**: Build a machine learning system that learns from user query history, MCP tool usage patterns, and context access logs to recommend relevant queries and context before users ask. This system complements the proactive-suggester by adding ML-based behavior clustering and anomaly detection. Create packages/semantic-core/src/query-recommender.ts with QueryRecommender: (1) analyzeUserQueryPatterns(userId, days=30) extracting: query intent distribution (operational % vs analytical %), most-used entity types, common filter combinations, time-of-day patterns, query length distribution, (2) clusterSimilarQueries(queries) using embedding-based clustering (cosine similarity >0.80) to find query families, (3) predictNextQuery(userId, currentQuery) based on n-gram model (if user asked Q1, they usually ask Q2 next), returning top-3 predictions with confidence, (4) detectAnomalousQuery(query, userProfile) flagging unusual queries (e.g., user suddenly querying sensitive data they never accessed), (5) scoreQueryRelevance(query, user, context) combining: user affinity (0-1 based on query pattern match), timeliness (higher if time-of-day matches typical pattern), business importance (derived from entity type+filter criticality), (6) rankRecommendations(queries, user) sorting by relevance score with diversity constraint (avoid duplicate entity types in top-5). Create migration 173 (user_query_patterns, query_clusters, query_recommendations, query_anomalies). Expose REST: GET /api/v1/users/:userId/query-recommendations (top-5 predicted queries with UI preview), POST /api/v1/users/:userId/query-feedback (mark recommendation relevant/irrelevant), GET /api/v1/users/:userId/behavior-profile (return extracted patterns). Build dashboard component apps/dashboard/components/query-recommendation-panel.tsx showing: top-3 predicted queries as pill buttons, "Why recommended?" explanation (shows pattern match reason), "Learn more" drill-down to behavior profile. Add 16+ tests: clustering accuracy, prediction evaluation (precision@3), anomaly scoring consistency.
+- **Files**:
+  - packages/semantic-core/src/query-recommender.ts
+  - packages/semantic-core/src/__tests__/query-recommender.test.ts
+  - packages/semantic-core/src/__tests__/query-recommender.integration.test.ts
+  - apps/api/src/routes/query-recommendations.ts
+  - apps/api/src/__tests__/query-recommendations.test.ts
+  - apps/api/migrations/173_query_recommendations.sql
+  - apps/dashboard/components/query-recommendation-panel.tsx
+- **Depends on**: nothing
+- **Added**: 2026-06-09
