@@ -4687,3 +4687,96 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
   - apps/dashboard/components/prefetch-recommendations.tsx
 - **Depends on**: nothing
 - **Added**: 2026-06-09
+
+---
+
+## Layer 73: Scale Phase IV - Observability, Compliance & Enterprise Hardening
+
+### Task: Computed Metric Engine with User-Defined Formulas
+- **Layer**: 73 — Scale Phase IV - Observability, Compliance & Enterprise Hardening
+- **Status**: COMMITTED
+- **Priority**: High
+- **Description**: Build a formula-based computed metric system allowing business users to define custom metrics from indexed data (e.g., "ARR = sum of active MRR × 12", "Churn_Rate = lost_customers / prev_month_customers"). Create packages/semantic-core/src/computed-metrics.ts with ComputedMetricEngine: (1) defineMetric(workspaceId, name, formula, description) accepting formulas with entity type references, aggregation functions (sum, avg, count, min, max), time windows, (2) parseFormula(formula) converting "sum(subscription.mrr) × 12" into an AST, (3) validateFormula(ast, schema) ensuring referenced entity types and fields exist, (4) computeMetric(metricId, timeRange) executing formula against indexed entities, returning value + confidence score, (5) explainComputation(metricId) showing: sample entities used, intermediate values, final result. Create apps/api/migrations/165_computed_metrics.sql with: computed_metrics (workspace_id, metric_id, name, formula_text, formula_ast, last_computed_value, last_computed_at, computation_status: 'success'|'error'), metric_computation_log (metric_id, computed_value, entity_count_used, execution_time_ms, error_message, computed_at). Expose REST: POST /api/v1/metrics/computed (define new), GET /api/v1/metrics/computed (list), GET /api/v1/metrics/computed/:id/value (get current value), GET /api/v1/metrics/computed/:id/explain (show how computed). Integrate with metric registry so computed metrics are queryable via MCP get-metric tool. Build dashboard UI: apps/dashboard/app/admin/metrics/computed-metrics/page.tsx with: metric-formula-editor (syntax highlighting, validation feedback), computation-results (value + timestamp), formula-explainer (showing entity sample and calculation steps), error-display if computation fails. Add 16+ tests: formula parsing, validation (undefined entities, invalid functions), computation accuracy (validate against expected results), error handling (division by zero, missing data).
+
+- **Files**:
+  - packages/semantic-core/src/computed-metrics.ts
+  - packages/semantic-core/src/__tests__/computed-metrics.test.ts
+  - packages/semantic-core/src/__tests__/computed-metrics.integration.test.ts
+  - apps/api/src/routes/computed-metrics.ts
+  - apps/api/src/__tests__/computed-metrics.test.ts
+  - apps/api/migrations/165_computed_metrics.sql
+  - apps/dashboard/app/admin/metrics/computed-metrics/page.tsx
+  - apps/dashboard/components/metric-formula-editor.tsx
+  - apps/dashboard/components/computation-results.tsx
+- **Depends on**: Metric Registry Service & API
+- **Added**: 2026-06-09
+
+### Task: Data Quality Scoring & Automated Remediation Recommendations
+- **Layer**: 73 — Scale Phase IV - Observability, Compliance & Enterprise Hardening
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Build an automated data quality assessment system that scores entity completeness, freshness, and accuracy, with suggested remediation actions. Create packages/semantic-core/src/data-quality-scorer.ts with DataQualityScorer: (1) scoreEntity(entity, schema, weights) computing 0-100 quality score from: completeness (% of non-null fields), freshness (age in days, older = lower), accuracy_confidence (relationship validation, cross-reference check), (2) scoreEntityType(entityType, workspaceId) aggregating scores for all entities of that type, (3) scoreWorkspace(workspaceId) rolling up across all entity types weighted by entity count, (4) detectQualityIssues(workspaceId) identifying patterns: duplicate entities, missing relationships, stale data (not updated in 90+ days), invalid values (out-of-range, wrong format), (5) recommendRemediations(issue, workspaceId) suggesting actions: "run dedup to remove 150 duplicates", "email owners of 50 stale contacts", "validate credit_card field format on 200 entities". Create apps/api/migrations/166_data_quality.sql with: data_quality_scores (workspace_id, entity_type, entity_id, completeness_score, freshness_score, accuracy_score, overall_score, last_assessed_at), quality_issues (workspace_id, issue_id, issue_type: 'duplicates'|'stale'|'invalid'|'missing_relationship', entity_type, affected_count, severity: 'low'|'medium'|'high', first_detected_at, auto_resolved: boolean), remediation_actions (issue_id, action_type, description, estimated_impact, status: 'pending'|'approved'|'applied'). Expose REST: GET /api/v1/quality/score (workspace overall), GET /api/v1/quality/by-type (scores per entity type), GET /api/v1/quality/issues (list detected issues), POST /api/v1/quality/issues/:id/apply-remediation (execute suggested action). Build dashboard page apps/dashboard/app/admin/data-quality/page.tsx with: quality-scorecard (overall score, trend), quality-by-type-table (sortable by score, entity count), issues-list (with severity coloring, remediation buttons), remediation-status (tracking applied actions). Add 18+ tests: score calculation (known datasets with expected scores), issue detection (seeded data with known problems), remediation recommendations (matching issue type to actions), edge cases (empty entity type, all-null fields).
+- **Files**:
+  - packages/semantic-core/src/data-quality-scorer.ts
+  - packages/semantic-core/src/__tests__/data-quality-scorer.test.ts
+  - packages/semantic-core/src/__tests__/data-quality-scorer.integration.test.ts
+  - apps/api/src/routes/data-quality.ts
+  - apps/api/src/__tests__/data-quality.test.ts
+  - apps/api/migrations/166_data_quality.sql
+  - apps/dashboard/app/admin/data-quality/page.tsx
+  - apps/dashboard/components/quality-scorecard.tsx
+  - apps/dashboard/components/issues-list.tsx
+  - apps/dashboard/components/remediation-status.tsx
+- **Depends on**: Semantic Deduplication Verification & Dashboard
+- **Added**: 2026-06-09
+
+### Task: Connector Health Forecasting with Proactive Alerts
+- **Layer**: 73 — Scale Phase IV - Observability, Compliance & Enterprise Hardening
+- **Status**: UNWORKED
+- **Priority**: Medium
+- **Description**: Build a predictive health monitoring system that forecasts connector degradation using time-series analysis and alerts ops teams before failures occur. Create packages/semantic-core/src/health-forecaster.ts with ConnectorHealthForecaster: (1) analyzeHealthTimeSeries(connectorId, days=30) extracting health metrics (sync latency, error rate, entity throughput), (2) trainForecastModel(metrics) using exponential smoothing (Holt-Winters) or ARIMA to fit trend, (3) forecastHealth(connectorId, daysAhead=7) predicting health score trajectory over next 7 days with confidence interval (±10%), (4) detectAnomalies(actual, forecast) identifying when actual performance suddenly deviates >2σ from forecast (indicates issue), (5) escalateAlert(connectorId, severity) raising alert if forecast predicts health score dropping below threshold (e.g., <70 = warning, <50 = critical). Create apps/api/migrations/167_health_forecasts.sql with: health_forecasts (connector_id, forecast_date, forecasted_score, confidence_interval_low, confidence_interval_high, model_type, created_at), forecast_alerts (connector_id, alert_severity, predicted_issue: 'high_latency'|'high_error_rate'|'data_staleness', days_until_threshold, recommended_action, created_at). Expose REST: GET /api/v1/connectors/:id/forecast (7-day health forecast with confidence bands), GET /api/v1/connectors/:id/forecast-alerts (active predicted issues). Integrate with health-scorer.ts to feed actual metrics. Build dashboard components: health-forecast-chart.tsx (line chart: actual + forecast + confidence interval), forecast-alerts-panel.tsx (list of predicted issues with recommended preventive actions). Add 14+ tests: time-series forecasting accuracy (validate against synthetic data with known trend), anomaly detection (seeded anomalies), forecast alert triggering.
+- **Files**:
+  - packages/semantic-core/src/health-forecaster.ts
+  - packages/semantic-core/src/__tests__/health-forecaster.test.ts
+  - packages/semantic-core/src/__tests__/health-forecaster.integration.test.ts
+  - apps/api/src/routes/health-forecasts.ts
+  - apps/api/src/__tests__/health-forecasts.test.ts
+  - apps/api/migrations/167_health_forecasts.sql
+  - apps/dashboard/components/health-forecast-chart.tsx
+  - apps/dashboard/components/forecast-alerts-panel.tsx
+- **Depends on**: Connector Health Score & SLA Tracking System
+- **Added**: 2026-06-09
+
+### Task: Granular Access Control with Field-Level & Connector-Level Permissions
+- **Layer**: 73 — Scale Phase IV - Observability, Compliance & Enterprise Hardening
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Extend role-based access control to support fine-grained permissions at the field and connector level, allowing teams to segment data access by sensitivity. Create packages/semantic-core/src/granular-permissions.ts with GranularPermissionManager: (1) defineFieldPermission(workspaceId, entityType, fieldName, roleIds) controlling which roles can view specific fields (e.g., sales team can see email, but support team cannot), (2) defineConnectorPermission(workspaceId, connectorId, roleIds) restricting which connectors' data a role can access, (3) checkFieldAccess(userId, entityType, fieldName) validating user's role has permission before returning field value, (4) checkConnectorAccess(userId, connectorId) preventing queries from returning data from non-permitted connectors, (5) applyFieldMasking(entities, userId) stripping disallowed fields from response before serialization. Create apps/api/migrations/168_granular_permissions.sql with: field_permissions (workspace_id, entity_type, field_name, permission_type: 'view'|'edit'|'delete', role_ids_json, created_at), connector_permissions (workspace_id, connector_id, role_ids_json, created_at). Expose REST: GET /api/v1/permissions/fields (list all), POST /api/v1/permissions/fields (define new), DELETE /api/v1/permissions/fields/:id (revoke). Integrate with MCP tools (query-context, get-entity, list-entities): apply field masking before returning context. Build admin UI: apps/dashboard/app/settings/[workspaceId]/permissions/page.tsx with: permission-matrix (role × entity_type × field grid), connector-access-selector (checkboxes per role). Add 16+ tests: permission checking (verify allowed/denied fields), connector access enforcement, field masking (validate disallowed fields removed), edge cases (user with multiple roles, inheritance).
+- **Files**:
+  - packages/semantic-core/src/granular-permissions.ts
+  - packages/semantic-core/src/__tests__/granular-permissions.test.ts
+  - packages/semantic-core/src/__tests__/granular-permissions.integration.test.ts
+  - apps/api/src/routes/granular-permissions.ts
+  - apps/api/src/__tests__/granular-permissions.test.ts
+  - apps/api/migrations/168_granular_permissions.sql
+  - apps/dashboard/app/settings/[workspaceId]/permissions/page.tsx
+  - apps/dashboard/components/permission-matrix.tsx
+  - apps/dashboard/components/connector-access-selector.tsx
+- **Depends on**: Role-Based Context Segmentation
+- **Added**: 2026-06-09
+
+### Task: Semantic Search over MCP Response Context
+- **Layer**: 73 — Scale Phase IV - Observability, Compliance & Enterprise Hardening
+- **Status**: UNWORKED
+- **Priority**: Medium
+- **Description**: Build a search capability allowing users to search within the context returned by MCP queries, enabling quick navigation of large result sets. Create packages/semantic-core/src/context-searcher.ts with ContextSearcher: (1) indexMcpResponse(responseId, entities) embedding the response context at query time, (2) searchWithinContext(responseId, searchQuery, limit) returning top-k matching entities/fields from prior response using vector similarity, (3) explainMatch(matchId) showing why entity ranked high for search query (highlight matching fields, similarity score). Create apps/api/migrations/169_mcp_context_search.sql with: mcp_response_cache (response_id, workspace_id, context_entities_json, embeddings_json, created_at, expires_at), context_search_results (response_id, search_query, result_rank, entity_id, match_score, matching_fields). Integrate with MCP server: after returning context from query-context tool, register searchable response. Build dashboard UI: apps/dashboard/components/context-search-panel.tsx (search input bar within query results, shows top-k matches with score + field highlighting). Expose REST: POST /api/v1/mcp-responses/:responseId/search (search within response). Add 12+ tests: embedding index creation, vector similarity search accuracy, result ranking.
+- **Files**:
+  - packages/semantic-core/src/context-searcher.ts
+  - packages/semantic-core/src/__tests__/context-searcher.test.ts
+  - packages/semantic-core/src/__tests__/context-searcher.integration.test.ts
+  - apps/api/src/routes/context-search.ts
+  - apps/api/src/__tests__/context-search.test.ts
+  - apps/api/migrations/169_mcp_context_search.sql
+  - apps/dashboard/components/context-search-panel.tsx
+- **Depends on**: Semantic Cache
+- **Added**: 2026-06-09
