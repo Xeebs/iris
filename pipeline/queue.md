@@ -4448,7 +4448,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Multi-Connector Query Optimization & Execution Strategy Engine
 - **Layer**: 70 — Test Coverage Completion & Enterprise Observability
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: Medium
 - **Description**: Build an intelligent query planner that optimizes multi-connector queries by selecting optimal execution strategies (parallel vs. serial, early filtering vs. late filtering, source prioritization). Create packages/semantic-core/src/multi-connector-optimizer.ts with MultiConnectorQueryOptimizer: (1) analyzeQueryConnectorAffinity(query) determining which connectors are relevant (BFS on entity graph), (2) rankExecutionStrategies(connectorList, contextBudget, latencyBudget) scoring strategies: parallel execution (max throughput but high memory), sequential (low memory but slow), filtered-first (reduce result size early), cached-first (leverage semantic cache), (3) estimateExecutionCost(strategy, connectorList) predicting latency p95, token consumption, connector costs, (4) selectOptimalStrategy(query, budget, constraints) choosing winner based on SLA requirements. Create migration 152 (query_execution_plans, execution_strategy_history). Add REST routes: POST /api/v1/query-optimizer/plan (analyze and recommend strategy), GET /api/v1/query-optimizer/history (plan execution results). Add MCP tool: multi-connector-query-optimize (advise on query strategy for Claude). Add dashboard component: query-strategy-analyzer.tsx showing cost vs latency tradeoff, recommended strategy, historical accuracy. Include 20+ tests (12 unit strategy scoring + 8 integration multi-connector execution).
 - **Files**:

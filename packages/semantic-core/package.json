@@ -74,7 +74,8 @@
     "./reliability-predictor": "./dist/reliability-predictor.js",
     "./enrichment-quality-scorer": "./dist/enrichment-quality-scorer.js",
     "./sync-parallelism-optimizer": "./dist/sync-parallelism-optimizer.js",
-    "./request-tracer": "./dist/request-tracer.js"
+    "./request-tracer": "./dist/request-tracer.js",
+    "./multi-connector-optimizer": "./dist/multi-connector-optimizer.js"
   },
   "scripts": {
     "build": "tsc --build",
