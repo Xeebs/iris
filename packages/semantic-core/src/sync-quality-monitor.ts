@@ -324,7 +324,8 @@ export class SyncQualityMonitor {
         return ok({ connectorId, workspaceId, anomalies: [], detectedAt: new Date() });
       }
 
-      const [latest, ...historical] = rows;
+      const latest = rows[0]!;
+      const historical = rows.slice(1);
       const anomalies: Anomaly[] = [];
 
       if (historical.length >= 3) {

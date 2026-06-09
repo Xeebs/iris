@@ -283,7 +283,9 @@ export class AnalyticsService {
       }
 
       for (const [key, values] of groups) {
-        const [name, workspaceId] = key.split('::');
+        const parts = key.split('::');
+        const name = parts[0] ?? '';
+        const workspaceId = parts[1] ?? '';
         const sorted = [...values].sort((a, b) => a - b);
         const { p50, p95, p99, mean, stddev } = computeAggregates(sorted);
         await this.sql`

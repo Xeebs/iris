@@ -113,8 +113,8 @@ export function parseCsvImport(csv: string): ImportRecord[] {
       label: raw['label'] ?? '',
       attributes,
       relationships,
-      lastModified: raw['lastModified'] || undefined,
-      sourceId: raw['sourceId'] || undefined,
+      ...(raw['lastModified'] ? { lastModified: raw['lastModified'] } : {}),
+      ...(raw['sourceId'] ? { sourceId: raw['sourceId'] } : {}),
     });
   }
 
@@ -160,7 +160,7 @@ export function validateBatch(records: ImportRecord[]): BatchValidationResult {
     const row = idx + 1;
     const result = ImportRecordSchema.safeParse(rec);
     if (result.success) {
-      valid.push(result.data);
+      valid.push(result.data as ImportRecord);
     } else {
       for (const issue of result.error.issues) {
         errors.push({
@@ -183,7 +183,7 @@ export function toSemanticEntity(record: ImportRecord, workspaceId: string): Sem
     id: `${workspaceId}:${record.id}`,
     type: record.type,
     label: record.label,
-    attributes: record.attributes,
+    attributes: record.attributes as SemanticEntity['attributes'],
     relationships: record.relationships ?? [],
     lastModified: record.lastModified ? new Date(record.lastModified) : new Date(),
     sourceId: record.sourceId ?? record.id,
@@ -380,8 +380,8 @@ export class BatchOperations {
       id: r.id,
       type: r.type,
       label: r.label,
-      attributes: r.attributes,
-      relationships: r.relationships,
+      attributes: r.attributes as SemanticEntity['attributes'],
+      relationships: r.relationships as SemanticEntity['relationships'],
       lastModified: r.last_modified instanceof Date ? r.last_modified : new Date(r.last_modified),
       sourceId: r.source_id,
     }));

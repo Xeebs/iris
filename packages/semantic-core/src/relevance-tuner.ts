@@ -56,7 +56,7 @@ export interface TuningConfig {
   tunedValue: number;
 }
 
-type SqlClient = ReturnType<typeof import('postgres').default>;
+type SqlClient = ReturnType<typeof postgres>;
 
 /**
  * Computes a blended relevance score for a search candidate.
@@ -74,7 +74,7 @@ export function computeBlendedScore(candidate: ScoredCandidate, weights: Scoring
 
   const typeKey = `type_boost_${candidate.entityType}` as ScoringFactorName;
   if (typeKey in weights) {
-    score *= (weights as Record<string, number>)[typeKey] ?? 1.0;
+    score *= (weights as unknown as Record<string, number>)[typeKey] ?? 1.0;
   }
 
   if (candidate.lastModified) {
@@ -208,11 +208,11 @@ export class RelevanceTuner {
       LIMIT 50
     `;
 
-    return rows.map((r) => ({
-      query: r.query,
-      avgRank: r.avg_rank,
-      clickCount: parseInt(r.click_count, 10),
-      avgDwellMs: r.avg_dwell_ms,
+    return (rows as Record<string, unknown>[]).map((r) => ({
+      query: r['query'] as string,
+      avgRank: r['avg_rank'] as number,
+      clickCount: parseInt(r['click_count'] as string, 10),
+      avgDwellMs: r['avg_dwell_ms'] as number,
     }));
   }
 

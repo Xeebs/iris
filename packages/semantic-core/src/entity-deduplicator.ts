@@ -199,13 +199,13 @@ export class EntityDeduplicator {
         AND enabled_at IS NOT NULL
       ORDER BY enabled_at ASC
     `;
-    return rows.map((r) => ({
-      id: r.id,
-      name: r.name,
-      entityType: r.entity_type,
-      condition: r.condition_json,
-      confidence: r.confidence as DeduplicationRule['confidence'],
-    }));
+    return (rows as Record<string, unknown>[]).map((r) => ({
+      id: r['id'] as string,
+      name: r['name'] as string,
+      entityType: r['entity_type'] as string,
+      condition: r['condition_json'] as RuleCondition,
+      ...(r['confidence'] ? { confidence: r['confidence'] as 'high' | 'medium' | 'low' } : {}),
+    })) as (DeduplicationRule & { id: string })[];
   }
 
   /**

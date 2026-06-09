@@ -152,7 +152,7 @@ export class CostOptimizationAdvisor {
       const totalCostCents = (totalTokensSpent / 1000) * COST_PER_1K_TOKENS_CENTS;
       const avgCostPerQuery = queryCount > 0 ? totalCostCents / queryCount : 0;
 
-      const topQueriesByTokens = (topRows as Array<{
+      const topQueriesByTokens = (topRows as unknown as Array<{
         tool_name: string;
         total_tokens: string;
         call_count: string;
@@ -321,7 +321,7 @@ export class CostOptimizationAdvisor {
     const crypto = await import('node:crypto');
     const queryHash = crypto.createHash('sha256').update(params.query).digest('hex').slice(0, 16);
 
-    const sourceConnectors = [...new Set(params.entities.map((e) => e.sourceConnectorId).filter(Boolean))];
+    const sourceConnectors = [...new Set(params.entities.map((e) => e.sourceConnectorId).filter((s): s is string => s != null))];
     const entityTypes = [...new Set(params.entities.map((e) => e.type))];
 
     await this.sql`

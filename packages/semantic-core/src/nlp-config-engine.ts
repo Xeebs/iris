@@ -127,16 +127,17 @@ export function parseConfigIntent(text: string): Result<ParsedIntent, Error> {
     if (!days) return err(new Error(`Could not parse time period: "${retainMatch[1]}"`));
     const isDelete = /delete|remove|purge/i.test(text);
     const entityTypeMatch = /(contacts?|deals?|companies?|accounts?|leads?)/i.exec(text);
+    const retentionPayload: RetentionPayload = {
+      ...(isDelete ? { deleteAfterDays: days } : { archiveAfterDays: days }),
+      ...(entityTypeMatch?.[1] ? { entityType: entityTypeMatch[1].toLowerCase() } : {}),
+    };
     return ok({
       category: 'retention',
-      payload: {
-        [isDelete ? 'deleteAfterDays' : 'archiveAfterDays']: days,
-        entityType: entityTypeMatch?.[1]?.toLowerCase() ?? undefined,
-      },
-      summary: `${isDelete ? 'Delete' : 'Archive'} ${entityTypeMatch?.[1] ?? 'entities'} older than ${retainMatch[1].trim()}`,
+      payload: retentionPayload,
+      summary: `${isDelete ? 'Delete' : 'Archive'} ${entityTypeMatch?.[1] ?? 'entities'} older than ${retainMatch[1]!.trim()}`,
       confidence: 0.9,
       rawInput: text,
-    });
+    } as ParsedIntent);
   }
 
   // ── Access control: hide/mask field from role ─────────────────────────────
@@ -169,13 +170,14 @@ export function parseConfigIntent(text: string): Result<ParsedIntent, Error> {
   // ── Timezone ─────────────────────────────────────────────────────────────
   const tzMatch = /(?:timezone|time\s+zone)\s+is\s+([\w/]+)/i.exec(text);
   if (tzMatch) {
+    const tz = tzMatch[1] ?? '';
     return ok({
       category: 'temporal',
-      payload: { timezone: tzMatch[1] },
-      summary: `Workspace timezone set to ${tzMatch[1]}`,
+      payload: { timezone: tz },
+      summary: `Workspace timezone set to ${tz}`,
       confidence: 0.93,
       rawInput: text,
-    });
+    } as ParsedIntent);
   }
 
   return err(new Error(`Could not parse intent from: "${text}". Supported: fiscal year, retention rules, access control, entity merging.`));

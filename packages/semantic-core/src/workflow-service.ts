@@ -193,7 +193,7 @@ export class WorkflowService {
         templateName: tpl.templateName,
         description: tpl.description,
         triggerType: tpl.triggerType,
-        triggerConfig: tpl.triggerConfig,
+        triggerConfig: tpl.triggerConfig as Record<string, unknown>,
         mcpCalls: tpl.mcpCalls,
         responseFormat: tpl.responseFormat,
       });

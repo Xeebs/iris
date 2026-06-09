@@ -216,7 +216,7 @@ export function selectOptimalProvider(
   try {
     const complexity = classifyQueryComplexity(query, { contextTokens });
     const ranked = rankProvidersByValue(complexity, {
-      maxCostCents: workspaceBudget,
+      ...(workspaceBudget !== undefined ? { maxCostCents: workspaceBudget } : {}),
       ...requirements,
     });
 

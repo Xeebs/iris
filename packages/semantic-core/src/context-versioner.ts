@@ -1,5 +1,5 @@
 import { ok, err, type Result } from 'neverthrow';
-import { createHash, createGzip } from 'crypto';
+import { createHash } from 'crypto';
 import { logger } from '@iris/core/logger';
 
 const log = logger.child({ service: 'context-versioner' });

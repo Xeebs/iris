@@ -166,7 +166,7 @@ export class OnboardingManager {
     industry: string | null,
   ): ConnectorRecommendation[] {
     const baseRecs =
-      (industry && CONNECTOR_RECOMMENDATIONS[industry.toLowerCase()]) ??
+      (industry ? CONNECTOR_RECOMMENDATIONS[industry.toLowerCase()] : undefined) ??
       DEFAULT_RECOMMENDATIONS;
 
     const recs = [...baseRecs];
@@ -175,7 +175,7 @@ export class OnboardingManager {
       const notionIdx = recs.findIndex((r) => r.connectorId === 'notion');
       if (notionIdx > 0) {
         const [notion] = recs.splice(notionIdx, 1);
-        recs.unshift({ ...notion, priority: 1 });
+        if (notion) recs.unshift({ ...notion, priority: 1 });
         recs.forEach((r, i) => { r.priority = i + 1; });
       }
     }

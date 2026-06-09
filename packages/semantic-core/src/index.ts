@@ -71,7 +71,7 @@ export type {
   CostEventType,
   ConnectorCostSummary,
   CostBreakdownReport,
-  CostRecommendation,
+  CostRecommendation as ConnectorCostRecommendation,
 } from './connector-cost-attribution.js';
 export {
   ConnectorCostAttributor,

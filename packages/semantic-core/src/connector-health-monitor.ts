@@ -342,7 +342,7 @@ export class ConnectorHealthMonitor {
           FROM connector_health_scores
           WHERE connector_id = ${connectorId}
             AND workspace_id = ${workspaceId}
-        ` as Array<{
+        ` as unknown as Array<{
           connector_id: string;
           workspace_id: string;
           score: number;
@@ -360,7 +360,7 @@ export class ConnectorHealthMonitor {
             AND acknowledged_at IS NULL
           ORDER BY created_at DESC
           LIMIT 20
-        ` as Array<{
+        ` as unknown as Array<{
           id: string;
           connector_id: string;
           workspace_id: string;

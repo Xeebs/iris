@@ -36,7 +36,7 @@ const DEFAULT_CONFIG: DocumentIndexerConfig = {
   maxTokensPerDocument: 512,
 };
 
-type SqlClient = ReturnType<typeof import('postgres').default>;
+type SqlClient = ReturnType<typeof postgres>;
 
 /**
  * Extracts and indexes full-text content from document-based connector sources.
@@ -185,12 +185,12 @@ export class DocumentIndexer {
       LIMIT ${limit}
     `;
 
-    return rows.map((row) => ({
-      documentId: row.id,
-      sourceEntityId: row.source_entity_id,
-      documentTitle: row.document_title,
-      excerpt: extractExcerpt(row.content_plaintext, query),
-      score: row.rank,
+    return (rows as Record<string, unknown>[]).map((row) => ({
+      documentId: row['id'] as string,
+      sourceEntityId: row['source_entity_id'] as string,
+      documentTitle: row['document_title'] as string,
+      excerpt: extractExcerpt(row['content_plaintext'] as string, query),
+      score: row['rank'] as number,
     }));
   }
 
@@ -228,11 +228,11 @@ export class DocumentIndexer {
       ORDER BY COUNT(*) DESC
     `;
 
-    return rows.map((r) => ({
-      sourceConnectorId: r.source_connector_id,
-      documentCount: parseInt(r.document_count, 10),
-      totalTokens: parseInt(r.total_tokens, 10),
-      lastExtractedAt: r.last_extracted_at,
+    return (rows as Record<string, unknown>[]).map((r) => ({
+      sourceConnectorId: r['source_connector_id'] as string,
+      documentCount: parseInt(r['document_count'] as string, 10),
+      totalTokens: parseInt(r['total_tokens'] as string, 10),
+      lastExtractedAt: r['last_extracted_at'] as string | null,
     }));
   }
 }
