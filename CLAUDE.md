@@ -74,6 +74,18 @@ pnpm mcp:inspect      # Open MCP inspector for debugging
 
 The Iris build pipeline runs continuously via `scripts/daemon.py`. The daemon fires `claude --dangerously-skip-permissions` in a loop, driving the project forward from the current empty scaffold toward a working MVP.
 
+### CURRENT FOCUS — Vertical Slice ONLY (overrides all queue breadth)
+
+**Read `docs/VERTICAL_SLICE.md` at the start of every cycle.** While its status line reads `NOT ACHIEVED`, the pipeline is in **slice mode**:
+
+- Task selection is restricted to the **CI Green Gate** and tasks in **Layer 78 — Vertical Slice** in `pipeline/queue.md`. All other UNWORKED tasks are frozen — do not select them, regardless of priority.
+- The task-researcher may only generate tasks that unblock or harden the slice (fixing a broken link in the connect → sync → index → serve → query → measure chain). It must not generate feature, dashboard, coverage-padding, or enterprise tasks.
+- "Done" for the slice is defined exclusively by the acceptance criteria in `docs/VERTICAL_SLICE.md` — a single command (`scripts/slice-demo.sh`) proving the end-to-end flow from a clean database, twice, with a token-savings report.
+- If a slice task reveals broken code elsewhere (unmounted route, broken migration, stub function on the slice path), fixing it **is** slice work — do it.
+- Only when every acceptance criterion is met, CI includes a green `slice-demo` job, and the status line in `docs/VERTICAL_SLICE.md` is flipped to `ACHIEVED`, may the pipeline resume normal queue-driven breadth work.
+
+Rationale: 344 cycles produced enormous surface area but the core value proposition has never been demonstrated end to end. Working product first; features second.
+
 ### CI Green Gate — MANDATORY, Highest Priority
 
 **Before selecting any new feature task, the pipeline MUST verify that GitHub CI is passing.**
@@ -99,11 +111,11 @@ Run `gh run list --limit 5`. If the most recent run is not `success`, enter the 
 
 ### Phase 1 — Task Research (conditional)
 
-Spawn the **task-researcher** subagent whenever fewer than 3 UNWORKED items remain in `pipeline/queue.md`. There is no date restriction — run it every cycle if needed until new tasks are added. The researcher scans the PRD, existing stubs, and TODO comments to generate 3–5 new tasks. It updates `pipeline/state.json` with `last_research: <today>`.
+Spawn the **task-researcher** subagent whenever fewer than 3 UNWORKED items remain in `pipeline/queue.md`. There is no date restriction — run it every cycle if needed until new tasks are added. The researcher scans the PRD, existing stubs, and TODO comments to generate 3–5 new tasks. It updates `pipeline/state.json` with `last_research: <today>`. **In slice mode (see CURRENT FOCUS), count only UNWORKED Layer 78 tasks, and the researcher may only generate slice-path tasks.**
 
 ### Phase 2 — Plan
 
-Select the top UNWORKED High-priority task from `pipeline/queue.md`. Read the relevant section of `docs/PRD.md`, the applicable `.claude/rules/*.md` files, and any existing stub code. Produce a concrete implementation plan and mark the task `IN_PROGRESS` in `pipeline/queue.md`. Write `pipeline/state.json` with `current_phase: PLAN, active_task: <task-name>`.
+Select the top UNWORKED High-priority task from `pipeline/queue.md` — **in slice mode, only from Layer 78 — Vertical Slice**. Read the relevant section of `docs/PRD.md`, the applicable `.claude/rules/*.md` files, and any existing stub code. Produce a concrete implementation plan and mark the task `IN_PROGRESS` in `pipeline/queue.md`. Write `pipeline/state.json` with `current_phase: PLAN, active_task: <task-name>`.
 
 ### Phase 3 — Implement
 
@@ -136,7 +148,7 @@ If tests pass:
 
 **Only stop** under one of these two conditions:
 1. **Rate limited** — write `rate_limit_hit: true` and current phase/task to state, then exit.
-2. **Queue exhausted after research** — task-researcher ran and produced 0 new tasks. Write `current_phase: IDLE` to state, then exit.
+2. **Queue exhausted after research** — task-researcher ran and produced 0 new tasks. Write `current_phase: IDLE` to state, then exit. **In slice mode, before declaring exhaustion: run `scripts/slice-demo.sh` (if it exists). If it fails, each failure is a new slice task — add it and continue. If it passes all acceptance criteria in `docs/VERTICAL_SLICE.md`, flip its status line to `ACHIEVED`, commit, and exit IDLE so the owner can verify by hand.**
 
 Never stop after a single task. Never stop because `last_research` is today — always attempt research when the queue is low. Drive all work forward until genuinely blocked.
 
