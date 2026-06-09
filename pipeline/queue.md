@@ -4216,7 +4216,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Batch Context Recommendations & Multi-Entity Analysis API
 - **Layer**: 67 — Advanced Insights, Automation & Quality Assurance
-- **Status**: IN_PROGRESS
+- **Status**: COMMITTED
 - **Priority**: Medium
 - **Description**: Extend the context recommendation system to support batch analysis of multiple entities, returning relevant contexts for each with deduplication and cross-entity insights. Create packages/semantic-core/src/batch-recommender.ts with BatchContextRecommender: (1) recommendContextForEntities(entityIds, topK=10) returning entity-specific recommendations and shared contexts across all, (2) analyzeEntityGroup(entityIds) finding common characteristics, gaps, and relationships among entities, (3) suggestGroupActions(entityIds) recommending bulk updates or linking based on group analysis, (4) computeGroupScore(entityIds, metric) aggregating metrics across entity group with variance/trend indicators. Create migration 142 (batch_analysis_cache, group_recommendations). Add REST routes: POST /api/v1/batch/recommend-contexts (body: entityIds, returns array of per-entity recommendations + group insights), POST /api/v1/batch/analyze (analyze group characteristics), GET /api/v1/batch/results/:sessionId (cache batch results). Add dashboard feature: multi-entity select mode with batch recommendation panel showing per-entity + group insights, suggested actions. Include 24+ tests (14 unit batch scoring + group analysis + 10 integration multi-entity patterns).
 - **Files**:
@@ -4233,7 +4233,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Semantic Search Quality Evaluation & Ranking Debugger
 - **Layer**: 67 — Advanced Insights, Automation & Quality Assurance
-- **Status**: UNWORKED
+- **Status**: IN_PROGRESS
 - **Priority**: Medium
 - **Description**: Build a search quality evaluation framework with explainable ranking, A/B testing capabilities, and automated quality metrics to help teams optimize their search relevance. Create packages/semantic-core/src/search-quality-evaluator.ts with SearchQualityEvaluator: (1) evaluateSearchResult(query, result) scoring result quality (relevance, freshness, completeness, rank position) with detailed breakdown, (2) runSearchTest(testName, queries, goldStandard, strategy1, strategy2) comparing ranking strategies with precision/recall/ndcg metrics, (3) explainRanking(query, resultId, topK=5) breaking down why result ranked where (term match, embedding sim, recency, popularity, user feedback), (4) suggestRankingImprovements(query) identifying low-performing queries and recommending fixes. Create migration 143 (search_quality_evals, ranking_tests, eval_results, quality_feedback). Add REST routes: POST /api/v1/search-quality/evaluate (single query evaluation), POST /api/v1/search-quality/tests (run ranking test), GET /api/v1/search-quality/tests/:id/results (test results + stats), GET /api/v1/search-quality/metrics (aggregate quality metrics). Add dashboard page /search-quality with: recent query evaluation timeline, A/B test runner (strategy picker, metric viewer), ranking explainer (show scoring breakdown for result position), suggested improvements panel. Include 28+ tests (16 unit evaluation scoring + 12 integration A/B testing).
 - **Files**:
