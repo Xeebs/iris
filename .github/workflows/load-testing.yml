@@ -87,7 +87,7 @@ jobs:
         env:
           DATABASE_URL: postgresql://iris:iris_test@localhost:5432/iris_test
       - name: Build servers
-        run: pnpm --filter @iris/api --filter @iris/mcp-server run build
+        run: pnpm exec turbo run build --filter=@iris/api --filter=@iris/mcp-server
       - name: Start API server
         run: pnpm --filter @iris/api run start &
         env:
