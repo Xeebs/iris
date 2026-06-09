@@ -4273,7 +4273,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Advanced Cost Attribution & Per-Entity Chargeback Model
 - **Layer**: 68 — Advanced Retrieval, Analytics & Observability
-- **Status**: IN_PROGRESS
+- **Status**: COMMITTED
 - **Priority**: High
 - **Description**: Build a detailed cost attribution system that tracks token consumption, API calls, and compute costs at per-entity, per-connector, per-user, and per-query granularity. Create packages/semantic-core/src/cost-attribution.ts with CostAttributor: (1) attributeCostToEntity(queryId, entityId, tokensUsed, computeMs) recording entity-level cost contribution, (2) computeConnectorCost(connectorId, period) aggregating sync costs (API calls, bandwidth) + query retrieval costs per connector, (3) aggregateUserCosts(userId, period) summing all user queries + resulting infrastructure costs with per-connector breakdown, (4) computeCostForecast(entityId, interval) predicting entity retrieval costs based on access patterns. Create migration 145 (entity_cost_attribution, connector_cost_events, user_cost_ledger, cost_forecasts). Add REST routes: GET /api/v1/cost-attribution/entities/:id (entity cost breakdown by operation), GET /api/v1/cost-attribution/connectors/:id (connector cost summary), GET /api/v1/cost-attribution/users/:id (user cost ledger with daily/monthly aggregates), GET /api/v1/cost-attribution/forecasts (cost projections). Add dashboard page: cost-chargeback/page.tsx with: entity-centric cost heatmap, connector cost-per-record analysis, user cost allocation table, forecast trends. Include 24+ tests (14 unit cost aggregation + 10 integration forecast accuracy).
 - **Files**:
@@ -4292,7 +4292,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Multi-Connector Entity Matching & Reconciliation Engine
 - **Layer**: 68 — Advanced Retrieval, Analytics & Observability
-- **Status**: UNWORKED
+- **Status**: IN_PROGRESS
 - **Priority**: Medium
 - **Description**: Implement cross-connector entity matching that identifies the same real-world entity appearing in different systems (e.g., same customer in HubSpot and Salesforce) and provides reconciliation workflows. Create packages/semantic-core/src/entity-reconciler.ts with EntityReconciler: (1) findMatchCandidates(entityId, topK=5) using embedding similarity + fuzzy name matching + attribute overlap to find candidates from other connectors, (2) scoreMatchConfidence(entity1, entity2) computing confidence 0–1 based on attribute overlap (email, phone, address), embedding distance, and relationship patterns, (3) suggestReconciliation(sourceId, targetIds) grouping candidates and recommending merge order, (4) recordReconciliationDecision(sourceId, targetId, decision) logging accepts/rejects for active learning. Create migration 146 (entity_matches, reconciliation_records, match_artifacts). Add REST routes: GET /api/v1/entities/:id/matches (find cross-connector matches), POST /api/v1/entities/reconcile (execute merge/link), GET /api/v1/reconciliation-status (view pending decisions). Add dashboard component: entity-reconciliation-panel.tsx (show candidate matches with confidence scores, side-by-side attribute comparison, accept/reject/manual-review buttons). Include 22+ tests (12 unit matching scoring + 10 integration cross-connector patterns).
 - **Files**:
