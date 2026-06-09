@@ -1,4 +1,18 @@
 -- Migration 161: Data governance schema (retention policies, compliance metadata, DSR queue)
+-- retention_policies was first created in migration 137 with a narrower per-entity-type schema
+-- (no workspace_id). Rename it to legacy before creating the workspace-scoped version.
+
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.tables WHERE table_name = 'retention_policies'
+  ) AND NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'retention_policies' AND column_name = 'workspace_id'
+  ) THEN
+    ALTER TABLE retention_policies RENAME TO retention_policies_legacy;
+  END IF;
+END $$;
 
 CREATE TABLE IF NOT EXISTS retention_policies (
   policy_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
