@@ -268,6 +268,8 @@ async function main(): Promise<void> {
 }
 
 main().catch((err) => {
-  log.error('Fatal startup error', { error: err });
+  const errMsg = err instanceof Error ? err.message : String(err);
+  const errStack = err instanceof Error ? err.stack : undefined;
+  log.error('Fatal startup error', { message: errMsg, stack: errStack });
   process.exit(1);
 });
