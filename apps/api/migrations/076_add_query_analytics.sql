@@ -23,7 +23,7 @@ CREATE TABLE query_patterns (
   pattern_type      TEXT NOT NULL CHECK (pattern_type IN ('temporal', 'user', 'entity_type')),
   pattern_definition JSONB NOT NULL,
   confidence_score  NUMERIC(4,3) NOT NULL DEFAULT 0,
-  discovered_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  discovered_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS query_patterns_workspace_type_uq
