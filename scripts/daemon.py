@@ -3,13 +3,16 @@
 
 Runs the Claude build pipeline in a continuous loop. Only pauses when:
   - Token budget >= 95% of configured limit   →  sleeps until window resets
-  - The Claude API returns a rate-limit error  →  sleeps 1 hour
+  - Active model's usage limit is exhausted   →  falls back to the next model in
+                                                 CLAUDE_MODEL_CHAIN (sonnet → opus → fable);
+                                                 sleeps only when every model is exhausted
   - The task queue is exhausted               →  sleeps 1 hour then researches new tasks
   - Unexpected Claude exit                    →  retries after 2 minutes
 """
 
 import json
 import os
+import re
 import signal
 import subprocess
 import sys
@@ -27,9 +30,21 @@ LOG_DIR     = IRIS / "logs"
 CLAUDE      = Path.home() / ".local" / "bin" / "claude"
 ENV_FILE    = IRIS / ".env"
 
-SLEEP_RATE_LIMITED  = 3600   # 1 hour
 SLEEP_QUEUE_EMPTY   = 3600   # 1 hour
 SLEEP_UNEXPECTED    = 120    # 2 min
+SLEEP_MODEL_SWITCH  = 30     # brief pause before relaunching on a fallback model
+
+# ── model fallback chain ─────────────────────────────────────────────────────
+# When the active model's usage limit is exhausted (CLI usage-limit error or the
+# pipeline writing rate_limit_hit), the daemon marks that model exhausted and
+# relaunches on the next model in the chain. Subagents without a `model:` pin in
+# their frontmatter inherit the session model, so the fallback covers them too.
+# Override with CLAUDE_MODEL_CHAIN (comma-separated, preferred first) in .env/.env.local.
+DEFAULT_MODEL_CHAIN  = "claude-sonnet-4-6,claude-opus-4-8,claude-fable-5"
+MODEL_CHAIN: list[str] = []   # populated in main() after env is loaded
+# Hold an exhausted model out of rotation for this long when the error message
+# carries no reset timestamp (CLAUDE_MODEL_EXHAUSTED_HOLD overrides, seconds):
+MODEL_EXHAUSTED_HOLD = 3600.0
 
 # ── token budget ─────────────────────────────────────────────────────────────
 # Set CLAUDE_TOKEN_BUDGET in .env.local to match your plan's per-window limit.
@@ -69,6 +84,69 @@ _session_tokens_lock   = threading.Lock()
 _session_input_tokens  = 0
 _session_output_tokens = 0
 _budget_kill_triggered = False
+
+# model fallback state (reader thread sets the flags; main loop consumes them)
+_model_exhausted_until: dict[str, float] = {}   # model id → epoch when usable again
+_active_model: str | None = None
+_limit_hit_detected = False
+_limit_reset_epoch  = 0.0
+
+
+# ── model fallback ───────────────────────────────────────────────────────────
+
+def parse_model_chain() -> list[str]:
+    raw = os.environ.get("CLAUDE_MODEL_CHAIN", DEFAULT_MODEL_CHAIN)
+    return [m.strip() for m in raw.split(",") if m.strip()]
+
+
+def pick_model() -> str | None:
+    """First model in the chain whose exhaustion hold has expired, else None."""
+    now = time.time()
+    for model in MODEL_CHAIN:
+        if _model_exhausted_until.get(model, 0.0) <= now:
+            return model
+    return None
+
+
+def mark_model_exhausted(model: str, reset_epoch: float = 0.0) -> None:
+    """Take a model out of rotation until its limit resets (or a default hold)."""
+    now = time.time()
+    _model_exhausted_until[model] = reset_epoch if reset_epoch > now else now + MODEL_EXHAUSTED_HOLD
+
+
+def seconds_until_any_model() -> float:
+    earliest = min((_model_exhausted_until.get(m, 0.0) for m in MODEL_CHAIN), default=0.0)
+    return max(60.0, earliest - time.time())
+
+
+_LIMIT_MARKERS = (
+    "usage limit reached",
+    "rate_limit_error",
+    "exceeded your rate limit",
+    "hit your usage limit",
+    "weekly limit",
+)
+
+
+def _scan_for_limit(text: str) -> None:
+    """Detect usage/rate-limit errors in CLI error output.
+
+    Only called for non-JSON output lines and error result events — never for
+    assistant text, so the pipeline talking *about* rate limiting can't trigger
+    a false positive. Usage-limit messages may carry a '...|<epoch>' reset
+    timestamp; capture it so the model is held out exactly until its reset.
+    """
+    global _limit_hit_detected, _limit_reset_epoch
+    lowered = text.lower()
+    if not any(marker in lowered for marker in _LIMIT_MARKERS):
+        return
+    _limit_hit_detected = True
+    match = re.search(r"\|(\d{10,13})", text)
+    if match:
+        epoch = float(match.group(1))
+        if epoch > 1e12:  # milliseconds → seconds
+            epoch /= 1000.0
+        _limit_reset_epoch = epoch
 
 
 # ── usage file ────────────────────────────────────────────────────────────────
@@ -150,6 +228,7 @@ def write_daemon(status: str, message: str, sleep_until: str | None = None) -> N
         "started_at":  _started_at,
         "updated_at":  _now_iso(),
         "sleep_until": sleep_until,
+        "model":       _active_model,
         "token_budget": {
             "used":         used,
             "limit":        limit,
@@ -238,6 +317,9 @@ def _stdout_reader(proc: subprocess.Popen, log_file_path: Path) -> None:
             try:
                 event = json.loads(line)
             except json.JSONDecodeError:
+                # Non-JSON output is CLI/stderr text — where fatal usage-limit
+                # errors land (stderr is merged into stdout).
+                _scan_for_limit(line)
                 continue
 
             etype = event.get("type", "")
@@ -260,6 +342,8 @@ def _stdout_reader(proc: subprocess.Popen, log_file_path: Path) -> None:
                     )
 
             elif etype == "result":
+                if event.get("is_error") or str(event.get("subtype", "")).startswith("error"):
+                    _scan_for_limit(json.dumps(event))
                 usage = event.get("usage", {})
                 cost  = event.get("cost_usd", 0)
                 dur   = event.get("duration_ms", 0)
@@ -318,13 +402,16 @@ signal.signal(signal.SIGUSR1, _on_sigusr1)
 def main() -> None:
     global _current_proc, _session_input_tokens, _session_output_tokens, _budget_kill_triggered
     global BUDGET_LIMIT, BUDGET_WINDOW_HOURS
+    global MODEL_CHAIN, MODEL_EXHAUSTED_HOLD, _active_model, _limit_hit_detected, _limit_reset_epoch
 
     LOG_DIR.mkdir(parents=True, exist_ok=True)
     load_env()
 
-    # Re-read budget config now that env is loaded
+    # Re-read budget + model config now that env is loaded
     BUDGET_LIMIT        = int(float(os.environ.get("CLAUDE_TOKEN_BUDGET",        str(BUDGET_LIMIT))))
     BUDGET_WINDOW_HOURS = float(os.environ.get("CLAUDE_BUDGET_WINDOW_HOURS", str(BUDGET_WINDOW_HOURS)))
+    MODEL_CHAIN          = parse_model_chain()
+    MODEL_EXHAUSTED_HOLD = float(os.environ.get("CLAUDE_MODEL_EXHAUSTED_HOLD", str(MODEL_EXHAUSTED_HOLD)))
 
     write_daemon("starting", "Daemon initializing")
 
@@ -341,28 +428,45 @@ def main() -> None:
             interruptible_sleep(wait_sec)
             continue
 
+        # ── model selection ───────────────────────────────────────────────────
+        model = pick_model()
+        if model is None:
+            wait_sec = seconds_until_any_model()
+            write_daemon(
+                "sleeping",
+                f"All models exhausted ({', '.join(MODEL_CHAIN)}) — "
+                f"sleeping {wait_sec / 3600:.1f}h until the earliest limit resets",
+                wake_iso(wait_sec),
+            )
+            interruptible_sleep(wait_sec)
+            continue
+        _active_model = model
+
         log_file = LOG_DIR / f"daemon-{datetime.now().strftime('%Y%m%d')}.log"
 
-        write_daemon("running", "Pipeline running")
+        write_daemon("running", f"Pipeline running on {model}")
 
         with open(log_file, "a") as lf:
-            lf.write(f"\n[{datetime.now().isoformat()}] === Pipeline run starting ===\n")
+            lf.write(f"\n[{datetime.now().isoformat()}] === Pipeline run starting (model: {model}) ===\n")
 
         # Reset per-session state
         _session_input_tokens  = 0
         _session_output_tokens = 0
         _budget_kill_triggered = False
+        _limit_hit_detected    = False
+        _limit_reset_epoch     = 0.0
 
         _current_proc = subprocess.Popen(
             [
                 str(CLAUDE),
                 "--dangerously-skip-permissions",
                 "--output-format", "stream-json",
+                "--model", model,
                 "-p", build_prompt(),
             ],
             cwd=str(IRIS),
             stdout=subprocess.PIPE,
-            stderr=open(log_file, "a"),
+            stderr=subprocess.STDOUT,  # merged so the reader can scan CLI errors for limit hits
             env=os.environ.copy(),
             text=True,
             bufsize=1,
@@ -393,7 +497,7 @@ def main() -> None:
 
         # ── post-run decision ─────────────────────────────────────────────────
         state        = read_state()
-        rate_limited = state.get("rate_limit_hit", False)
+        rate_limited = state.get("rate_limit_hit", False) or _limit_hit_detected
         phase        = state.get("current_phase", "")
         budget_hit   = _budget_kill_triggered or is_near_budget()
 
@@ -407,8 +511,27 @@ def main() -> None:
             )
             interruptible_sleep(wait_sec)
         elif rate_limited:
-            write_daemon("sleeping", "Rate limited — resuming in 1 hour", wake_iso(SLEEP_RATE_LIMITED))
-            interruptible_sleep(SLEEP_RATE_LIMITED)
+            mark_model_exhausted(model, _limit_reset_epoch)
+            if state.get("rate_limit_hit"):
+                # Clear the flag so the next run isn't misread as still limited
+                state["rate_limit_hit"] = False
+                STATE_FILE.write_text(json.dumps(state, indent=2))
+            next_model = pick_model()
+            if next_model:
+                write_daemon(
+                    "sleeping",
+                    f"{model} usage exhausted — falling back to {next_model}",
+                    wake_iso(SLEEP_MODEL_SWITCH),
+                )
+                interruptible_sleep(SLEEP_MODEL_SWITCH)
+            else:
+                wait_sec = seconds_until_any_model()
+                write_daemon(
+                    "sleeping",
+                    f"All models exhausted — sleeping {wait_sec / 3600:.1f}h until the earliest limit resets",
+                    wake_iso(wait_sec),
+                )
+                interruptible_sleep(wait_sec)
         elif phase == "IDLE":
             write_daemon("sleeping", "Queue exhausted — resuming in 1 hour for task research", wake_iso(SLEEP_QUEUE_EMPTY))
             interruptible_sleep(SLEEP_QUEUE_EMPTY)
