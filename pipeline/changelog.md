@@ -163,3 +163,4 @@ feat(semantic-core,api,dashboard): workflow service test suite & curated catalog
 - 2026-06-09: test(dashboard): unit tests for 9 dashboard components — 79 tests, completes Dashboard Component Unit Test Suite (Layer 76) [SHA: cf0613e]
 - 2026-06-09: chore: add core vitest config, admin-console e2e spec, local researcher script [SHA: f9861ef]
 - 2026-06-09: fix(api): mount orphaned permission, granular-permission & entity-search routes (were 404; dashboard permissions page was broken) [SHA: 342ce53]
+- 2026-06-09: fix(api): mount orphaned /workflows route (was 404; dashboard workflows page broken) [SHA: 0a81504]
