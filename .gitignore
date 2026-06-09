@@ -16,5 +16,6 @@ packages/*/src/**/*.d.ts.map
 CLAUDE.local.md
 logs/
 pipeline/daemon.json
+pipeline/session-tokens.json
 __pycache__/
 *.pyc

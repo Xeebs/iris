@@ -25,6 +25,7 @@ IRIS        = Path(__file__).resolve().parent.parent
 STATE_FILE  = IRIS / "pipeline" / "state.json"
 DAEMON_FILE = IRIS / "pipeline" / "daemon.json"
 USAGE_FILE  = IRIS / "pipeline" / "usage.json"
+SESSION_FILE = IRIS / "pipeline" / "session-tokens.json"   # live in-flight session counters
 QUEUE_MD    = IRIS / "pipeline" / "queue.md"
 LOG_DIR     = IRIS / "logs"
 CLAUDE      = Path.home() / ".local" / "bin" / "claude"
@@ -83,7 +84,12 @@ _started_at  = datetime.now(timezone.utc).isoformat()
 _session_tokens_lock   = threading.Lock()
 _session_input_tokens  = 0
 _session_output_tokens = 0
+_session_cache_read     = 0
+_session_cache_creation = 0
+_session_msg_count      = 0
 _budget_kill_triggered = False
+_last_session_write    = 0.0
+SESSION_WRITE_INTERVAL = 5.0   # seconds between live session-token file updates
 
 # model fallback state (reader thread sets the flags; main loop consumes them)
 _model_exhausted_until: dict[str, float] = {}   # model id → epoch when usable again
@@ -286,6 +292,29 @@ def build_prompt() -> str:
     return BASE_PROMPT + budget_line
 
 
+def write_session_tokens(force: bool = False) -> None:
+    """Publish live in-flight session counters so the monitor can show real usage
+    mid-run (usage.json is only written when a session ends)."""
+    global _last_session_write
+    now = time.time()
+    if not force and now - _last_session_write < SESSION_WRITE_INTERVAL:
+        return
+    _last_session_write = now
+    with _session_tokens_lock:
+        payload = {
+            "model":                       _active_model,
+            "input_tokens":                _session_input_tokens,   # running max = current context size
+            "output_tokens":               _session_output_tokens,
+            "cache_read_input_tokens":     _session_cache_read,
+            "cache_creation_input_tokens": _session_cache_creation,
+            "messages":                    _session_msg_count,
+            "updated_at":                  _now_iso(),
+        }
+    tmp = SESSION_FILE.with_suffix(".tmp")
+    tmp.write_text(json.dumps(payload, indent=2))
+    tmp.replace(SESSION_FILE)
+
+
 # ── stream-json stdout reader ─────────────────────────────────────────────────
 
 def _extract_text(content: list) -> str:
@@ -305,6 +334,7 @@ def _stdout_reader(proc: subprocess.Popen, log_file_path: Path) -> None:
     - Triggers a SIGTERM if the combined (historical + session) budget is hit.
     """
     global _session_input_tokens, _session_output_tokens, _budget_kill_triggered
+    global _session_cache_read, _session_cache_creation, _session_msg_count
 
     with open(log_file_path, "a", buffering=1) as lf:
         for raw_line in proc.stdout:  # type: ignore[union-attr]
@@ -329,7 +359,7 @@ def _stdout_reader(proc: subprocess.Popen, log_file_path: Path) -> None:
                 content = msg.get("content", [])
                 usage   = msg.get("usage", {})
 
-                text = _extract_text(content)
+                text = " ".join(_extract_text(content).split())  # single line — keeps the log greppable
                 if text:
                     lf.write(f"[claude] {text[:500]}\n")
 
@@ -338,8 +368,14 @@ def _stdout_reader(proc: subprocess.Popen, log_file_path: Path) -> None:
                     # input_tokens grows with context — keep the running max
                     _session_input_tokens = max(
                         _session_input_tokens,
-                        usage.get("input_tokens", 0),
+                        usage.get("input_tokens", 0)
+                        + usage.get("cache_read_input_tokens", 0)
+                        + usage.get("cache_creation_input_tokens", 0),
                     )
+                    _session_cache_read     += usage.get("cache_read_input_tokens", 0)
+                    _session_cache_creation += usage.get("cache_creation_input_tokens", 0)
+                    _session_msg_count      += 1
+                write_session_tokens()
 
             elif etype == "result":
                 if event.get("is_error") or str(event.get("subtype", "")).startswith("error"):
@@ -349,10 +385,16 @@ def _stdout_reader(proc: subprocess.Popen, log_file_path: Path) -> None:
                 dur   = event.get("duration_ms", 0)
                 with _session_tokens_lock:
                     # Authoritative totals override running estimates
-                    _session_input_tokens  = usage.get("input_tokens",  _session_input_tokens)
-                    _session_output_tokens = usage.get("output_tokens", _session_output_tokens)
+                    _session_input_tokens = max(
+                        _session_input_tokens,
+                        usage.get("input_tokens", 0)
+                        + usage.get("cache_read_input_tokens", 0)
+                        + usage.get("cache_creation_input_tokens", 0),
+                    )
+                    _session_output_tokens = max(_session_output_tokens, usage.get("output_tokens", 0))
                     sess_in  = _session_input_tokens
                     sess_out = _session_output_tokens
+                write_session_tokens(force=True)
                 lf.write(
                     f"[budget] Session total — in: {sess_in:,}  out: {sess_out:,}  "
                     f"cost: ${cost:.4f}  dur: {dur / 1000:.1f}s\n"
@@ -401,6 +443,7 @@ signal.signal(signal.SIGUSR1, _on_sigusr1)
 
 def main() -> None:
     global _current_proc, _session_input_tokens, _session_output_tokens, _budget_kill_triggered
+    global _session_cache_read, _session_cache_creation, _session_msg_count
     global BUDGET_LIMIT, BUDGET_WINDOW_HOURS
     global MODEL_CHAIN, MODEL_EXHAUSTED_HOLD, _active_model, _limit_hit_detected, _limit_reset_epoch
 
@@ -450,11 +493,16 @@ def main() -> None:
             lf.write(f"\n[{datetime.now().isoformat()}] === Pipeline run starting (model: {model}) ===\n")
 
         # Reset per-session state
-        _session_input_tokens  = 0
-        _session_output_tokens = 0
+        with _session_tokens_lock:
+            _session_input_tokens   = 0
+            _session_output_tokens  = 0
+            _session_cache_read     = 0
+            _session_cache_creation = 0
+            _session_msg_count      = 0
         _budget_kill_triggered = False
         _limit_hit_detected    = False
         _limit_reset_epoch     = 0.0
+        write_session_tokens(force=True)
 
         _current_proc = subprocess.Popen(
             [

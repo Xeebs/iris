@@ -9,6 +9,7 @@ Press Ctrl+C to exit.
 
 import json
 import re
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 from time import sleep
@@ -22,9 +23,10 @@ from rich.table import Table
 from rich.text import Text
 
 IRIS        = Path(__file__).resolve().parent.parent
-DAEMON_JSON = IRIS / "pipeline" / "daemon.json"
-STATE_JSON  = IRIS / "pipeline" / "state.json"
-USAGE_JSON  = IRIS / "pipeline" / "usage.json"
+DAEMON_JSON  = IRIS / "pipeline" / "daemon.json"
+STATE_JSON   = IRIS / "pipeline" / "state.json"
+USAGE_JSON   = IRIS / "pipeline" / "usage.json"
+SESSION_JSON = IRIS / "pipeline" / "session-tokens.json"
 QUEUE_MD    = IRIS / "pipeline" / "queue.md"
 CHANGE_MD   = IRIS / "pipeline" / "changelog.md"
 LOG_DIR     = IRIS / "logs"
@@ -133,14 +135,108 @@ def _parse_changelog(path: Path) -> list[str]:
     return entries
 
 
-def _tail_log(n: int = LOG_LINES) -> list[str]:
+def _window_tokens(usage: dict, window_hours: float) -> int:
+    """Sum recorded session tokens inside the rolling budget window."""
+    cutoff = time.time() - window_hours * 3600
+    return sum(
+        s.get("input_tokens", 0) + s.get("output_tokens", 0)
+        for s in usage.get("sessions", [])
+        if s.get("timestamp", 0) > cutoff
+    )
+
+
+# Daemon logs are stream-json (one JSON event per line, often huge). The recent-log
+# panel summarizes each event to a single short action line instead of raw output.
+
+_TOOL_ARG_KEYS = ("description", "file_path", "pattern", "skill", "command", "prompt", "query")
+
+
+def _summarize_tool_use(name: str, inp: dict) -> str:
+    for key in _TOOL_ARG_KEYS:
+        val = inp.get(key)
+        if isinstance(val, str) and val.strip():
+            val = " ".join(val.split())
+            if key == "file_path":
+                val = val.replace(f"{IRIS}/", "")
+            return f"{name} · {val[:78]}"
+    return name
+
+
+def _summarize_line(line: str) -> list[tuple[str, str]]:
+    """Convert one log line into zero or more (style, summary) entries."""
+    line = line.strip()
+    if not line:
+        return []
+    if "=== Pipeline run" in line:
+        return [("marker", line[:110])]
+    if line.startswith("[budget]"):
+        return [("budget", line[:110])]
+    if line.startswith("[claude]"):
+        return []  # raw text echo — the assistant event below carries the same text
+    if not line.startswith("{"):
+        style = "error" if re.search(r"error|traceback|fail", line, re.I) else "dim"
+        return [(style, line[:110])]
+
+    try:
+        event = json.loads(line)
+    except json.JSONDecodeError:
+        return []
+
+    etype = event.get("type", "")
+    out: list[tuple[str, str]] = []
+
+    if etype == "system" and event.get("subtype") == "init":
+        out.append(("marker", f"▶ session started — {event.get('model', '?')}"))
+
+    elif etype == "assistant":
+        for block in event.get("message", {}).get("content", []):
+            if not isinstance(block, dict):
+                continue
+            if block.get("type") == "tool_use":
+                summary = _summarize_tool_use(block.get("name", "?"), block.get("input") or {})
+                out.append(("tool", f"⚒ {summary}"))
+            elif block.get("type") == "text":
+                text = " ".join(block.get("text", "").split())
+                if text:
+                    out.append(("claude", f"💬 {text[:100]}"))
+
+    elif etype == "user":
+        for block in event.get("message", {}).get("content", []):
+            if isinstance(block, dict) and block.get("type") == "tool_result" and block.get("is_error"):
+                content = block.get("content", "")
+                if isinstance(content, list):
+                    content = " ".join(
+                        b.get("text", "") for b in content if isinstance(b, dict)
+                    )
+                content = " ".join(str(content).split())
+                out.append(("error", f"✗ tool error · {content[:90]}"))
+
+    elif etype == "result":
+        ok     = not event.get("is_error")
+        result = " ".join(str(event.get("result", "")).split())
+        cost   = event.get("total_cost_usd", event.get("cost_usd", 0)) or 0
+        out.append((
+            "marker" if ok else "error",
+            f"■ run {'completed' if ok else 'FAILED'} — {result[:70]}  (${cost:.2f})",
+        ))
+
+    return out
+
+
+def _recent_actions(n: int = LOG_LINES) -> list[tuple[str, str]]:
     logs = sorted(LOG_DIR.glob("daemon-*.log"))
     if not logs:
         return []
     try:
-        return logs[-1].read_text().splitlines()[-n:]
+        with open(logs[-1], "rb") as f:
+            f.seek(max(0, logs[-1].stat().st_size - 512 * 1024))
+            raw = f.read().decode("utf-8", errors="replace")
     except Exception:
         return []
+    actions: list[tuple[str, str]] = []
+    for line in raw.splitlines():
+        actions.extend(_summarize_line(line))
+    return actions[-n:]
 
 
 # ── panel builders ────────────────────────────────────────────────────────────
@@ -281,12 +377,21 @@ def _queue_table(tasks: list[dict]) -> Table:
     return tbl
 
 
-def _budget_panel(daemon: dict) -> Panel:
-    tb = daemon.get("token_budget", {})
-    used  = tb.get("used",  0)
+def _budget_panel(daemon: dict, usage: dict, session: dict) -> Panel:
+    tb    = daemon.get("token_budget", {})
     limit = tb.get("limit", 0)
-    pct   = tb.get("pct",   0.0)   # already multiplied by 100
     hours = tb.get("window_hours", 5)
+
+    # Compute usage live instead of trusting daemon.json (which is only written
+    # on daemon state transitions, so it goes stale during long runs).
+    window_used = _window_tokens(usage, hours)
+    sess_in     = session.get("input_tokens", 0)
+    sess_out    = session.get("output_tokens", 0)
+    sess_cache  = session.get("cache_read_input_tokens", 0)
+    sess_msgs   = session.get("messages", 0)
+    live        = (sess_in + sess_out) if daemon.get("status") == "running" else 0
+    used        = window_used + live
+    pct         = (used / limit * 100) if limit > 0 else 0.0
 
     t = Text()
 
@@ -317,6 +422,13 @@ def _budget_panel(daemon: dict) -> Panel:
     t.append("Remaining ", style="dim"); t.append(f"{limit - used:,} tokens\n", style=pct_style)
     t.append("Window    ", style="dim"); t.append(f"{hours:.0f}h rolling\n",  style="white")
 
+    if live > 0 or (daemon.get("status") == "running" and sess_msgs > 0):
+        t.append("\nLive session\n", style="bold")
+        t.append("  ctx in  ", style="dim"); t.append(f"{sess_in:,}\n",  style="cyan")
+        t.append("  output  ", style="dim"); t.append(f"{sess_out:,}\n", style="cyan")
+        t.append("  cached  ", style="dim"); t.append(f"{sess_cache:,}\n", style="dim cyan")
+        t.append("  msgs    ", style="dim"); t.append(f"{sess_msgs:,}\n",  style="white")
+
     if pct >= 95:
         t.append("\n⚠  Budget paused — waiting for window reset\n", style="bold red")
 
@@ -324,20 +436,23 @@ def _budget_panel(daemon: dict) -> Panel:
     return Panel(t, title="[bold]TOKEN BUDGET[/bold]", border_style=border)
 
 
-def _log_panel(lines: list[str]) -> Panel:
+_LOG_STYLE = {
+    "marker": "bold cyan",
+    "claude": "italic white",
+    "tool":   "cyan",
+    "budget": "magenta",
+    "error":  "red",
+    "dim":    "dim",
+}
+
+
+def _log_panel(actions: list[tuple[str, str]]) -> Panel:
     t = Text()
-    for line in lines:
-        if "=== Iris" in line or "=== Pipeline" in line:
-            t.append(line + "\n", style="bold cyan")
-        elif any(w in line.upper() for w in ("ERROR", "FAIL", "TRACEBACK")):
-            t.append(line + "\n", style="red")
-        elif any(w in line.upper() for w in ("COMMITTED", "PASS", "SUCCESS", "✓")):
-            t.append(line + "\n", style="green")
-        elif line.startswith("["):
-            t.append(line + "\n", style="dim")
-        else:
-            t.append(line + "\n")
-    return Panel(t, title="[bold]RECENT LOG[/bold]", border_style="dim white")
+    if not actions:
+        t.append("No activity yet.", style="dim")
+    for style, line in actions:
+        t.append(line + "\n", style=_LOG_STYLE.get(style, "white"))
+    return Panel(t, title="[bold]RECENT ACTIVITY[/bold]", border_style="dim white")
 
 
 # ── layout ────────────────────────────────────────────────────────────────────
@@ -365,9 +480,11 @@ def _make_layout() -> Layout:
 def _update(layout: Layout) -> None:
     daemon    = _read_json(DAEMON_JSON)
     state     = _read_json(STATE_JSON)
+    usage     = _read_json(USAGE_JSON)
+    session   = _read_json(SESSION_JSON)
     tasks     = _parse_queue(QUEUE_MD)
     changelog = _parse_changelog(CHANGE_MD)
-    log_lines = _tail_log()
+    actions   = _recent_actions()
 
     now_str  = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     unworked = sum(1 for tk in tasks if tk.get("status", "").strip() == "UNWORKED")
@@ -385,7 +502,7 @@ def _update(layout: Layout) -> None:
 
     layout["daemon"].update(_daemon_panel(daemon))
     layout["pipeline"].update(_pipeline_panel(state, tasks))
-    layout["budget"].update(_budget_panel(daemon))
+    layout["budget"].update(_budget_panel(daemon, usage, session))
     layout["changelog"].update(_changelog_panel(changelog))
 
     layout["right"].update(Panel(
@@ -394,7 +511,7 @@ def _update(layout: Layout) -> None:
         border_style="magenta",
     ))
 
-    layout["footer"].update(_log_panel(log_lines))
+    layout["footer"].update(_log_panel(actions))
 
 
 # ── entry point ───────────────────────────────────────────────────────────────
