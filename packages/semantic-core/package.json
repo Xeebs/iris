@@ -81,7 +81,8 @@
     "./resilience-middleware": "./dist/resilience-middleware.js",
     "./connector-benchmarker": "./dist/connector-benchmarker.js",
     "./sdk-generator": "./dist/sdk-generator.js",
-    "./streaming-context": "./dist/streaming-context.js"
+    "./streaming-context": "./dist/streaming-context.js",
+    "./vector-store-tuner": "./dist/vector-store-tuner.js"
   },
   "scripts": {
     "build": "tsc --build",

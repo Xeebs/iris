@@ -68,6 +68,7 @@ import { createConnectorRecipeRoutes } from './routes/connector-recipes.js';
 import { createAdminIndexRoutes } from './routes/admin-index.js';
 import { createStreamingContextRoutes } from './routes/streaming-context.js';
 import { createStreamingQueryRoutes } from './routes/streaming-queries.js';
+import { createVectorStoreAdminRoutes } from './routes/vector-store-admin.js';
 import { createIndexCompositionRoutes } from './routes/index-composition.js';
 import { createAutoTuningRoutes } from './routes/auto-tuning.js';
 import { createProviderRoutes } from './routes/providers.js';
@@ -225,6 +226,7 @@ function createApp(
   authed.route('/proactive', createProactiveContextRoutes(sql));
   authed.route('/nlp-config', createNlpConfigRoutes(sql));
   authed.route('/streaming-queries', createStreamingQueryRoutes(sql));
+  authed.route('/admin/vector-store', createVectorStoreAdminRoutes(sql));
 
   // Webhook routes: inbound (unauthenticated) + events status (authenticated)
   app.route('/api/v1/webhooks', createWebhookRoutes(sql));
