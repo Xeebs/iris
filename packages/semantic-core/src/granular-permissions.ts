@@ -1,5 +1,5 @@
 import { logger } from '@iris/core/logger';
-import type { SemanticEntity } from '@iris/connector-sdk';
+import type { SemanticEntity, AttributeValue } from '@iris/connector-sdk';
 
 const log = logger.child({ service: 'granular-permissions' });
 
@@ -165,7 +165,7 @@ export class GranularPermissionManager {
    */
   applyFieldMasking(entities: SemanticEntity[], userId: string, workspaceId: string): SemanticEntity[] {
     return entities.map((entity) => {
-      const maskedAttrs: Record<string, unknown> = {};
+      const maskedAttrs: Record<string, AttributeValue> = {};
       for (const [field, value] of Object.entries(entity.attributes)) {
         if (this.checkFieldAccess(userId, workspaceId, entity.type, field, 'view')) {
           maskedAttrs[field] = value;
