@@ -24,6 +24,7 @@ import { createSuggestionsRoutes } from './routes/suggestions.js';
 import { createEntitySearchRoutes } from './routes/entity-search.js';
 import { createGranularPermissionsRoutes } from './routes/granular-permissions.js';
 import { makePermissionRouter } from './routes/permission-management.js';
+import { createWorkflowRoutes } from './routes/workflows.js';
 import { createExportRoutes } from './routes/export.js';
 import { createWorkspaceConfigRoutes } from './routes/workspace-config.js';
 import { createIndexOptimizationRoutes } from './routes/index-optimization.js';
@@ -238,6 +239,9 @@ function createApp(
   // (roles/templates/evaluate vs fields/connectors).
   authed.route('/permissions', makePermissionRouter(sql));
   authed.route('/permissions', createGranularPermissionsRoutes(sql));
+
+  // Workflows — the dashboard /workflows page calls /api/v1/workflows (was 404).
+  authed.route('/workflows', createWorkflowRoutes(sql));
 
   // Entity search + suggestions (paths are /entities/search, /entities/search-suggestions).
   // The route uses a narrow tagged-template SqlFn (for mockability); the postgres
