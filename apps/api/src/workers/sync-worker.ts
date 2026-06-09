@@ -12,6 +12,7 @@ import { emitSyncEvent } from '@iris/semantic-core/sync-events';
 import { ConnectorCDCManager } from '@iris/semantic-core/connector-cdc';
 import type { VectorStore } from '@iris/semantic-core';
 import { ConnectorService } from '../services/connector-service.js';
+import { registerConnectors } from '../connector-registration.js';
 import type postgres from 'postgres';
 
 const log = logger.child({ worker: 'sync-worker' });
@@ -42,6 +43,7 @@ export function createSyncWorker(
   openAiApiKey: string,
   redisUrl: string,
 ): Worker<SyncJobData> {
+  registerConnectors();
   const syncQueue = new SyncJobQueue(redisUrl);
   const dlqService = new SyncJobDlqService(sql, syncQueue);
   const connectorService = new ConnectorService(sql);
@@ -114,7 +116,7 @@ export function createSyncWorker(
             async function* changedEntityGenerator() {
               for (const entity of changedEntities) yield entity;
             }
-            const indexResult = await indexEntities(changedEntityGenerator(), vectorStore, { openAiApiKey });
+            const indexResult = await indexEntities(changedEntityGenerator(), vectorStore, { openAiApiKey, workspaceId });
 
             const runResult = cdcManager.buildRunResult(deltas);
             runResult.strategy = cdcStrategy;

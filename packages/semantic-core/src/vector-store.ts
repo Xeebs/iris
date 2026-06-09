@@ -23,8 +23,10 @@ export interface VectorStore {
   /**
    * Upsert a batch of entities with their pre-computed embedding vectors.
    * Overwrites any existing entry with the same entity id.
+   * When workspaceId is omitted, falls back to deriving it from the entity id
+   * (legacy behavior — workspace-scoped queries will not match such rows).
    */
-  upsert(entities: SemanticEntity[], vectors: number[][]): Promise<void>;
+  upsert(entities: SemanticEntity[], vectors: number[][], workspaceId?: string): Promise<void>;
 
   /**
    * Find the top-k most similar entities to a query vector.
@@ -96,7 +98,7 @@ export class PgvectorStore implements VectorStore {
     log.info('PgvectorStore initialized');
   }
 
-  async upsert(entities: SemanticEntity[], vectors: number[][]): Promise<void> {
+  async upsert(entities: SemanticEntity[], vectors: number[][], workspaceId?: string): Promise<void> {
     if (entities.length !== vectors.length) {
       throw new IndexerError('entities and vectors arrays must have the same length');
     }
@@ -104,7 +106,7 @@ export class PgvectorStore implements VectorStore {
 
     const rows = entities.map((e, i) => ({
       id: e.id,
-      workspace_id: extractWorkspaceId(e.id),
+      workspace_id: workspaceId ?? extractWorkspaceId(e.id),
       type: e.type,
       label: e.label,
       attributes: JSON.stringify(e.attributes),

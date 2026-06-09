@@ -1,14 +1,51 @@
 import { clerkMiddleware, getAuth } from '@hono/clerk-auth';
 import type { MiddlewareHandler } from 'hono';
 import { createMiddleware } from 'hono/factory';
+import type postgres from 'postgres';
+
+import { ApiKeyManager } from '@iris/semantic-core';
+import { logger } from '@iris/core/logger';
 
 export { clerkMiddleware };
+
+const log = logger.child({ middleware: 'auth' });
+
+/**
+ * Demo-mode API-key authentication (DEMO_MODE=true only). Accepts the
+ * `Authorization: Bearer iris_...` MCP API keys issued by /demo/bootstrap,
+ * validates them against mcp_api_keys, and injects the key's workspaceId.
+ * Mount before requireAuth; inactive (pass-through) outside demo mode.
+ *
+ * @param sql - Postgres client for key validation
+ * @returns Hono middleware
+ */
+export function demoApiKeyAuth(sql: ReturnType<typeof postgres>): MiddlewareHandler {
+  const keyManager = new ApiKeyManager(sql);
+  return createMiddleware(async (c, next) => {
+    if (process.env['DEMO_MODE'] !== 'true') return next();
+
+    const header = c.req.header('Authorization');
+    if (!header?.startsWith('Bearer iris_')) return next();
+
+    const result = await keyManager.validateKey(header.slice('Bearer '.length));
+    if (result.isOk()) {
+      c.set('workspaceId', result.value.workspaceId);
+      c.set('demoAuthenticated', true);
+      log.debug('Demo API-key auth accepted', { workspaceId: result.value.workspaceId });
+    }
+    return next();
+  });
+}
 
 /**
  * Require a valid Clerk JWT on the request.
  * Returns 401 if the token is missing or invalid.
+ * Requests already authenticated by demoApiKeyAuth (DEMO_MODE) pass through.
  */
 export const requireAuth: MiddlewareHandler = createMiddleware(async (c, next) => {
+  if (c.get('demoAuthenticated') === true) {
+    return next();
+  }
   const auth = getAuth(c);
   if (!auth?.userId) {
     return c.json(
@@ -68,5 +105,6 @@ export function assertWorkspaceMatch(
 declare module 'hono' {
   interface ContextVariableMap {
     workspaceId: string;
+    demoAuthenticated: boolean;
   }
 }

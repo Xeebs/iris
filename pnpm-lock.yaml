@@ -41,6 +41,9 @@ importers:
       '@iris/compression':
         specifier: workspace:*
         version: link:../../packages/compression
+      '@iris/connector-hubspot':
+        specifier: workspace:*
+        version: link:../../packages/connectors/hubspot
       '@iris/connector-sdk':
         specifier: workspace:*
         version: link:../../packages/connector-sdk

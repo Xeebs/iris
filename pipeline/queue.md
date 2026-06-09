@@ -86,7 +86,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: VS-3 One-command slice demo script (connect → sync → index)
 - **Layer**: 78 — Vertical Slice
-- **Status**: IN_PROGRESS
+- **Status**: COMMITTED
 - **Priority**: High
 - **Description**: Create `scripts/slice-demo.sh` (plus a TypeScript driver `scripts/slice-demo.ts` if cleaner) that from a clean state: (1) resets the database (drop/recreate schema, run all migrations), (2) sets DEMO_MODE=true and EMBEDDING_PROVIDER=hash-deterministic in the API server environment, (3) starts the API server, (4) calls POST /api/v1/demo/bootstrap to create a workspace and API key, (5) creates a HubSpot connector instance in demoMode via real REST POST /api/v1/connectors, (6) triggers sync and waits for completion, (7) verifies indexed entity counts in the vector store match fixture counts (select count from iris_entities where workspace_id = $1), and exits non-zero with a clear message at the first broken step. This script is the slice's source of truth — it must need no manual steps beyond `docker-compose up -d` and env vars in `.env.local`. Keep it boring and observable: log each step, fail fast.
 - **Files**:

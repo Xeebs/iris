@@ -93,7 +93,7 @@ describe('indexEntities', () => {
     const result = await indexEntities(makeEntityGen([entity]), store);
     expect(result.created).toBe(1);
     expect(result.deduplicated).toBe(0);
-    expect(store.upsert).toHaveBeenCalledWith([entity], [makeVector(0)]);
+    expect(store.upsert).toHaveBeenCalledWith([entity], [makeVector(0)], undefined);
   });
 
   it('deduplicates entities with similarity above threshold', async () => {

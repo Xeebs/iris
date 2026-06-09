@@ -249,7 +249,7 @@ async function flushBatch(
   }
 
   if (toUpsert.length > 0) {
-    await vectorStore.upsert(toUpsert, toUpsertVectors);
+    await vectorStore.upsert(toUpsert, toUpsertVectors, config.workspaceId);
   }
 
   // Persist entity nodes and relationships to the knowledge graph

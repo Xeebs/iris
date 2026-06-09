@@ -6,7 +6,10 @@ import { clerkMiddleware } from '@hono/clerk-auth';
 import { PgvectorStore } from '@iris/semantic-core';
 import { logger } from '@iris/core/logger';
 
-import { requireAuth, errorHandler, defaultRateLimiter, syncRateLimiter, syncQuota, webhookQuota } from './middleware/index.js';
+import { SyncJobQueue } from '@iris/queue';
+
+import { requireAuth, demoApiKeyAuth, errorHandler, defaultRateLimiter, syncRateLimiter, syncQuota, webhookQuota } from './middleware/index.js';
+import { registerConnectors } from './connector-registration.js';
 import { checkHealth } from './health.js';
 import { initTelemetry, shutdownTelemetry } from './telemetry.js';
 import { createConnectorRoutes } from './routes/connectors.js';
@@ -99,6 +102,8 @@ function createApp(
 ): Hono {
   const app = new Hono();
 
+  registerConnectors();
+
   // Health/readiness probes — unauthenticated, no Clerk middleware
   app.get('/health', async (c) => {
     const result = await checkHealth(sql, redis);
@@ -146,6 +151,9 @@ function createApp(
   app.use('*', clerkMiddleware());
 
   const authed = new Hono();
+  if (process.env['DEMO_MODE'] === 'true') {
+    authed.use('*', demoApiKeyAuth(sql));
+  }
   authed.use('*', requireAuth);
 
   // Global rate limit: 100 req/min per user
@@ -153,7 +161,8 @@ function createApp(
     authed.use('*', defaultRateLimiter(redis));
   }
 
-  const connectorRoutes = createConnectorRoutes(sql);
+  // Without a SyncJobQueue, POST /connectors/:id/sync silently no-ops.
+  const connectorRoutes = createConnectorRoutes(sql, redisUrl ? new SyncJobQueue(redisUrl) : undefined);
 
   // Tighter limit on sync triggers: sliding window + token-bucket quota with burst
   if (redis) {

@@ -168,3 +168,4 @@ feat(semantic-core,api,dashboard): workflow service test suite & curated catalog
 - 2026-06-09 cycle 345: feat(semantic-core) VS-1b deterministic hash embedding provider + EMBEDDING_PROVIDER wiring in generateEmbeddings
 - 2026-06-09 cycle 345: feat(connector-hubspot) VS-2 demo-mode fixture sync + canonical-question fixtures; fixed broken package entry point
 VS-1 (slice path audit): documented connect→sync→index→serve→query chain in docs/VERTICAL_SLICE.md; found blocker B1 (sync worker unstarted) → added VS-2c. — 2026-06-09
+- 2026-06-09 cycle 345: feat(api,semantic-core,scripts) VS-3 slice-demo script + 4 slice-path fixes (workspace_id at index time, registry bootstrap, sync queue wiring, demo API-key auth)
