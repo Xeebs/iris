@@ -4941,7 +4941,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Dashboard Component Unit Test Suite
 - **Layer**: 76 — Dashboard Test Coverage & WebSocket Infrastructure
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: High
 - **Description**: Create unit tests for 20+ untested dashboard components to reach the 50% coverage target for apps/dashboard. Components without tests include: advanced-query-builder.tsx, role-permission-matrix.tsx, retention-policy-editor.tsx, audit-log-filter.tsx, dlq-inspector.tsx, dependency-graph-viewer.tsx, agent-proactive-config.tsx, entity-detail-panel.tsx, mcp-tool-browser.tsx, real-time-log-viewer.tsx, backup-manager.tsx, schema-discovery-wizard.tsx, relationship-mapper.tsx, entity-audit-timeline.tsx, billing-card.tsx, performance-charts.tsx, invite-form.tsx, lineage-flow-diagram.tsx. Create apps/dashboard/components/__tests__/ directory and individual test files using Vitest + React Testing Library. For each component, write 6-8 tests covering: (1) component renders without errors with required props, (2) user interactions (clicks, form submissions, selections), (3) conditional rendering based on props/state, (4) data prop validation (handles null/undefined), (5) event handlers called correctly, (6) accessibility (ARIA labels, semantic HTML). Key focus areas: advanced-query-builder (query validation, filter chain construction, parameter binding), role-permission-matrix (checkbox toggling, matrix rendering, submission), audit-log-filter (date range, entity type, severity filtering), entity-detail-panel (field display, relationship expansion, edit mode). Total: 120+ assertions across all tests. Reference testing.md for 50% dashboard coverage target.
 - **Files**:
