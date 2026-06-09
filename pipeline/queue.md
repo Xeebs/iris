@@ -4159,7 +4159,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Team & Role-Based Context Recommendation Engine
 - **Layer**: 67 — Advanced Insights, Automation & Quality Assurance
-- **Status**: IN_PROGRESS
+- **Status**: COMMITTED
 - **Priority**: High
 - **Description**: Build an intelligent context recommendation system that surfaces relevant data to entire teams and roles based on historical access patterns, job functions, and entity relationships. Create packages/semantic-core/src/team-context-recommender.ts with TeamContextRecommender: (1) analyzeTeamContextUsage(teamId, window) computing aggregate context usage patterns by role, (2) generateTeamRecommendations(teamId, topK=15) ranking entities by relevance to team (role-weighted access patterns 40% + entity recency 30% + relationship to accessed entities 20% + popularity in team 10%), (3) predictContextNeedsByRole(roleId) using historical queries to predict what contexts a role needs, (4) suggestContextExpansionForTeam(teamId) recommending underutilized but valuable entities. Create migration 139 (team_context_usage, role_context_affinities, team_recommendations, recommendation_feedback). Add REST routes: GET /api/v1/teams/:id/recommended-contexts (ranked by relevance + reasoning), PUT /api/v1/teams/:id/context-preferences (save overrides), GET /api/v1/roles/:id/context-predictions (role-specific predictions). Add dashboard page /team-insights with: recommended contexts widget per team, context popularity heatmap by role, "new contexts to explore" cards with onboarding, team context access timeline. Include 28+ tests (16 unit scoring + role analysis + 12 integration team patterns).
 - **Files**:
@@ -4178,7 +4178,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Automated Business Insight Generation & Reporting
 - **Layer**: 67 — Advanced Insights, Automation & Quality Assurance
-- **Status**: UNWORKED
+- **Status**: IN_PROGRESS
 - **Priority**: High
 - **Description**: Create an automated insight generation system that analyzes indexed data to surface actionable business intelligence without manual queries. Create packages/semantic-core/src/insight-generator.ts with InsightGenerator: (1) discoverInsights(entityTypes, filters) scanning entities to detect patterns (anomalies, outliers, trends, missing data, relationships), (2) generateInsightReport(entityType, granularity='daily'|'weekly') creating executive summaries with key metrics, trend direction, flagged exceptions, (3) scoreInsightValue(insight) ranking insights by business impact (frequency of affected entities, impact on metrics, novelty), (4) scheduleInsightGeneration(entityTypes, frequency, recipients) configuring automated daily/weekly reports with delivery, (5) explainInsight(insightId) providing drill-down details and data sources. Create migration 140 (generated_insights, insight_metrics, insight_delivery_jobs, insight_value_feedback). Add REST routes: GET /api/v1/insights (paginated, filterable by type/value), GET /api/v1/insights/:id/details (full insight with evidence), POST /api/v1/insights/:id/feedback (value signal), GET /api/v1/insights/scheduled (scheduled reports). Add dashboard page /insights with: insights feed (sortable by value, recency, impact), "did you know?" widgets on overview, scheduled report management, insight value feedback + trending topics. Include 32+ tests (18 unit insight discovery + scoring + 14 integration report generation).
 - **Files**:
