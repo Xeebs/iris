@@ -24,8 +24,10 @@ CREATE TABLE query_patterns (
   pattern_definition JSONB NOT NULL,
   confidence_score  NUMERIC(4,3) NOT NULL DEFAULT 0,
   discovered_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  UNIQUE (workspace_id, pattern_type, (pattern_definition->>'type'))
 );
+
+CREATE UNIQUE INDEX IF NOT EXISTS query_patterns_workspace_type_uq
+  ON query_patterns (workspace_id, pattern_type, (pattern_definition->>'type'));
 
 CREATE INDEX idx_query_patterns_workspace ON query_patterns(workspace_id, pattern_type);
 
