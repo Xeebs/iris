@@ -44,6 +44,81 @@
         "lastmodifieddate": "2026-05-05T16:20:00.000Z",
         "associatedcompanyid": "2001"
       }
+    },
+    {
+      "id": "1004",
+      "properties": {
+        "firstname": "David",
+        "lastname": "Nguyen",
+        "email": "david@globex.com",
+        "company": "Globex",
+        "phone": "+1-555-0104",
+        "lifecyclestage": "lead",
+        "hs_lead_status": "NEW",
+        "hubspot_owner_id": "51",
+        "lastmodifieddate": "2026-05-07T09:35:00.000Z",
+        "associatedcompanyid": "2002"
+      }
+    },
+    {
+      "id": "1005",
+      "properties": {
+        "firstname": "Elena",
+        "lastname": "Petrova",
+        "email": "elena@initech.io",
+        "company": "Initech",
+        "phone": "+1-555-0105",
+        "lifecyclestage": "customer",
+        "hs_lead_status": null,
+        "hubspot_owner_id": "52",
+        "lastmodifieddate": "2026-05-08T14:50:00.000Z",
+        "associatedcompanyid": "2003"
+      }
+    },
+    {
+      "id": "1006",
+      "properties": {
+        "firstname": "Frank",
+        "lastname": "Okafor",
+        "email": "frank@initech.io",
+        "company": "Initech",
+        "phone": null,
+        "lifecyclestage": "lead",
+        "hs_lead_status": "OPEN",
+        "hubspot_owner_id": "52",
+        "lastmodifieddate": "2026-05-09T10:05:00.000Z",
+        "associatedcompanyid": "2003"
+      }
+    },
+    {
+      "id": "1007",
+      "properties": {
+        "firstname": "Greta",
+        "lastname": "Visser",
+        "email": "greta@umbrella-logistics.eu",
+        "company": "Umbrella Logistics",
+        "phone": "+31-555-0107",
+        "lifecyclestage": "customer",
+        "hs_lead_status": null,
+        "hubspot_owner_id": "52",
+        "lastmodifieddate": "2026-05-11T08:15:00.000Z",
+        "associatedcompanyid": "2004"
+      }
+    },
+    {
+      "id": "1008",
+      "properties": {
+        "firstname": "Hassan",
+        "lastname": "Karim",
+        "email": "hassan@umbrella-logistics.eu",
+        "company": "Umbrella Logistics",
+        "phone": "+31-555-0108",
+        "lifecyclestage": "lead",
+        "hs_lead_status": "IN_PROGRESS",
+        "hubspot_owner_id": "50",
+        "lastmodifieddate": "2026-05-13T12:40:00.000Z",
+        "associatedcompanyid": "2004"
+      }
     }
   ],
   "paging": {}

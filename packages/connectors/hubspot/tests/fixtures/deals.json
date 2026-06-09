@@ -64,6 +64,71 @@
         "hubspot_owner_id": "50",
         "associatedcompanyid": "2001"
       }
+    },
+    {
+      "id": "3006",
+      "properties": {
+        "dealname": "Initech Platform License",
+        "amount": "67000",
+        "dealstage": "closedwon",
+        "pipeline": "default",
+        "closedate": "2026-01-20",
+        "hs_lastmodifieddate": "2026-01-21T09:15:00.000Z",
+        "hubspot_owner_id": "52",
+        "associatedcompanyid": "2003"
+      }
+    },
+    {
+      "id": "3007",
+      "properties": {
+        "dealname": "Umbrella Data Integration",
+        "amount": "54000",
+        "dealstage": "closedwon",
+        "pipeline": "default",
+        "closedate": "2025-12-15",
+        "hs_lastmodifieddate": "2025-12-16T13:40:00.000Z",
+        "hubspot_owner_id": "52",
+        "associatedcompanyid": "2004"
+      }
+    },
+    {
+      "id": "3008",
+      "properties": {
+        "dealname": "Initech Analytics Add-on",
+        "amount": "12000",
+        "dealstage": "closedlost",
+        "pipeline": "default",
+        "closedate": "2026-02-10",
+        "hs_lastmodifieddate": "2026-02-11T10:05:00.000Z",
+        "hubspot_owner_id": "51",
+        "associatedcompanyid": "2003"
+      }
+    },
+    {
+      "id": "3009",
+      "properties": {
+        "dealname": "Umbrella Security Audit",
+        "amount": "21000",
+        "dealstage": "closedwon",
+        "pipeline": "default",
+        "closedate": "2026-04-22",
+        "hs_lastmodifieddate": "2026-04-23T15:30:00.000Z",
+        "hubspot_owner_id": "50",
+        "associatedcompanyid": "2004"
+      }
+    },
+    {
+      "id": "3010",
+      "properties": {
+        "dealname": "Globex Hardware Refresh",
+        "amount": "39000",
+        "dealstage": "closedlost",
+        "pipeline": "default",
+        "closedate": "2026-03-05",
+        "hs_lastmodifieddate": "2026-03-06T08:45:00.000Z",
+        "hubspot_owner_id": "52",
+        "associatedcompanyid": "2002"
+      }
     }
   ],
   "paging": {}

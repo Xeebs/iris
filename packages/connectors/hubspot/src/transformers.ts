@@ -108,6 +108,9 @@ export function transformCompany(company: HubSpotCompany): SemanticEntity {
 export function transformDeal(deal: HubSpotDeal): SemanticEntity {
   const p = deal.properties;
   const label = p.dealname ?? `Deal ${deal.id}`;
+  // Derived semantic attribute: HubSpot stage names don't contain the word
+  // "open", but users ask about open/closed deals — make it retrievable.
+  const status = p.dealstage === 'closedwon' || p.dealstage === 'closedlost' ? 'closed' : 'open';
 
   return {
     id: `hubspot:deal:${deal.id}`,
@@ -116,6 +119,7 @@ export function transformDeal(deal: HubSpotDeal): SemanticEntity {
     attributes: {
       amount: p.amount ? Number(p.amount) : null,
       stage: p.dealstage ?? null,
+      status: p.dealstage ? status : null,
       pipeline: p.pipeline ?? null,
       closeDate: p.closedate ?? null,
       owner: p.hubspot_owner_id ?? null,

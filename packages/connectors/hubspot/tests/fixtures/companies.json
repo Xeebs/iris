@@ -27,6 +27,34 @@
         "hs_lastmodifieddate": "2026-05-12T09:30:00.000Z",
         "hubspot_owner_id": "51"
       }
+    },
+    {
+      "id": "2003",
+      "properties": {
+        "name": "Initech",
+        "domain": "initech.io",
+        "industry": "Software",
+        "city": "Austin",
+        "country": "United States",
+        "numberofemployees": "300",
+        "annualrevenue": "28000000",
+        "hs_lastmodifieddate": "2026-05-14T10:10:00.000Z",
+        "hubspot_owner_id": "52"
+      }
+    },
+    {
+      "id": "2004",
+      "properties": {
+        "name": "Umbrella Logistics",
+        "domain": "umbrella-logistics.eu",
+        "industry": "Transportation",
+        "city": "Rotterdam",
+        "country": "Netherlands",
+        "numberofemployees": "2400",
+        "annualrevenue": "310000000",
+        "hs_lastmodifieddate": "2026-05-15T11:25:00.000Z",
+        "hubspot_owner_id": "52"
+      }
     }
   ],
   "paging": {}

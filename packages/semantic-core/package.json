@@ -9,6 +9,7 @@
     ".": "./dist/index.js",
     "./indexer": "./dist/indexer.js",
     "./retrieval": "./dist/retrieval.js",
+    "./llm-router": "./dist/llm-router.js",
     "./embedding": "./dist/embedding.js",
     "./vector-store": "./dist/vector-store.js",
     "./glossary": "./dist/glossary.js",

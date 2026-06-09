@@ -47,16 +47,16 @@ describe('HubSpotConnector demo mode', () => {
       const connector = await connectedDemoConnector();
       const entities = await syncAll(connector);
 
-      expect(entities).toHaveLength(10);
+      expect(entities).toHaveLength(22);
       expect(fetchSpy).not.toHaveBeenCalled();
     });
 
     it('yields expected counts per entity type', async () => {
       const entities = await syncAll(await connectedDemoConnector());
       const byType = (t: string) => entities.filter((e) => e.type === t);
-      expect(byType('contact')).toHaveLength(3);
-      expect(byType('company')).toHaveLength(2);
-      expect(byType('deal')).toHaveLength(5);
+      expect(byType('contact')).toHaveLength(8);
+      expect(byType('company')).toHaveLength(4);
+      expect(byType('deal')).toHaveLength(10);
     });
   });
 

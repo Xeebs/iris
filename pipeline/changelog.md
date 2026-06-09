@@ -170,3 +170,4 @@ feat(semantic-core,api,dashboard): workflow service test suite & curated catalog
 VS-1 (slice path audit): documented connect→sync→index→serve→query chain in docs/VERTICAL_SLICE.md; found blocker B1 (sync worker unstarted) → added VS-2c. — 2026-06-09
 - 2026-06-09 cycle 345: feat(api,semantic-core,scripts) VS-3 slice-demo script + 4 slice-path fixes (workspace_id at index time, registry bootstrap, sync queue wiring, demo API-key auth)
 - 2026-06-09 cycle 345: feat(mcp-server,scripts) VS-4 MCP query phase — canonical questions over stdio + query-embedding provider fix
+- 2026-06-09 cycle 346: feat(mcp-server,connector-hubspot,semantic-core) VS-5 token-savings measure phase — per-question Iris-vs-raw-paste report → pipeline/slice-report.md, ≥70% gate; derived open/closed deal status; expanded fixtures (8c/4co/10d) + updated count assertions
