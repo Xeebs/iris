@@ -4923,3 +4923,63 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
   - packages/semantic-core/src/__tests__/nlp-config-parser.integration.test.ts
 - **Depends on**: nothing
 - **Added**: 2026-06-09
+
+---
+
+## Layer 76: Dashboard Test Coverage & WebSocket Infrastructure
+
+### Task: WebSocket Context Stream Handler Tests
+- **Layer**: 76 — Dashboard Test Coverage & WebSocket Infrastructure
+- **Status**: COMMITTED
+- **Priority**: High
+- **Description**: Create comprehensive test suite for apps/api/src/websocket/context-stream-handler.ts, which handles large context responses via WebSocket with streaming chunking but currently has no tests. Create apps/api/src/websocket/__tests__/context-stream-handler.test.ts with 18+ tests covering: (1) createContextStream(query, budget, chunkSize) initializing stream with correct headers and metadata, (2) streamChunk(chunk) properly formatting and serializing chunk with field boundaries, (3) estimateChunkTokenCount(chunk) accurately counting tokens across different field types (strings, arrays, objects), (4) bufferChunk(chunk) queuing chunks when stream buffer is full and resuming after drain, (5) handleStreamError(error) gracefully catching errors and emitting error chunk without corrupting stream, (6) closeStream(graceful=true) finalizing stream with summary stats or immediate termination, (7) trackStreamMetrics(streamId) logging bytes/chunks/latency_ms/error_count to audit table, (8) backpressure handling (client-side pausing should pause server emission), (9) concurrent streams isolation (multiple streams don't interfere), (10) large context edge case (1M+ token response properly chunked and bounded), (11) client reconnection (resuming from last acknowledged chunk), (12) heartbeat/keepalive during long chunks. Add integration tests with mock WebSocket client simulating: slow consumer (backpressure), sudden disconnect, context budget exhaustion mid-stream. Reference testing.md for 75% coverage requirement on mcp-server. Use vitest + ws mocking library.
+- **Files**:
+  - apps/api/src/websocket/__tests__/context-stream-handler.test.ts
+  - apps/api/src/websocket/__tests__/context-stream-handler.integration.test.ts
+- **Depends on**: nothing
+- **Added**: 2026-06-09
+
+### Task: Dashboard Component Unit Test Suite
+- **Layer**: 76 — Dashboard Test Coverage & WebSocket Infrastructure
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Create unit tests for 20+ untested dashboard components to reach the 50% coverage target for apps/dashboard. Components without tests include: advanced-query-builder.tsx, role-permission-matrix.tsx, retention-policy-editor.tsx, audit-log-filter.tsx, dlq-inspector.tsx, dependency-graph-viewer.tsx, agent-proactive-config.tsx, entity-detail-panel.tsx, mcp-tool-browser.tsx, real-time-log-viewer.tsx, backup-manager.tsx, schema-discovery-wizard.tsx, relationship-mapper.tsx, entity-audit-timeline.tsx, billing-card.tsx, performance-charts.tsx, invite-form.tsx, lineage-flow-diagram.tsx. Create apps/dashboard/components/__tests__/ directory and individual test files using Vitest + React Testing Library. For each component, write 6-8 tests covering: (1) component renders without errors with required props, (2) user interactions (clicks, form submissions, selections), (3) conditional rendering based on props/state, (4) data prop validation (handles null/undefined), (5) event handlers called correctly, (6) accessibility (ARIA labels, semantic HTML). Key focus areas: advanced-query-builder (query validation, filter chain construction, parameter binding), role-permission-matrix (checkbox toggling, matrix rendering, submission), audit-log-filter (date range, entity type, severity filtering), entity-detail-panel (field display, relationship expansion, edit mode). Total: 120+ assertions across all tests. Reference testing.md for 50% dashboard coverage target.
+- **Files**:
+  - apps/dashboard/components/__tests__/advanced-query-builder.test.tsx
+  - apps/dashboard/components/__tests__/role-permission-matrix.test.tsx
+  - apps/dashboard/components/__tests__/retention-policy-editor.test.tsx
+  - apps/dashboard/components/__tests__/audit-log-filter.test.tsx
+  - apps/dashboard/components/__tests__/dlq-inspector.test.tsx
+  - apps/dashboard/components/__tests__/dependency-graph-viewer.test.tsx
+  - apps/dashboard/components/__tests__/agent-proactive-config.test.tsx
+  - apps/dashboard/components/__tests__/entity-detail-panel.test.tsx
+  - apps/dashboard/components/__tests__/mcp-tool-browser.test.tsx
+  - apps/dashboard/components/__tests__/real-time-log-viewer.test.tsx
+- **Depends on**: nothing
+- **Added**: 2026-06-09
+
+### Task: Configuration Validation & Database Migration Tests
+- **Layer**: 76 — Dashboard Test Coverage & WebSocket Infrastructure
+- **Status**: UNWORKED
+- **Priority**: Medium
+- **Description**: Create test infrastructure for database migrations and configuration validation to catch breaking changes and data loss risks. Build packages/semantic-core/src/__tests__/config-validator.test.ts with 14+ tests covering: (1) validateWorkspaceConfig(config) schema validation for workspace settings (context budget, sync frequency, default entity types), (2) detectConfigBreakingChanges(oldConfig, newConfig) identifying incompatible migrations (enum value removals, required field additions), (3) validateConnectorConfig(connectorId, config) per-connector config validation (OAuth required fields, API URL formats, API key patterns), (4) migrateLegacyConfig(oldFormat) forward-compatibility for older workspace configs, (5) encryptSensitiveFields(config) ensuring API keys and OAuth tokens encrypted before storage. Create apps/api/src/__tests__/migrations.test.ts with 12+ migration tests covering: (1) forward migration runs without errors, (2) backward rollback succeeds (if applicable), (3) idempotency (running same migration twice is safe), (4) data integrity (no data loss during schema changes), (5) constraint enforcement (foreign keys, unique indexes created), (6) trigger/view creation verified. Test 3-4 critical migrations: 168_granular_permissions.sql (field_permissions table), 170_workflow_sessions.sql (workflow execution tracking), 171_stream_metrics.sql (streaming session logging). Use Postgres database in Docker for integration tests. Reference code-style.md for Result pattern on validation functions.
+- **Files**:
+  - packages/semantic-core/src/config-validator.ts
+  - packages/semantic-core/src/__tests__/config-validator.test.ts
+  - apps/api/src/__tests__/migrations.test.ts
+  - apps/api/src/__tests__/migration-rollback.test.ts
+- **Depends on**: nothing
+- **Added**: 2026-06-09
+
+### Task: Critical End-to-End Workflow Tests
+- **Layer**: 76 — Dashboard Test Coverage & WebSocket Infrastructure
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Create end-to-end Playwright tests for 4 critical user workflows to verify multi-layer integration works: (1) Connector setup → sync → entity search workflow (user creates HubSpot connector with OAuth, waits for initial sync, searches for entities), (2) Query execution with MCP context workflow (user submits natural language query → system decomposes → queries connectors → returns context via MCP stream), (3) Admin data quality remediation workflow (admin scans connector data → reviews issues → marks as resolved → monitors improvement), (4) Field-level permission enforcement workflow (admin defines field permission rules → user attempts access → verifies masking applied correctly). Each test should cover happy path + 1-2 error scenarios. Use test fixtures for: pre-configured test workspaces, seed data (100 test contacts in HubSpot), auth tokens for test admin user. Tests must verify: API responses, dashboard UI state changes, database audit trails, WebSocket message delivery (where applicable). Run tests in --headed mode on CI for debugging. Reference testing.md for E2E patterns. Expect 600-800ms per test (use timeouts carefully).
+- **Files**:
+  - tests/e2e/connector-sync-search-workflow.spec.ts
+  - tests/e2e/query-context-mcp-workflow.spec.ts
+  - tests/e2e/data-quality-remediation-workflow.spec.ts
+  - tests/e2e/field-permission-enforcement-workflow.spec.ts
+- **Depends on**: Granular Access Control with Field-Level & Connector-Level Permissions
+- **Added**: 2026-06-09
