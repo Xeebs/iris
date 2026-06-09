@@ -1,5 +1,10 @@
 -- Migration 138: Relationship Suggestions & Auto-Linking Engine
 -- Stores suggested relationships between entities, user feedback, and auto-link records.
+-- relationship_suggestions may already exist from 084_add_schema_discovery.sql
+-- without from_id/to_id; add missing columns before creating indexes.
+ALTER TABLE relationship_suggestions
+  ADD COLUMN IF NOT EXISTS from_id TEXT,
+  ADD COLUMN IF NOT EXISTS to_id   TEXT;
 
 CREATE TABLE IF NOT EXISTS relationship_suggestions (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
