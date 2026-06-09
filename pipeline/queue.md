@@ -4098,7 +4098,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Connector Marketplace & Plugin Distribution Framework
 - **Layer**: 66 — Advanced Semantic Features & Intelligent Governance
-- **Status**: IN_PROGRESS
+- **Status**: COMMITTED
 - **Priority**: High
 - **Description**: Create a connector marketplace system enabling community connectors, vendor-verified connectors, and private plugin distribution with dependency resolution and version management. Create packages/semantic-core/src/connector-marketplace.ts with MarketplaceService: (1) publishConnector(manifest, package, version, releaseNotes) uploading connector to registry with signature verification, (2) searchConnectors(query, filters) querying marketplace by name/category/rating/author, (3) resolveConnectorDependencies(connectorId, version) computing transitive dependency tree with conflict detection, (4) installConnector(connectorId, version, workspace) installing verified connector with auto-updates, (5) rateConnector(connectorId, rating, review, verified_installation) tracking quality signals, (6) getConnectorTelemetry(connectorId) returning usage stats (installations, uninstalls, error rates by version). Create migration 136 (connector_registry, connector_versions, connector_dependencies, connector_ratings, marketplace_audit). Add REST routes: GET /api/v1/marketplace/connectors (search + pagination), GET /api/v1/marketplace/connectors/:id/versions (version history + changelogs), POST /api/v1/marketplace/connectors/:id/install, POST /api/v1/marketplace/connectors/:id/rate, GET /api/v1/marketplace/featured (community picks + trending). Add dashboard /marketplace page with: connector catalog (cards with ratings/downloads/version), detail page (compatibility matrix, dependency graph, installation instructions, reviews). Add background job for connector auto-updates (opt-in per workspace). Include 30+ tests (16 unit marketplace logic + dependency resolution + 14 integration registry + install workflows).
 - **Files**:
@@ -4150,5 +4150,102 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
   - apps/dashboard/components/relationship-suggestions-widget.tsx
   - apps/dashboard/components/bulk-linking-interface.tsx
   - apps/dashboard/components/suggestion-feedback-chart.tsx
+- **Depends on**: nothing
+- **Added**: 2026-06-08
+
+---
+
+## Layer 67: Advanced Insights, Automation & Quality Assurance
+
+### Task: Team & Role-Based Context Recommendation Engine
+- **Layer**: 67 — Advanced Insights, Automation & Quality Assurance
+- **Status**: IN_PROGRESS
+- **Priority**: High
+- **Description**: Build an intelligent context recommendation system that surfaces relevant data to entire teams and roles based on historical access patterns, job functions, and entity relationships. Create packages/semantic-core/src/team-context-recommender.ts with TeamContextRecommender: (1) analyzeTeamContextUsage(teamId, window) computing aggregate context usage patterns by role, (2) generateTeamRecommendations(teamId, topK=15) ranking entities by relevance to team (role-weighted access patterns 40% + entity recency 30% + relationship to accessed entities 20% + popularity in team 10%), (3) predictContextNeedsByRole(roleId) using historical queries to predict what contexts a role needs, (4) suggestContextExpansionForTeam(teamId) recommending underutilized but valuable entities. Create migration 139 (team_context_usage, role_context_affinities, team_recommendations, recommendation_feedback). Add REST routes: GET /api/v1/teams/:id/recommended-contexts (ranked by relevance + reasoning), PUT /api/v1/teams/:id/context-preferences (save overrides), GET /api/v1/roles/:id/context-predictions (role-specific predictions). Add dashboard page /team-insights with: recommended contexts widget per team, context popularity heatmap by role, "new contexts to explore" cards with onboarding, team context access timeline. Include 28+ tests (16 unit scoring + role analysis + 12 integration team patterns).
+- **Files**:
+  - packages/semantic-core/src/team-context-recommender.ts
+  - packages/semantic-core/src/__tests__/team-context-recommender.test.ts
+  - packages/semantic-core/src/__tests__/team-context-recommender.integration.test.ts
+  - apps/api/src/routes/team-recommendations.ts
+  - apps/api/src/__tests__/team-recommendations.test.ts
+  - apps/api/migrations/139_team_context_recommendations.sql
+  - apps/dashboard/app/team-insights/page.tsx
+  - apps/dashboard/components/team-context-recommendations.tsx
+  - apps/dashboard/components/role-context-heatmap.tsx
+  - apps/dashboard/components/context-adoption-tracker.tsx
+- **Depends on**: nothing
+- **Added**: 2026-06-08
+
+### Task: Automated Business Insight Generation & Reporting
+- **Layer**: 67 — Advanced Insights, Automation & Quality Assurance
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Create an automated insight generation system that analyzes indexed data to surface actionable business intelligence without manual queries. Create packages/semantic-core/src/insight-generator.ts with InsightGenerator: (1) discoverInsights(entityTypes, filters) scanning entities to detect patterns (anomalies, outliers, trends, missing data, relationships), (2) generateInsightReport(entityType, granularity='daily'|'weekly') creating executive summaries with key metrics, trend direction, flagged exceptions, (3) scoreInsightValue(insight) ranking insights by business impact (frequency of affected entities, impact on metrics, novelty), (4) scheduleInsightGeneration(entityTypes, frequency, recipients) configuring automated daily/weekly reports with delivery, (5) explainInsight(insightId) providing drill-down details and data sources. Create migration 140 (generated_insights, insight_metrics, insight_delivery_jobs, insight_value_feedback). Add REST routes: GET /api/v1/insights (paginated, filterable by type/value), GET /api/v1/insights/:id/details (full insight with evidence), POST /api/v1/insights/:id/feedback (value signal), GET /api/v1/insights/scheduled (scheduled reports). Add dashboard page /insights with: insights feed (sortable by value, recency, impact), "did you know?" widgets on overview, scheduled report management, insight value feedback + trending topics. Include 32+ tests (18 unit insight discovery + scoring + 14 integration report generation).
+- **Files**:
+  - packages/semantic-core/src/insight-generator.ts
+  - packages/semantic-core/src/__tests__/insight-generator.test.ts
+  - packages/semantic-core/src/__tests__/insight-generator.integration.test.ts
+  - apps/api/src/routes/insights.ts
+  - apps/api/src/__tests__/insights.test.ts
+  - apps/api/migrations/140_insights_generation.sql
+  - apps/dashboard/app/insights/page.tsx
+  - apps/dashboard/components/insights-feed.tsx
+  - apps/dashboard/components/insight-detail-panel.tsx
+  - apps/dashboard/components/insights-value-gauge.tsx
+- **Depends on**: nothing
+- **Added**: 2026-06-08
+
+### Task: Dynamic Business Rule Engine & Data Validation Framework
+- **Layer**: 67 — Advanced Insights, Automation & Quality Assurance
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Implement a rule engine allowing teams to define and enforce business validation rules on entities with automated violation detection, correction suggestions, and audit trails. Create packages/semantic-core/src/business-rule-engine.ts with RuleEngine: (1) defineRule(name, entityType, condition, action, severity) creating rules like "contacts must have email OR phone" with violation severity levels, (2) evaluateEntity(entity) running all rules against entity and returning violations with correction suggestions, (3) bulkEvaluateRules(entities, ruleIds) batch processing with reporting, (4) suggestRuleCorrections(entityId, ruleId) recommending fixes based on similar valid entities, (5) autoCorrectViolations(entityIds, ruleIds, trustLevel) auto-fix low-risk violations (e.g., trim whitespace, standardize case), (6) trackRuleViolations(window) reporting violation trends and rule effectiveness. Create migration 141 (business_rules, rule_violations, rule_corrections, violation_stats). Add REST routes: GET/POST/PUT/DELETE /api/v1/admin/rules (CRUD), POST /api/v1/entities/:id/validate (validate against rules), GET /api/v1/admin/rule-violations (paginated violations with drill-down), POST /api/v1/admin/violations/:id/auto-fix (auto-correct). Add dashboard page /admin/data-rules with: rule builder (visual + JSON), violation dashboard (by rule/type/severity), rule effectiveness chart (% compliant over time), bulk auto-fix interface. Include 36+ tests (20 unit rule logic + condition evaluation + 16 integration violation detection + auto-correct).
+- **Files**:
+  - packages/semantic-core/src/business-rule-engine.ts
+  - packages/semantic-core/src/__tests__/business-rule-engine.test.ts
+  - packages/semantic-core/src/__tests__/business-rule-engine.integration.test.ts
+  - apps/api/src/routes/business-rules.ts
+  - apps/api/src/__tests__/business-rules.test.ts
+  - apps/api/migrations/141_business_rules.sql
+  - apps/dashboard/app/admin/data-rules/page.tsx
+  - apps/dashboard/components/rule-builder.tsx
+  - apps/dashboard/components/violations-dashboard.tsx
+  - apps/dashboard/components/rule-effectiveness-chart.tsx
+- **Depends on**: nothing
+- **Added**: 2026-06-08
+
+### Task: Batch Context Recommendations & Multi-Entity Analysis API
+- **Layer**: 67 — Advanced Insights, Automation & Quality Assurance
+- **Status**: UNWORKED
+- **Priority**: Medium
+- **Description**: Extend the context recommendation system to support batch analysis of multiple entities, returning relevant contexts for each with deduplication and cross-entity insights. Create packages/semantic-core/src/batch-recommender.ts with BatchContextRecommender: (1) recommendContextForEntities(entityIds, topK=10) returning entity-specific recommendations and shared contexts across all, (2) analyzeEntityGroup(entityIds) finding common characteristics, gaps, and relationships among entities, (3) suggestGroupActions(entityIds) recommending bulk updates or linking based on group analysis, (4) computeGroupScore(entityIds, metric) aggregating metrics across entity group with variance/trend indicators. Create migration 142 (batch_analysis_cache, group_recommendations). Add REST routes: POST /api/v1/batch/recommend-contexts (body: entityIds, returns array of per-entity recommendations + group insights), POST /api/v1/batch/analyze (analyze group characteristics), GET /api/v1/batch/results/:sessionId (cache batch results). Add dashboard feature: multi-entity select mode with batch recommendation panel showing per-entity + group insights, suggested actions. Include 24+ tests (14 unit batch scoring + group analysis + 10 integration multi-entity patterns).
+- **Files**:
+  - packages/semantic-core/src/batch-recommender.ts
+  - packages/semantic-core/src/__tests__/batch-recommender.test.ts
+  - packages/semantic-core/src/__tests__/batch-recommender.integration.test.ts
+  - apps/api/src/routes/batch-recommendations.ts
+  - apps/api/src/__tests__/batch-recommendations.test.ts
+  - apps/api/migrations/142_batch_recommendations.sql
+  - apps/dashboard/components/batch-context-panel.tsx
+  - apps/dashboard/components/group-analysis-results.tsx
+- **Depends on**: nothing
+- **Added**: 2026-06-08
+
+### Task: Semantic Search Quality Evaluation & Ranking Debugger
+- **Layer**: 67 — Advanced Insights, Automation & Quality Assurance
+- **Status**: UNWORKED
+- **Priority**: Medium
+- **Description**: Build a search quality evaluation framework with explainable ranking, A/B testing capabilities, and automated quality metrics to help teams optimize their search relevance. Create packages/semantic-core/src/search-quality-evaluator.ts with SearchQualityEvaluator: (1) evaluateSearchResult(query, result) scoring result quality (relevance, freshness, completeness, rank position) with detailed breakdown, (2) runSearchTest(testName, queries, goldStandard, strategy1, strategy2) comparing ranking strategies with precision/recall/ndcg metrics, (3) explainRanking(query, resultId, topK=5) breaking down why result ranked where (term match, embedding sim, recency, popularity, user feedback), (4) suggestRankingImprovements(query) identifying low-performing queries and recommending fixes. Create migration 143 (search_quality_evals, ranking_tests, eval_results, quality_feedback). Add REST routes: POST /api/v1/search-quality/evaluate (single query evaluation), POST /api/v1/search-quality/tests (run ranking test), GET /api/v1/search-quality/tests/:id/results (test results + stats), GET /api/v1/search-quality/metrics (aggregate quality metrics). Add dashboard page /search-quality with: recent query evaluation timeline, A/B test runner (strategy picker, metric viewer), ranking explainer (show scoring breakdown for result position), suggested improvements panel. Include 28+ tests (16 unit evaluation scoring + 12 integration A/B testing).
+- **Files**:
+  - packages/semantic-core/src/search-quality-evaluator.ts
+  - packages/semantic-core/src/__tests__/search-quality-evaluator.test.ts
+  - packages/semantic-core/src/__tests__/search-quality-evaluator.integration.test.ts
+  - apps/api/src/routes/search-quality.ts
+  - apps/api/src/__tests__/search-quality.test.ts
+  - apps/api/migrations/143_search_quality.sql
+  - apps/dashboard/app/search-quality/page.tsx
+  - apps/dashboard/components/ranking-explainer.tsx
+  - apps/dashboard/components/ab-test-runner.tsx
+  - apps/dashboard/components/quality-metrics-dashboard.tsx
 - **Depends on**: nothing
 - **Added**: 2026-06-08
