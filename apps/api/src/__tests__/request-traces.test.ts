@@ -1,174 +1,206 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Hono } from 'hono';
 
-vi.mock('@iris/core/logger', () => ({
-  logger: { child: () => ({ info: vi.fn(), error: vi.fn(), warn: vi.fn(), debug: vi.fn() }) },
-}));
+vi.mock('@iris/core/logger', async () => {
+  const actual = await vi.importActual<typeof import('@iris/core/logger')>('@iris/core/logger');
+  return {
+    ...actual,
+    logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
+  };
+});
 
-function buildApp(workspaceId: string | null = 'ws-1') {
-  const outer = new Hono();
-  outer.use('*', async (c, next) => {
-    if (workspaceId) c.set('workspaceId', workspaceId);
-    await next();
-  });
-  return outer;
+vi.mock('@iris/semantic-core/request-tracer', async () => {
+  const actual = await vi.importActual<typeof import('@iris/semantic-core/request-tracer')>(
+    '@iris/semantic-core/request-tracer'
+  );
+  return { ...actual };
+});
+
+import { createRequestTracesRoutes } from '../routes/request-traces.js';
+
+function makeSql(responses: Record<string, unknown[]> = {}) {
+  return vi.fn((strings: TemplateStringsArray) => {
+    const q = strings.raw.join('?');
+    for (const [key, rows] of Object.entries(responses)) {
+      if (q.includes(key)) return Promise.resolve(rows);
+    }
+    return Promise.resolve([]);
+  }) as unknown as ReturnType<typeof import('postgres').default>;
 }
 
-async function importRoutes() {
-  const mod = await import('../routes/request-traces.js');
-  return mod;
+const spanFixture = {
+  traceId: 'a'.repeat(32),
+  spanId: 'b'.repeat(16),
+  parentSpanId: null,
+  operationName: 'api.query-context',
+  serviceName: 'api',
+  durationMs: 145,
+  status: 'ok',
+  metadata: { method: 'POST', path: '/query-context', statusCode: 200 },
+  errors: null,
+  startedAt: new Date().toISOString(),
+  endedAt: new Date().toISOString(),
+  workspaceId: 'ws-1',
+};
+
+function buildApp(sql: ReturnType<typeof makeSql>) {
+  const app = new Hono();
+  app.route('/traces', createRequestTracesRoutes(sql as unknown as ReturnType<typeof import('postgres').default>));
+  return app;
 }
+
+const BASE = 'http://localhost';
 
 describe('request-traces routes', () => {
-  let createRequestTracesRoutes: Awaited<ReturnType<typeof importRoutes>>['createRequestTracesRoutes'];
-  let recordSpan: Awaited<ReturnType<typeof importRoutes>>['recordSpan'];
-  let mockSql: ReturnType<typeof vi.fn>;
+  let sql: ReturnType<typeof makeSql>;
+  let app: Hono;
 
-  beforeEach(async () => {
+  beforeEach(() => {
+    sql = makeSql({ request_traces: [spanFixture] });
+    app = buildApp(sql);
     vi.clearAllMocks();
-    mockSql = vi.fn().mockResolvedValue([]);
-    const mod = await importRoutes();
-    createRequestTracesRoutes = mod.createRequestTracesRoutes;
-    recordSpan = mod.recordSpan;
   });
 
-  describe('GET /:correlationId', () => {
-    it('returns 401 without workspace', async () => {
-      const app = buildApp(null);
-      app.route('/traces', createRequestTracesRoutes(mockSql as never));
-      const res = await app.request('/traces/abc12345678');
-      expect(res.status).toBe(401);
-    });
-
-    it('returns 400 for short correlationId', async () => {
-      const app = buildApp();
-      app.route('/traces', createRequestTracesRoutes(mockSql as never));
-      const res = await app.request('/traces/short');
-      expect(res.status).toBe(400);
-    });
-
-    it('returns 200 with empty timeline when no spans found', async () => {
-      const app = buildApp();
-      app.route('/traces', createRequestTracesRoutes(mockSql as never));
-      const res = await app.request('/traces/abc1234567890abc');
+  describe('GET /traces', () => {
+    it('returns 200 with trace list', async () => {
+      const res = await app.request(`${BASE}/traces`);
       expect(res.status).toBe(200);
-      const body = await res.json() as { data: { correlationId: string; spanCount: number } };
-      expect(body.data.correlationId).toBe('abc1234567890abc');
-      expect(body.data.spanCount).toBe(0);
-    });
-
-    it('includes recorded spans in timeline', async () => {
-      const correlationId = `test-${Date.now()}-xyz`;
-      recordSpan({
-        correlationId,
-        traceId: 'tid1',
-        spanId: 'sid1',
-        service: 'api',
-        operation: 'GET /entities',
-        startTimeMs: Date.now() - 100,
-        durationMs: 45,
-        statusCode: 200,
-        metadata: {},
-      });
-
-      const app = buildApp();
-      app.route('/traces', createRequestTracesRoutes(mockSql as never));
-      const res = await app.request(`/traces/${correlationId}`);
-      expect(res.status).toBe(200);
-      const body = await res.json() as { data: { spanCount: number; timeline: unknown[] } };
-      expect(body.data.spanCount).toBe(1);
-      expect(body.data.timeline).toHaveLength(1);
-    });
-
-    it('merges audit events into timeline', async () => {
-      mockSql.mockResolvedValue([
-        {
-          id: 'log1',
-          action: 'entity_read',
-          actor_id: 'u1',
-          resource_type: 'contact',
-          created_at: new Date(),
-          metadata: { correlationId: 'corr-abc123456789' },
-        },
-      ]);
-      const app = buildApp();
-      app.route('/traces', createRequestTracesRoutes(mockSql as never));
-      const res = await app.request('/traces/corr-abc123456789');
-      const body = await res.json() as { data: { auditEventCount: number } };
-      expect(body.data.auditEventCount).toBe(1);
-    });
-
-    it('returns 200 even when audit log query fails', async () => {
-      mockSql.mockRejectedValue(new Error('db down'));
-      const app = buildApp();
-      app.route('/traces', createRequestTracesRoutes(mockSql as never));
-      const res = await app.request('/traces/abc1234567890xyz');
-      expect(res.status).toBe(200);
-    });
-  });
-
-  describe('GET / (slow requests)', () => {
-    it('returns 401 without workspace', async () => {
-      const app = buildApp(null);
-      app.route('/traces', createRequestTracesRoutes(mockSql as never));
-      const res = await app.request('/traces');
-      expect(res.status).toBe(401);
-    });
-
-    it('returns 200 with empty list when no slow requests', async () => {
-      const app = buildApp();
-      app.route('/traces', createRequestTracesRoutes(mockSql as never));
-      const res = await app.request('/traces');
-      expect(res.status).toBe(200);
-      const body = await res.json() as { data: unknown[] };
+      const body = await res.json() as { data: unknown[]; meta: { hasMore: boolean } };
       expect(Array.isArray(body.data)).toBe(true);
+      expect(body.meta).toHaveProperty('hasMore');
     });
 
-    it('returns slow requests from audit log', async () => {
-      mockSql.mockResolvedValue([
-        {
-          metadata: { correlationId: 'slow-corr', durationMs: 2500 },
-          created_at: new Date(),
-          action: 'entity_read',
-        },
-      ]);
-      const app = buildApp();
-      app.route('/traces', createRequestTracesRoutes(mockSql as never));
-      const res = await app.request('/traces?minDurationMs=500');
-      const body = await res.json() as { data: { durationMs: number }[] };
-      expect(body.data[0]!.durationMs).toBe(2500);
-    });
-
-    it('returns empty list when audit query fails', async () => {
-      mockSql.mockRejectedValue(new Error('timeout'));
-      const app = buildApp();
-      app.route('/traces', createRequestTracesRoutes(mockSql as never));
-      const res = await app.request('/traces');
+    it('returns empty data when no traces exist', async () => {
+      app = buildApp(makeSql({ request_traces: [] }));
+      const res = await app.request(`${BASE}/traces`);
       expect(res.status).toBe(200);
       const body = await res.json() as { data: unknown[] };
       expect(body.data).toHaveLength(0);
     });
+
+    it('passes operationName filter to tracer', async () => {
+      const res = await app.request(`${BASE}/traces?operationName=api.query`);
+      expect(res.status).toBe(200);
+    });
+
+    it('respects limit query param', async () => {
+      const res = await app.request(`${BASE}/traces?limit=10`);
+      expect(res.status).toBe(200);
+    });
+
+    it('returns 500 when tracer throws', async () => {
+      app = buildApp(vi.fn().mockRejectedValueOnce(new Error('DB error')) as unknown as ReturnType<typeof makeSql>);
+      const res = await app.request(`${BASE}/traces`);
+      expect(res.status).toBe(500);
+    });
+
+    it('includes meta.nextCursor field', async () => {
+      const res = await app.request(`${BASE}/traces`);
+      const body = await res.json() as { meta: { nextCursor: string | null } };
+      expect('nextCursor' in body.meta).toBe(true);
+    });
   });
 
-  describe('recordSpan', () => {
-    it('spans become visible in the trace route response', async () => {
-      const correlationId = `span-test-${Date.now()}-abc`;
-      recordSpan({
-        correlationId,
-        traceId: 't1',
-        spanId: 's1',
-        service: 'test',
-        operation: 'unit-test',
-        startTimeMs: Date.now(),
-        durationMs: 10,
-        metadata: { unit: true },
-      });
-      const app = buildApp();
-      app.route('/traces', createRequestTracesRoutes(mockSql as never));
-      const res = await app.request(`/traces/${correlationId}`);
+  describe('GET /traces/:traceId', () => {
+    it('returns 200 with spans for known trace', async () => {
+      const res = await app.request(`${BASE}/traces/${'a'.repeat(32)}`);
       expect(res.status).toBe(200);
-      const body = await res.json() as { data: { spanCount: number } };
-      expect(body.data.spanCount).toBeGreaterThan(0);
+      const body = await res.json() as { data: unknown[] };
+      expect(body.data).toHaveLength(1);
+    });
+
+    it('returns 404 when trace not found', async () => {
+      app = buildApp(makeSql({ request_traces: [] }));
+      const res = await app.request(`${BASE}/traces/nonexistent-trace`);
+      expect(res.status).toBe(404);
+    });
+
+    it('returns 500 when query throws', async () => {
+      app = buildApp(vi.fn().mockRejectedValueOnce(new Error('DB error')) as unknown as ReturnType<typeof makeSql>);
+      const res = await app.request(`${BASE}/traces/some-trace`);
+      expect(res.status).toBe(500);
+    });
+
+    it('returns all spans for multi-span trace', async () => {
+      const span2 = { ...spanFixture, spanId: 'c'.repeat(16) };
+      app = buildApp(makeSql({ request_traces: [spanFixture, span2] }));
+      const res = await app.request(`${BASE}/traces/${'a'.repeat(32)}`);
+      const body = await res.json() as { data: unknown[] };
+      expect(body.data).toHaveLength(2);
+    });
+  });
+
+  describe('POST /traces/analyze', () => {
+    it('returns 200 with analysis for known trace', async () => {
+      const res = await app.request(`${BASE}/traces/analyze`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ traceId: 'a'.repeat(32) }),
+      });
+      expect(res.status).toBe(200);
+      const body = await res.json() as { data: { traceId: string; totalSpans: number } };
+      expect(body.data).toHaveProperty('totalSpans');
+      expect(body.data).toHaveProperty('criticalPath');
+    });
+
+    it('returns 400 when traceId is missing', async () => {
+      const res = await app.request(`${BASE}/traces/analyze`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+      expect(res.status).toBe(400);
+    });
+
+    it('returns 400 when body is not valid JSON', async () => {
+      const res = await app.request(`${BASE}/traces/analyze`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: 'not-json',
+      });
+      expect(res.status).toBe(400);
+    });
+
+    it('returns analysis with errorCount field', async () => {
+      const errorSpan = { ...spanFixture, status: 'error', spanId: 'c'.repeat(16) };
+      app = buildApp(makeSql({ request_traces: [spanFixture, errorSpan] }));
+      const res = await app.request(`${BASE}/traces/analyze`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ traceId: 'a'.repeat(32) }),
+      });
+      const body = await res.json() as { data: { errorCount: number } };
+      expect(typeof body.data.errorCount).toBe('number');
+    });
+
+    it('returns analysis with slowestOperations array', async () => {
+      const res = await app.request(`${BASE}/traces/analyze`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ traceId: 'a'.repeat(32) }),
+      });
+      const body = await res.json() as { data: { slowestOperations: unknown[] } };
+      expect(Array.isArray(body.data.slowestOperations)).toBe(true);
+    });
+
+    it('returns 500 when analysis throws', async () => {
+      app = buildApp(vi.fn().mockRejectedValueOnce(new Error('DB error')) as unknown as ReturnType<typeof makeSql>);
+      const res = await app.request(`${BASE}/traces/analyze`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ traceId: 'a'.repeat(32) }),
+      });
+      expect(res.status).toBe(500);
+    });
+
+    it('returns totalDurationMs in response', async () => {
+      const res = await app.request(`${BASE}/traces/analyze`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ traceId: 'a'.repeat(32) }),
+      });
+      const body = await res.json() as { data: { totalDurationMs: number } };
+      expect(typeof body.data.totalDurationMs).toBe('number');
     });
   });
 });

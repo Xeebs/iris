@@ -73,7 +73,8 @@
     "./freshness-tracker": "./dist/freshness-tracker.js",
     "./reliability-predictor": "./dist/reliability-predictor.js",
     "./enrichment-quality-scorer": "./dist/enrichment-quality-scorer.js",
-    "./sync-parallelism-optimizer": "./dist/sync-parallelism-optimizer.js"
+    "./sync-parallelism-optimizer": "./dist/sync-parallelism-optimizer.js",
+    "./request-tracer": "./dist/request-tracer.js"
   },
   "scripts": {
     "build": "tsc --build",

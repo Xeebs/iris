@@ -4408,7 +4408,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Critical Route Test Coverage Suite — Phase 1
 - **Layer**: 70 — Test Coverage Completion & Enterprise Observability
-- **Status**: IN_PROGRESS
+- **Status**: COMMITTED
 - **Priority**: High
 - **Description**: Add comprehensive test coverage for 10 high-impact API routes that currently lack dedicated test files. Target routes: relationship-recommendations, custom-connectors, document-indexing, query-cost-analysis, metrics-anomalies, webhook-admin, circuit-breaker-admin, pii-config, admin-sync-monitoring, admin-sync-quality. For each route, create a test file covering: (1) happy path with valid inputs and expected outputs, (2) 400-level validation/auth errors, (3) 500-level error handling and recovery, (4) edge cases (empty results, pagination boundaries, concurrency), (5) integration with dependent services (database, connectors, cache). Follow test patterns in .claude/rules/testing.md: 80%+ coverage target, use Vitest + MSW for mocks. Each test file should have 20–30 tests covering all endpoints and error paths.
 - **Files**:
@@ -4427,7 +4427,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Distributed Request Tracing & Correlation ID Framework
 - **Layer**: 70 — Test Coverage Completion & Enterprise Observability
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: High
 - **Description**: Implement end-to-end request tracing with W3C TraceContext propagation across all services (API, MCP, connectors, workers). Create packages/semantic-core/src/request-tracer.ts with RequestTracer: (1) generateTraceId() and propagateTraceContext(parentSpanId, operation) creating linked trace chains, (2) recordSpan(name, durationMs, metadata, errors) capturing operation telemetry including API latency, database query time, embedding calls, (3) extractTraceFromHeaders(request) and injectTraceIntoHeaders(response) for HTTP propagation, (4) publishTraceToBackend(traceId, spans) sending structured traces to observability sink. Create migration 151 (request_traces table with trace_id, parent_span_id, operation_name, duration_ms, metadata, errors). Add REST middleware at apps/api/src/middleware/request-tracing.ts to inject/extract traces on all requests. Add MCP server interceptor to trace tool calls. Export tracing data via: GET /api/v1/traces (paginated search), GET /api/v1/traces/:traceId (trace waterfall), POST /api/v1/traces/analyze (latency heatmap, critical path analysis). Add dashboard components: trace-waterfall.tsx (Gantt-style visualization), latency-heatmap.tsx (operation × percentile), critical-path-analyzer.tsx. Include 24+ tests (16 unit tracing logic + 8 integration cross-service traces).
 - **Files**:
