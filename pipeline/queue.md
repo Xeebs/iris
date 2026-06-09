@@ -4549,7 +4549,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Query Plan Visualization & Execution Metrics Dashboard
 - **Layer**: 71 — Advanced Integration & Production Hardening
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: Medium
 - **Description**: Build a comprehensive execution analytics dashboard for query optimization (Layer 70's multi-connector-optimizer). Create apps/dashboard/app/admin/query-execution-analytics/page.tsx with 4 sections: (1) execution-plan-explorer: interactive Mermaid diagram showing connector order, filters, cache hits, estimated vs actual latency per connector; (2) strategy-comparison-matrix: table comparing all 4 strategies (parallel/sequential/filtered-first/cached-first) for historical queries (cost, latency, token savings); (3) connector-affinity-heatmap: 2D grid (query topics × connectors) showing how often each connector is selected, hover for example queries; (4) performance-anomalies: list of queries where actual >> estimated, with drill-down to trace view. Create analytics endpoints: GET /api/v1/query-analytics/plans (paginated list with filters), GET /api/v1/query-analytics/plans/:id (full plan with traces), POST /api/v1/query-analytics/plans/:id/rerun (re-execute with selected strategy for comparison). Add 3 dashboard components: query-plan-diagram.tsx (Mermaid + interactive), strategy-matrix.tsx (sortable table), connector-heatmap.tsx (canvas heatmap). Create migration 158 (query_execution_results table: plan_id, actual_latency_ms, actual_token_cost, strategy_used, connector_timings_jsonb, cache_hits). Include 16+ tests (10 component + 6 route).
 - **Files**:
