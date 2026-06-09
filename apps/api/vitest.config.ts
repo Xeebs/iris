@@ -102,6 +102,7 @@ export default defineConfig({
       '@iris/semantic-core/sdk-generator': path.resolve(__dirname, '../../packages/semantic-core/src/sdk-generator.ts'),
       '@iris/semantic-core/computed-metrics': path.resolve(__dirname, '../../packages/semantic-core/src/computed-metrics.ts'),
       '@iris/semantic-core/granular-permissions': path.resolve(__dirname, '../../packages/semantic-core/src/granular-permissions.ts'),
+      '@iris/semantic-core/context-searcher': path.resolve(__dirname, '../../packages/semantic-core/src/context-searcher.ts'),
       '@iris/semantic-core/freshness-tracker': path.resolve(__dirname, '../../packages/semantic-core/src/freshness-tracker.ts'),
       '@iris/semantic-core/reliability-predictor': path.resolve(__dirname, '../../packages/semantic-core/src/reliability-predictor.ts'),
       '@iris/semantic-core/enrichment-quality-scorer': path.resolve(__dirname, '../../packages/semantic-core/src/enrichment-quality-scorer.ts'),

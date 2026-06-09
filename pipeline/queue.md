@@ -4767,7 +4767,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Semantic Search over MCP Response Context
 - **Layer**: 73 — Scale Phase IV - Observability, Compliance & Enterprise Hardening
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: Medium
 - **Description**: Build a search capability allowing users to search within the context returned by MCP queries, enabling quick navigation of large result sets. Create packages/semantic-core/src/context-searcher.ts with ContextSearcher: (1) indexMcpResponse(responseId, entities) embedding the response context at query time, (2) searchWithinContext(responseId, searchQuery, limit) returning top-k matching entities/fields from prior response using vector similarity, (3) explainMatch(matchId) showing why entity ranked high for search query (highlight matching fields, similarity score). Create apps/api/migrations/169_mcp_context_search.sql with: mcp_response_cache (response_id, workspace_id, context_entities_json, embeddings_json, created_at, expires_at), context_search_results (response_id, search_query, result_rank, entity_id, match_score, matching_fields). Integrate with MCP server: after returning context from query-context tool, register searchable response. Build dashboard UI: apps/dashboard/components/context-search-panel.tsx (search input bar within query results, shows top-k matches with score + field highlighting). Expose REST: POST /api/v1/mcp-responses/:responseId/search (search within response). Add 12+ tests: embedding index creation, vector similarity search accuracy, result ranking.
 - **Files**:
