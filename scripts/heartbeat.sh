@@ -8,18 +8,28 @@ IRIS="/home/xhasan/my-projects/Iris"
 LOG_DIR="$IRIS/logs"
 LOG_FILE="$LOG_DIR/heartbeat-$(date +%Y%m%d).log"
 CLAUDE="/home/xhasan/.local/bin/claude"
-LOCK_FILE="/tmp/iris-heartbeat.lock"
+LOCK_FILE="$IRIS/pipeline/worker.lock"   # shared with daemon.py — one pipeline worker per tree
 
 log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" | tee -a "$LOG_FILE"; }
 
-if [ -f "$LOCK_FILE" ]; then
-    log "SKIP — previous cycle still running (lock: $LOCK_FILE)"
+mkdir -p "$LOG_DIR"
+
+# The heartbeat is only a fallback: if the daemon process is alive, it owns the
+# pipeline — spawning a second worker in the same tree corrupts in-flight edits.
+DAEMON_PID=$(python3 -c "import json; print(json.load(open('$IRIS/pipeline/daemon.json')).get('pid', ''))" 2>/dev/null || true)
+if [ -n "$DAEMON_PID" ] && kill -0 "$DAEMON_PID" 2>/dev/null; then
+    log "SKIP — daemon alive (pid $DAEMON_PID); heartbeat not needed"
     exit 0
 fi
-touch "$LOCK_FILE"
-trap 'rm -f "$LOCK_FILE"' EXIT
 
-mkdir -p "$LOG_DIR"
+# Mutual exclusion with any pipeline worker (daemon child or an earlier heartbeat).
+# flock is advisory and auto-releases if the holder dies — no stale-lock cleanup.
+exec 9>>"$LOCK_FILE"
+if ! flock -n 9; then
+    log "SKIP — another pipeline worker holds $LOCK_FILE"
+    exit 0
+fi
+printf 'heartbeat pid %s started %s\n' "$$" "$(date -Is)" >&9
 
 find "$LOG_DIR" -name "heartbeat-*.log" -mtime +30 -delete 2>/dev/null || true
 

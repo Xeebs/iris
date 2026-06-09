@@ -10,6 +10,7 @@ Runs the Claude build pipeline in a continuous loop. Only pauses when:
   - Unexpected Claude exit                    →  retries after 2 minutes
 """
 
+import fcntl
 import json
 import os
 import re
@@ -26,6 +27,7 @@ STATE_FILE  = IRIS / "pipeline" / "state.json"
 DAEMON_FILE = IRIS / "pipeline" / "daemon.json"
 USAGE_FILE  = IRIS / "pipeline" / "usage.json"
 SESSION_FILE = IRIS / "pipeline" / "session-tokens.json"   # live in-flight session counters
+WORKER_LOCK  = IRIS / "pipeline" / "worker.lock"           # shared with heartbeat.sh
 QUEUE_MD    = IRIS / "pipeline" / "queue.md"
 LOG_DIR     = IRIS / "logs"
 CLAUDE      = Path.home() / ".local" / "bin" / "claude"
@@ -34,6 +36,7 @@ ENV_FILE    = IRIS / ".env"
 SLEEP_QUEUE_EMPTY   = 3600   # 1 hour
 SLEEP_UNEXPECTED    = 120    # 2 min
 SLEEP_MODEL_SWITCH  = 30     # brief pause before relaunching on a fallback model
+SLEEP_LOCK_BUSY     = 300    # another worker (heartbeat) holds the tree — retry in 5 min
 
 # ── model fallback chain ─────────────────────────────────────────────────────
 # When the active model's usage limit is exhausted (CLI usage-limit error or the
@@ -292,6 +295,31 @@ def build_prompt() -> str:
     return BASE_PROMPT + budget_line
 
 
+def acquire_worker_lock(model: str):
+    """Exclusive advisory lock shared with heartbeat.sh — guarantees a single
+    pipeline worker per working tree. Returns the held file object, or None if
+    another worker owns the tree. Auto-released by the OS if the holder dies."""
+    fd = open(WORKER_LOCK, "a+")
+    try:
+        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except OSError:
+        fd.close()
+        return None
+    fd.seek(0)
+    fd.truncate()
+    fd.write(f"daemon pid {os.getpid()} model {model} started {_now_iso()}\n")
+    fd.flush()
+    return fd
+
+
+def release_worker_lock(fd) -> None:
+    try:
+        fcntl.flock(fd, fcntl.LOCK_UN)
+        fd.close()
+    except Exception:
+        pass
+
+
 def write_session_tokens(force: bool = False) -> None:
     """Publish live in-flight session counters so the monitor can show real usage
     mid-run (usage.json is only written when a session ends)."""
@@ -485,6 +513,22 @@ def main() -> None:
             continue
         _active_model = model
 
+        # ── single-worker guarantee (shared flock with heartbeat.sh) ──────────
+        lock_fd = acquire_worker_lock(model)
+        if lock_fd is None:
+            owner = ""
+            try:
+                owner = WORKER_LOCK.read_text().strip()
+            except Exception:
+                pass
+            write_daemon(
+                "sleeping",
+                f"Tree busy — another pipeline worker holds the lock ({owner or 'unknown'}); retrying in 5 minutes",
+                wake_iso(SLEEP_LOCK_BUSY),
+            )
+            interruptible_sleep(SLEEP_LOCK_BUSY)
+            continue
+
         log_file = LOG_DIR / f"daemon-{datetime.now().strftime('%Y%m%d')}.log"
 
         write_daemon("running", f"Pipeline running on {model}")
@@ -530,6 +574,7 @@ def main() -> None:
         returncode = _current_proc.wait()
         reader.join(timeout=5)
         _current_proc = None
+        release_worker_lock(lock_fd)
 
         with open(log_file, "a") as lf:
             lf.write(f"[{datetime.now().isoformat()}] === Pipeline run ended (exit {returncode}) ===\n")

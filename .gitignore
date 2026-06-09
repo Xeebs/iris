@@ -17,5 +17,6 @@ CLAUDE.local.md
 logs/
 pipeline/daemon.json
 pipeline/session-tokens.json
+pipeline/worker.lock
 __pycache__/
 *.pyc
