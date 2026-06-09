@@ -35,6 +35,12 @@ importers:
       '@hono/zod-validator':
         specifier: ^0.4.0
         version: 0.4.3(hono@4.12.23)(zod@3.25.76)
+      '@iris/cache':
+        specifier: workspace:*
+        version: link:../../packages/cache
+      '@iris/compression':
+        specifier: workspace:*
+        version: link:../../packages/compression
       '@iris/connector-sdk':
         specifier: workspace:*
         version: link:../../packages/connector-sdk
