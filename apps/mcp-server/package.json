@@ -8,6 +8,7 @@
     "build": "tsc --build --noCheck",
     "dev": "tsx --watch src/server.ts",
     "start": "node dist/server.js",
+    "start:ci": "tsx src/server.ts",
     "test": "vitest run --coverage",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src --ext .ts"

@@ -87,8 +87,8 @@ jobs:
           fi
         env:
           DATABASE_URL: postgresql://iris:iris_test@localhost:5432/iris_test
-      - name: Build servers
-        run: pnpm exec turbo run build --filter=@iris/api --filter=@iris/mcp-server
+      - name: Build API server
+        run: pnpm exec turbo run build --filter=@iris/api
       - name: Start API server
         run: pnpm --filter @iris/api run start &
         env:
@@ -98,7 +98,7 @@ jobs:
           PORT: 3001
           NODE_ENV: test
       - name: Start MCP server
-        run: pnpm --filter @iris/mcp-server run start &
+        run: pnpm --filter @iris/mcp-server run start:ci &
         env:
           DATABASE_URL: postgresql://iris:iris_test@localhost:5432/iris_test
           REDIS_URL: redis://localhost:6379
