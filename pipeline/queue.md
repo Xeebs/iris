@@ -4233,7 +4233,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Semantic Search Quality Evaluation & Ranking Debugger
 - **Layer**: 67 — Advanced Insights, Automation & Quality Assurance
-- **Status**: IN_PROGRESS
+- **Status**: COMMITTED
 - **Priority**: Medium
 - **Description**: Build a search quality evaluation framework with explainable ranking, A/B testing capabilities, and automated quality metrics to help teams optimize their search relevance. Create packages/semantic-core/src/search-quality-evaluator.ts with SearchQualityEvaluator: (1) evaluateSearchResult(query, result) scoring result quality (relevance, freshness, completeness, rank position) with detailed breakdown, (2) runSearchTest(testName, queries, goldStandard, strategy1, strategy2) comparing ranking strategies with precision/recall/ndcg metrics, (3) explainRanking(query, resultId, topK=5) breaking down why result ranked where (term match, embedding sim, recency, popularity, user feedback), (4) suggestRankingImprovements(query) identifying low-performing queries and recommending fixes. Create migration 143 (search_quality_evals, ranking_tests, eval_results, quality_feedback). Add REST routes: POST /api/v1/search-quality/evaluate (single query evaluation), POST /api/v1/search-quality/tests (run ranking test), GET /api/v1/search-quality/tests/:id/results (test results + stats), GET /api/v1/search-quality/metrics (aggregate quality metrics). Add dashboard page /search-quality with: recent query evaluation timeline, A/B test runner (strategy picker, metric viewer), ranking explainer (show scoring breakdown for result position), suggested improvements panel. Include 28+ tests (16 unit evaluation scoring + 12 integration A/B testing).
 - **Files**:
@@ -4256,7 +4256,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Multi-Stage Query Expansion & Iterative Context Refinement
 - **Layer**: 68 — Advanced Retrieval, Analytics & Observability
-- **Status**: UNWORKED
+- **Status**: IN_PROGRESS
 - **Priority**: High
 - **Description**: Implement iterative query expansion that retrieves initial context, allows user feedback, and refines results in subsequent rounds. Create packages/semantic-core/src/query-expansion-engine.ts with QueryExpansionEngine: (1) expandQuery(query, stage=1, feedback=null) retrieving initial K results, then re-ranking based on feedback (stale, incomplete, irrelevant marks), (2) suggestExpansionDirections(query, results) identifying expansion axes (time range, entity types, attributes to explore), (3) computeExpansionRelevance(originalQuery, expansion) scoring how helpful an expansion dimension would be, (4) refineContextByFeedback(results, userFeedback) adjusting weights and retrieval strategy based on explicit user marks. Create migration 144 (query_expansion_sessions, expansion_feedback, expansion_suggestions). Add MCP tool: query-context-refined (takes original query + expansion params + feedback history, returns expanded results). Add REST routes: POST /api/v1/queries/:id/expand (execute expansion with optional direction), POST /api/v1/queries/:id/feedback (submit refinement feedback), GET /api/v1/expansion-sessions/:id (view expansion history). Add dashboard component: query-expansion-interface.tsx (show initial results, feedback buttons, suggested expansions, refined results). Include 26+ tests (15 unit expansion scoring + 11 integration multi-stage retrieval).
 - **Files**:
