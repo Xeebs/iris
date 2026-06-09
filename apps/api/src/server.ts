@@ -83,6 +83,7 @@ import { createProactiveContextRoutes } from './routes/proactive-context.js';
 import { createNlpConfigRoutes } from './routes/nlp-config.js';
 import { createSsoConfigRoutes } from './routes/sso-config.js';
 import { createDataQualityEngineRoutes } from './routes/data-quality-engine-routes.js';
+import { createDemoBootstrapRoutes } from './routes/demo-bootstrap.js';
 import { openApiSpec } from './openapi.js';
 
 export { createApp };
@@ -134,6 +135,13 @@ function createApp(
 </body>
 </html>`),
   );
+
+  // Demo bootstrap — unauthenticated workspace + MCP API key creation.
+  // Mounted before Clerk middleware; the route itself 404s unless DEMO_MODE=true.
+  if (process.env['DEMO_MODE'] === 'true') {
+    log.warn('DEMO_MODE enabled — /api/v1/demo/bootstrap is open (never use in production)');
+    app.route('/api/v1/demo', createDemoBootstrapRoutes(sql));
+  }
 
   app.use('*', clerkMiddleware());
 
