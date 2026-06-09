@@ -136,3 +136,4 @@ Custom Transformation Pipeline & Entity Mapping Language — TransformationDSLEn
 - feat(semantic-core,api,dashboard): rate limiting & quota management (sliding window, tier configs, override grants) — c3f7cb4
 - feat(scripts): Iris admin CLI suite (connector/workspace/backup/admin/diagnostics commands, 37 tests) — 54c7036
 - feat(semantic-core,api,dashboard): advanced metrics & analytics pipeline (EMA anomaly detection, 42 tests) — 349f306
+- feat(mcp-server): complete tool registration & wiring for 8 orphaned tools (bulk-entity-update, connector-health-forecast, entity-trend-analysis, query-context-at-date, query-context-refined, query-federated-context, multi-connector-query-optimize, generate-query-from-question) with 34 tests

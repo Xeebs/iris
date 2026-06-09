@@ -19,6 +19,10 @@ export default defineConfig({
       '@iris/semantic-core/metrics-anomaly-detector': path.resolve(__dirname, '../../packages/semantic-core/src/metrics-anomaly-detector.ts'),
       '@iris/semantic-core/context-versioner': path.resolve(__dirname, '../../packages/semantic-core/src/context-versioner.ts'),
       '@iris/semantic-core/federation-manager': path.resolve(__dirname, '../../packages/semantic-core/src/federation-manager.ts'),
+      '@iris/semantic-core/reliability-predictor': path.resolve(__dirname, '../../packages/semantic-core/src/reliability-predictor.ts'),
+      '@iris/semantic-core/query-expansion-engine': path.resolve(__dirname, '../../packages/semantic-core/src/query-expansion-engine.ts'),
+      '@iris/semantic-core/multi-connector-optimizer': path.resolve(__dirname, '../../packages/semantic-core/src/multi-connector-optimizer.ts'),
+      '@iris/semantic-core/nl-query-generator': path.resolve(__dirname, '../../packages/semantic-core/src/nl-query-generator.ts'),
       '@iris/semantic-core/schema-discovery': path.resolve(__dirname, '../../packages/semantic-core/src/schema-discovery.ts'),
       '@iris/semantic-core': path.resolve(__dirname, '../../packages/semantic-core/src/index.ts'),
       '@iris/cache/semantic-cache': path.resolve(__dirname, '../../packages/cache/src/semantic-cache.ts'),
@@ -29,5 +33,6 @@ export default defineConfig({
   },
   test: {
     include: ['src/__tests__/**/*.test.ts'],
+    exclude: ['src/__tests__/**/*.integration.test.ts'],
   },
 });

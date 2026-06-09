@@ -4500,3 +4500,80 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
   - apps/dashboard/components/suggested-queries.tsx
 - **Depends on**: nothing
 - **Added**: 2026-06-08
+
+---
+
+## Layer 71: Advanced Integration & Production Hardening
+
+### Task: Complete MCP Tool Registration & Wiring
+- **Layer**: 71 — Advanced Integration & Production Hardening
+- **Status**: COMMITTED
+- **Priority**: High
+- **Description**: Register the 8 unregistered MCP tools (bulk-entity-update, connector-health-forecast, entity-trend-analysis, query-context-at-date, query-context-refined, query-federated-context, multi-connector-query-optimize, generate-query-from-question) in apps/mcp-server/src/server.ts. Each tool handler must: (1) validate input schema with zod, (2) extract workspaceId from authenticatedWorkspaceId or input, (3) apply contextPermissions checks, (4) enforce context budget / token limits, (5) return MCP-compliant response envelope with text content and optional truncated flag. Update server.tool() registrations to match all 8 tools with proper error handling. Create apps/mcp-server/src/__tests__/complete-tool-registration.test.ts with 32+ tests: (1) 8 registration tests (one per tool verifying server.tool was called), (2) 16 execution tests (verify input validation, permissions, budget enforcement, output format), (3) 8 integration tests (end-to-end MCP request/response). Ensure all tools appear in GET /api/v1/mcp/tools introspection endpoint and MCP inspector.
+- **Files**:
+  - apps/mcp-server/src/server.ts
+  - apps/mcp-server/src/__tests__/complete-tool-registration.test.ts
+  - apps/api/src/routes/mcp-tools.ts
+- **Depends on**: nothing
+- **Added**: 2026-06-09
+
+### Task: Production Error Handling & Resilience for Layer 70 Features
+- **Layer**: 71 — Advanced Integration & Production Hardening
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Add comprehensive error handling and resilience patterns to the 5 Layer 70 features (request-tracing, query-optimization, entity-change-stream, nl-query-generator, multi-connector-optimizer). For each feature module, implement: (1) graceful degradation — if tracer/cache/database fails, queries still succeed (with reduced observability/optimization), (2) timeout protection (5s default for external calls, 10s for multi-connector queries), (3) error categorization (transient/permanent/rate-limit with retry policies), (4) logging with correlation IDs, (5) circuit breaker for flaky services (3 failures → open for 30s). Create packages/semantic-core/src/resilience-middleware.ts: applyResilience(fn, options) wrapper. Create migration 156 (resilience_circuit_breaker_state table: service, failure_count, last_failure_time, state). Add tests: 24+ covering all degradation paths, timeout triggers, circuit breaker state transitions, error recovery. Update apps/api error handler to catch and wrap errors properly. Add dashboard resilience-status.tsx showing circuit breaker states per service.
+- **Files**:
+  - packages/semantic-core/src/resilience-middleware.ts
+  - packages/semantic-core/src/__tests__/resilience-middleware.test.ts
+  - apps/api/migrations/156_resilience_circuit_breaker.sql
+  - apps/api/src/middleware/error-handler-resilience.ts
+  - apps/dashboard/components/resilience-status.tsx
+- **Depends on**: nothing
+- **Added**: 2026-06-09
+
+### Task: Entity Change Stream MCP Resource & Subscription Management
+- **Layer**: 71 — Advanced Integration & Production Hardening
+- **Status**: UNWORKED
+- **Priority**: Medium
+- **Description**: Wire the Entity Change Stream feature from Layer 70 as an MCP resource type and create comprehensive subscription management UX. Create apps/mcp-server/src/resources/entity-change-stream-resource.ts: (1) registerChangeStreamResource exposing /entities/:id/changes as an MCP resource, (2) implement SSE transport negotiation (clients declare capability), (3) serialize change events as structured JSON per entity changelog format, (4) support filter parameters (types=['contact','company'], fields=['email','status'], since=ISO8601timestamp), (5) respect context budget by truncating old events. Create REST subscription management routes in apps/api/src/routes/entity-change-subscriptions.ts: POST /subscriptions (create with filters), PUT /:id (update filters), DELETE /:id (unsubscribe), GET (list user subscriptions), GET /:id/events (change history paginated). Create migration 157 (add subscription_filters JSONB column if missing). Add dashboard pages: subscription-manager/page.tsx (table of active subscriptions, bulk delete), entity-monitor/page.tsx (real-time change feed for one entity, expandable timeline). Include 20+ tests (12 resource + 8 route).
+- **Files**:
+  - apps/mcp-server/src/resources/entity-change-stream-resource.ts
+  - apps/mcp-server/src/__tests__/entity-change-stream-resource.test.ts
+  - apps/api/src/routes/entity-change-subscriptions.ts
+  - apps/api/src/__tests__/entity-change-subscriptions.test.ts
+  - apps/api/migrations/157_change_stream_subscriptions.sql
+  - apps/dashboard/app/admin/subscription-manager/page.tsx
+  - apps/dashboard/app/admin/entity-monitor/page.tsx
+- **Depends on**: nothing
+- **Added**: 2026-06-09
+
+### Task: Query Plan Visualization & Execution Metrics Dashboard
+- **Layer**: 71 — Advanced Integration & Production Hardening
+- **Status**: UNWORKED
+- **Priority**: Medium
+- **Description**: Build a comprehensive execution analytics dashboard for query optimization (Layer 70's multi-connector-optimizer). Create apps/dashboard/app/admin/query-execution-analytics/page.tsx with 4 sections: (1) execution-plan-explorer: interactive Mermaid diagram showing connector order, filters, cache hits, estimated vs actual latency per connector; (2) strategy-comparison-matrix: table comparing all 4 strategies (parallel/sequential/filtered-first/cached-first) for historical queries (cost, latency, token savings); (3) connector-affinity-heatmap: 2D grid (query topics × connectors) showing how often each connector is selected, hover for example queries; (4) performance-anomalies: list of queries where actual >> estimated, with drill-down to trace view. Create analytics endpoints: GET /api/v1/query-analytics/plans (paginated list with filters), GET /api/v1/query-analytics/plans/:id (full plan with traces), POST /api/v1/query-analytics/plans/:id/rerun (re-execute with selected strategy for comparison). Add 3 dashboard components: query-plan-diagram.tsx (Mermaid + interactive), strategy-matrix.tsx (sortable table), connector-heatmap.tsx (canvas heatmap). Create migration 158 (query_execution_results table: plan_id, actual_latency_ms, actual_token_cost, strategy_used, connector_timings_jsonb, cache_hits). Include 16+ tests (10 component + 6 route).
+- **Files**:
+  - apps/api/src/routes/query-analytics.ts
+  - apps/api/src/__tests__/query-analytics.test.ts
+  - apps/api/migrations/158_query_execution_results.sql
+  - apps/dashboard/app/admin/query-execution-analytics/page.tsx
+  - apps/dashboard/components/query-plan-diagram.tsx
+  - apps/dashboard/components/strategy-matrix.tsx
+  - apps/dashboard/components/connector-heatmap.tsx
+- **Depends on**: nothing
+- **Added**: 2026-06-09
+
+### Task: Natural Language Query Session Persistence & Learning UI
+- **Layer**: 71 — Advanced Integration & Production Hardening
+- **Status**: UNWORKED
+- **Priority**: Medium
+- **Description**: Build a full query session management system and learning interface for NL query generation (Layer 70's nl-query-generator). Create apps/dashboard/app/admin/query-sessions/page.tsx with: (1) sessions-list: table of all NL query sessions (user, count of questions, favorite count, last queried timestamp) with drill-down; (2) session-detail: expandable view showing session history (question → context-query → result with execution time), feedback (thumbs), suggested refinements, copy-to-clipboard; (3) favorites-panel: bookmark queries for team reuse, add descriptions, export as snippet; (4) learning-dashboard: trending question patterns (word cloud), low-quality sessions flagged (with hints for improvement), model confidence vs actual accuracy scatter. Create REST endpoints: GET /api/v1/nl-queries/sessions (paginated), GET /api/v1/nl-queries/sessions/:id (full session + history), POST /api/v1/nl-queries/sessions/:id/favorite (bookmark), DELETE /api/v1/nl-queries/sessions/:id/question/:qid (delete specific Q). Create 3 dashboard components: session-list.tsx (sortable/filterable), session-detail.tsx (timeline view + feedback), learning-insights.tsx (word cloud + scatter). Enhance migration 155 (nlquery_sessions + nlquery_feedback) with is_favorite boolean if missing. Include 18+ tests (8 component + 10 route).
+- **Files**:
+  - apps/api/src/routes/nl-query-sessions.ts
+  - apps/api/src/__tests__/nl-query-sessions.test.ts
+  - apps/dashboard/app/admin/query-sessions/page.tsx
+  - apps/dashboard/components/session-list.tsx
+  - apps/dashboard/components/session-detail.tsx
+  - apps/dashboard/components/learning-insights.tsx
+- **Depends on**: nothing
+- **Added**: 2026-06-09

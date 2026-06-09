@@ -26,6 +26,14 @@ import { registerEntityResource } from './resources/entity-resource.js';
 import { registerGraphResource } from './resources/graph-resource.js';
 import { registerDocumentResource } from './resources/document-resource.js';
 import { validateMcpApiKey, recordSessionStart, recordSessionEnd } from './auth.js';
+import { registerConnectorHealthForecastTool } from './tools/connector-health-forecast.js';
+import { registerQueryContextAtDateTool } from './tools/query-context-at-date.js';
+import { registerQueryContextRefined } from './tools/query-context-refined.js';
+import { registerQueryFederatedContextTool } from './tools/query-federated-context.js';
+import { bulkEntityUpdateTool, bulkEntityUpdateSchema } from './tools/bulk-entity-update.js';
+import { entityTrendAnalysisTool, entityTrendAnalysisSchema } from './tools/entity-trend-analysis.js';
+import { createMultiConnectorQueryOptimizeTool } from './tools/multi-connector-query-optimize.js';
+import { createGenerateQueryFromQuestionTool } from './tools/generate-query-from-question.js';
 
 const log = logger.child({ service: 'mcp-server' });
 
@@ -104,6 +112,56 @@ export function createMcpServer(
         const result = await detectAnomalyTool(input as Parameters<typeof detectAnomalyTool>[0], sqlFn);
         return result.isOk() ? result.value : { content: [{ type: 'text' as const, text: 'Detection error' }] };
       }
+    );
+
+    // Register previously unwired tools
+    registerConnectorHealthForecastTool(server, sqlFn as ReturnType<typeof import('postgres').default>);
+    registerQueryContextAtDateTool(server, { sql: sqlFn });
+    registerQueryContextRefined(server, sqlFn as ReturnType<typeof import('postgres').default>, authenticatedWorkspaceId);
+    registerQueryFederatedContextTool(server, { sql: sqlFn });
+
+    server.tool(
+      bulkEntityUpdateTool.name,
+      bulkEntityUpdateTool.description,
+      bulkEntityUpdateSchema.shape,
+      async (input) =>
+        bulkEntityUpdateTool.execute(
+          input as Parameters<typeof bulkEntityUpdateTool.execute>[0],
+          { sql: sqlFn as ReturnType<typeof import('postgres').default> }
+        )
+    );
+
+    server.tool(
+      entityTrendAnalysisTool.name,
+      entityTrendAnalysisTool.description,
+      entityTrendAnalysisSchema.shape,
+      async (input) =>
+        entityTrendAnalysisTool.execute(
+          input as Parameters<typeof entityTrendAnalysisTool.execute>[0],
+          { sql: sqlFn as ReturnType<typeof import('postgres').default> }
+        )
+    );
+
+    const multiConnectorTool = createMultiConnectorQueryOptimizeTool(
+      sqlFn as ReturnType<typeof import('postgres').default>
+    );
+    server.tool(
+      multiConnectorTool.name,
+      multiConnectorTool.description,
+      multiConnectorTool.inputSchema.shape,
+      async (input) =>
+        multiConnectorTool.handler(input as Parameters<typeof multiConnectorTool.handler>[0])
+    );
+
+    const nlQueryTool = createGenerateQueryFromQuestionTool(
+      sqlFn as ReturnType<typeof import('postgres').default>
+    );
+    server.tool(
+      nlQueryTool.name,
+      nlQueryTool.description,
+      nlQueryTool.inputSchema.shape,
+      async (input) =>
+        nlQueryTool.handler(input as Parameters<typeof nlQueryTool.handler>[0])
     );
   }
 
