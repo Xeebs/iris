@@ -1,12 +1,12 @@
 {
   "current_phase": "IMPLEMENT",
-  "active_task": "Multi-Stage Query Expansion & Iterative Context Refinement",
+  "active_task": "Advanced Cost Attribution & Per-Entity Chargeback Model",
   "active_layer": 68,
   "last_cycle": "2026-06-08",
   "last_research": "2026-06-08",
   "last_commit": "2026-06-08",
-  "cycle_count": 282,
+  "cycle_count": 283,
   "rate_limit_hit": false,
   "mode": "BUILD",
-  "notes": "Implementing query expansion engine: expandQuery, suggestExpansionDirections, computeExpansionRelevance, refineContextByFeedback. Migration 144."
+  "notes": "Implementing cost attribution: entity/connector/user cost tracking, forecasting, chargeback dashboard. Migration 145."
 }

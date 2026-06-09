@@ -4256,7 +4256,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Multi-Stage Query Expansion & Iterative Context Refinement
 - **Layer**: 68 — Advanced Retrieval, Analytics & Observability
-- **Status**: IN_PROGRESS
+- **Status**: COMMITTED
 - **Priority**: High
 - **Description**: Implement iterative query expansion that retrieves initial context, allows user feedback, and refines results in subsequent rounds. Create packages/semantic-core/src/query-expansion-engine.ts with QueryExpansionEngine: (1) expandQuery(query, stage=1, feedback=null) retrieving initial K results, then re-ranking based on feedback (stale, incomplete, irrelevant marks), (2) suggestExpansionDirections(query, results) identifying expansion axes (time range, entity types, attributes to explore), (3) computeExpansionRelevance(originalQuery, expansion) scoring how helpful an expansion dimension would be, (4) refineContextByFeedback(results, userFeedback) adjusting weights and retrieval strategy based on explicit user marks. Create migration 144 (query_expansion_sessions, expansion_feedback, expansion_suggestions). Add MCP tool: query-context-refined (takes original query + expansion params + feedback history, returns expanded results). Add REST routes: POST /api/v1/queries/:id/expand (execute expansion with optional direction), POST /api/v1/queries/:id/feedback (submit refinement feedback), GET /api/v1/expansion-sessions/:id (view expansion history). Add dashboard component: query-expansion-interface.tsx (show initial results, feedback buttons, suggested expansions, refined results). Include 26+ tests (15 unit expansion scoring + 11 integration multi-stage retrieval).
 - **Files**:
@@ -4273,7 +4273,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Advanced Cost Attribution & Per-Entity Chargeback Model
 - **Layer**: 68 — Advanced Retrieval, Analytics & Observability
-- **Status**: UNWORKED
+- **Status**: IN_PROGRESS
 - **Priority**: High
 - **Description**: Build a detailed cost attribution system that tracks token consumption, API calls, and compute costs at per-entity, per-connector, per-user, and per-query granularity. Create packages/semantic-core/src/cost-attribution.ts with CostAttributor: (1) attributeCostToEntity(queryId, entityId, tokensUsed, computeMs) recording entity-level cost contribution, (2) computeConnectorCost(connectorId, period) aggregating sync costs (API calls, bandwidth) + query retrieval costs per connector, (3) aggregateUserCosts(userId, period) summing all user queries + resulting infrastructure costs with per-connector breakdown, (4) computeCostForecast(entityId, interval) predicting entity retrieval costs based on access patterns. Create migration 145 (entity_cost_attribution, connector_cost_events, user_cost_ledger, cost_forecasts). Add REST routes: GET /api/v1/cost-attribution/entities/:id (entity cost breakdown by operation), GET /api/v1/cost-attribution/connectors/:id (connector cost summary), GET /api/v1/cost-attribution/users/:id (user cost ledger with daily/monthly aggregates), GET /api/v1/cost-attribution/forecasts (cost projections). Add dashboard page: cost-chargeback/page.tsx with: entity-centric cost heatmap, connector cost-per-record analysis, user cost allocation table, forecast trends. Include 24+ tests (14 unit cost aggregation + 10 integration forecast accuracy).
 - **Files**:

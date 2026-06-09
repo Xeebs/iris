@@ -90,6 +90,7 @@ export default defineConfig({
       '@iris/semantic-core/relationship-recommender': path.resolve(__dirname, '../../packages/semantic-core/src/relationship-recommender.ts'),
       '@iris/semantic-core/batch-recommender': path.resolve(__dirname, '../../packages/semantic-core/src/batch-recommender.ts'),
       '@iris/semantic-core/query-expansion-engine': path.resolve(__dirname, '../../packages/semantic-core/src/query-expansion-engine.ts'),
+      '@iris/semantic-core/cost-attribution': path.resolve(__dirname, '../../packages/semantic-core/src/cost-attribution.ts'),
       '@iris/semantic-core': path.resolve(__dirname, '../../packages/semantic-core/src/index.ts'),
       '@iris/cache/response-cache': path.resolve(__dirname, '../../packages/cache/src/response-cache.ts'),
       '@iris/compression': path.resolve(__dirname, '../../packages/compression/src/index.ts'),
