@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS index_snapshots (
   retention_days INT NOT NULL DEFAULT 30,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   completed_at TIMESTAMPTZ,
-  expires_at TIMESTAMPTZ GENERATED ALWAYS AS (created_at + (retention_days || ' days')::INTERVAL) STORED
+  expires_at TIMESTAMPTZ
 );
 
 CREATE INDEX IF NOT EXISTS idx_snapshots_workspace ON index_snapshots (workspace_id, created_at DESC);
