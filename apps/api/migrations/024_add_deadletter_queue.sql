@@ -1,7 +1,7 @@
 CREATE TABLE deadletter_jobs (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   job_id TEXT NOT NULL,
-  connector_instance_id UUID REFERENCES connector_instances(id) ON DELETE SET NULL,
+  connector_instance_id TEXT REFERENCES connector_instances(id) ON DELETE SET NULL,
   workspace_id TEXT NOT NULL,
   error_message TEXT NOT NULL,
   error_stack TEXT,
