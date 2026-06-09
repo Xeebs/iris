@@ -4577,3 +4577,100 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
   - apps/dashboard/components/learning-insights.tsx
 - **Depends on**: nothing
 - **Added**: 2026-06-09
+
+---
+
+## Layer 72: Platform Maturity & Ecosystem Expansion
+
+### Task: Connector Performance Benchmarking & Comparison Suite
+- **Layer**: 72 — Platform Maturity & Ecosystem Expansion
+- **Status**: COMMITTED
+- **Priority**: High
+- **Description**: Build a comprehensive performance benchmarking system to help teams evaluate and compare connector efficiency across data sources. Create packages/semantic-core/src/connector-benchmarker.ts with ConnectorBenchmarker: (1) defineBenchmark(connectorId, entityTypes, config) setting up test harness with configurable data sizes (1K/10K/100K records), (2) executeSync(connectorId, benchmark) running timed sync with metrics collection (throughput entities/sec, memory peak MB, API calls count, error rate, average entity transformation time), (3) compareConnectors(connectorIds, entityType) producing ranked comparison (fastest, lowest memory, most reliable), (4) detectPerformanceRegression(connectorId, historicalBaseline) flagging if current performance degrades >10% vs baseline. Create migration 160 (connector_benchmarks, benchmark_results, benchmark_baselines). Add REST routes: POST /api/v1/connectors/:id/benchmark (start benchmark), GET /api/v1/connectors/:id/benchmark-results (historical results), POST /api/v1/connectors/benchmark-compare (multi-connector comparison), GET /api/v1/connectors/benchmark-matrix (all connectors vs entity types heatmap). Add dashboard page apps/dashboard/app/admin/connector-benchmarks/page.tsx with: performance-matrix (entity type × connector grid showing throughput/latency/cost), regression-alerts (visual warning for degraded connectors), benchmark-trends (line chart of performance over time per connector). Include 26+ tests (14 unit benchmarking logic + 12 integration with mock sync data).
+- **Files**:
+  - packages/semantic-core/src/connector-benchmarker.ts
+  - packages/semantic-core/src/__tests__/connector-benchmarker.test.ts
+  - packages/semantic-core/src/__tests__/connector-benchmarker.integration.test.ts
+  - apps/api/src/routes/connector-benchmarks.ts
+  - apps/api/src/__tests__/connector-benchmarks.test.ts
+  - apps/api/migrations/160_connector_benchmarks.sql
+  - apps/dashboard/app/admin/connector-benchmarks/page.tsx
+  - apps/dashboard/components/performance-matrix.tsx
+  - apps/dashboard/components/regression-alerts.tsx
+  - apps/dashboard/components/benchmark-trends.tsx
+- **Depends on**: nothing
+- **Added**: 2026-06-09
+
+### Task: Enterprise Data Governance & Compliance Dashboard
+- **Layer**: 72 — Platform Maturity & Ecosystem Expansion
+- **Status**: IN_PROGRESS
+- **Priority**: High
+- **Description**: Build a centralized compliance and governance dashboard for enterprise users to manage data lineage, audit trails, retention policies, and regulatory compliance. Create apps/dashboard/app/admin/data-governance/page.tsx with 5 sections: (1) data-lineage-viewer: interactive Mermaid flowchart showing data flow from connectors → indexer → cache → MCP consumers with entity type breakdowns and transformation logs; (2) audit-trail-inspector: searchable paginated table of all data access events (who, what, when, how long, returned bytes), with export to CSV; (3) retention-policy-manager: configure TTL policies per entity type per connector (e.g., "delete support tickets after 90 days"), show affected entity counts, manually trigger cleanups; (4) compliance-certificate-panel: track GDPR/HIPAA/SOC2 compliance status, show certificate expiry, audit scope summary; (5) data-delete-request-queue: DSR workflow showing pending deletion requests, execution status, completion date. Create new REST routes in apps/api/src/routes/governance-dashboard.ts: GET /api/v1/governance/lineage (entity flow data), GET /api/v1/governance/audit-summary (aggregate stats), POST /api/v1/governance/retention-policies (create policy), GET /api/v1/governance/compliance-status. Create migration 161 (retention_policies, compliance_metadata, dsr_queue). Add 5 dashboard components: lineage-flow-diagram.tsx, audit-trail-table.tsx, retention-policy-editor.tsx, compliance-badge.tsx, dsr-queue.tsx. Include 28+ tests (16 dashboard component + 12 route).
+- **Files**:
+  - apps/api/src/routes/governance-dashboard.ts
+  - apps/api/src/__tests__/governance-dashboard.test.ts
+  - apps/api/migrations/161_governance_schema.sql
+  - apps/dashboard/app/admin/data-governance/page.tsx
+  - apps/dashboard/components/lineage-flow-diagram.tsx
+  - apps/dashboard/components/audit-trail-table.tsx
+  - apps/dashboard/components/retention-policy-editor.tsx
+  - apps/dashboard/components/compliance-badge.tsx
+  - apps/dashboard/components/dsr-queue.tsx
+- **Depends on**: nothing
+- **Added**: 2026-06-09
+
+### Task: MCP Client SDK Generation & Developer Portal
+- **Layer**: 72 — Platform Maturity & Ecosystem Expansion
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Create auto-generated type-safe client SDKs for the Iris MCP server in multiple languages (TypeScript, Python, Go) and build a developer portal to host documentation, tutorials, and SDK downloads. Create packages/semantic-core/src/sdk-generator.ts with SdkCodeGenerator: (1) parseToolSchema(toolDefinition) extracting name, description, input schema, output format, (2) generateTypeDefinitions(schema, language) producing type-safe request/response types for TS (zod schemas), Python (pydantic models), Go (structs), (3) generateClientLibrary(tools, language) outputting complete client library with async client class, method per tool, error handling per language conventions, (4) outputDocs(tools) generating markdown documentation (method signatures, examples, error codes). Create apps/api/src/routes/sdk-downloads.ts with endpoints: GET /api/v1/sdks/languages (list supported), POST /api/v1/sdks/generate/:language (trigger generation, return download URL + async job ID), GET /api/v1/sdks/jobs/:jobId/status. Create REST API docs portal page at apps/dashboard/app/developers/sdk-portal/page.tsx with: SDK download buttons per language, copy-paste quick-start examples, auto-updated API reference (reads from server tool registry), changelog tracking SDK versions. Create 3 generated SDK stubs (typescript-sdk, python-sdk, go-sdk) with example usage. Include 22+ tests (12 code generation logic + 10 route + SDK correctness).
+- **Files**:
+  - packages/semantic-core/src/sdk-generator.ts
+  - packages/semantic-core/src/__tests__/sdk-generator.test.ts
+  - packages/semantic-core/src/__tests__/sdk-generator.integration.test.ts
+  - apps/api/src/routes/sdk-downloads.ts
+  - apps/api/src/__tests__/sdk-downloads.test.ts
+  - apps/api/migrations/162_sdk_jobs.sql
+  - apps/dashboard/app/developers/sdk-portal/page.tsx
+  - packages/generated-sdks/typescript-sdk/package.json
+  - packages/generated-sdks/python-sdk/setup.py
+  - packages/generated-sdks/go-sdk/go.mod
+- **Depends on**: nothing
+- **Added**: 2026-06-09
+
+### Task: Connector Health Score & SLA Tracking System
+- **Layer**: 72 — Platform Maturity & Ecosystem Expansion
+- **Status**: UNWORKED
+- **Priority**: Medium
+- **Description**: Implement a comprehensive health scoring system for connectors with SLA tracking, incident detection, and automated alerting. Create packages/semantic-core/src/connector-health-scorer.ts with ConnectorHealthScorerService: (1) computeHealthScore(connectorId, window=30d) aggregating metrics (sync success rate weight 40%, avg sync latency weight 20%, data freshness weight 20%, error rate weight 10%, data quality weight 10%) into 0-100 score with grade (A/B/C/D/F), (2) trackSlaCompliance(connectorId, slaTarget) measuring uptime/latency SLA targets (e.g., "99.5% success rate, p95 latency <5min"), flagging breaches, (3) detectHealthAnomaly(connectorId, metricType) using exponential smoothing to flag sudden degradation (>2σ from baseline), (4) predictMaintenanceNeeded(connectorId) trend analysis suggesting proactive action (e.g., "API quota approaching limit in 3 days"). Create migration 163 (connector_health_scores, sla_targets, sla_breaches, health_incidents). Add REST routes: GET /api/v1/connectors/:id/health-score (current + history), POST /api/v1/connectors/:id/sla-config (set targets), GET /api/v1/connectors/health-summary (all connectors ranked by health), GET /api/v1/admin/incidents (active health incidents with remediation steps). Add dashboard page apps/dashboard/app/admin/connector-health-scorecard/page.tsx with: connector-grid (card per connector showing health grade, incidents, SLA status with trend sparkline), sla-compliance-tracker (timeline of breaches, root cause analysis), incident-response-workflow (escalation paths, runbooks). Include 24+ tests (14 unit health scoring + 10 integration SLA tracking + anomaly detection).
+- **Files**:
+  - packages/semantic-core/src/connector-health-scorer.ts
+  - packages/semantic-core/src/__tests__/connector-health-scorer.test.ts
+  - packages/semantic-core/src/__tests__/connector-health-scorer.integration.test.ts
+  - apps/api/src/routes/connector-health-scorecards.ts
+  - apps/api/src/__tests__/connector-health-scorecards.test.ts
+  - apps/api/migrations/163_connector_health_sla.sql
+  - apps/dashboard/app/admin/connector-health-scorecard/page.tsx
+  - apps/dashboard/components/connector-grid.tsx
+  - apps/dashboard/components/sla-compliance-tracker.tsx
+  - apps/dashboard/components/incident-response-panel.tsx
+- **Depends on**: nothing
+- **Added**: 2026-06-09
+
+### Task: Advanced Query Caching with Smart Invalidation & Prefetching
+- **Layer**: 72 — Platform Maturity & Ecosystem Expansion
+- **Status**: UNWORKED
+- **Priority**: Medium
+- **Description**: Build an intelligent multi-layer caching strategy with automatic invalidation based on entity change events and predictive prefetching to maximize token savings. Create packages/cache/src/smart-cache-manager.ts with SmartCacheManager: (1) cacheQuery(queryHash, result, ttl, dependencies) storing result with dependency tracking (list of entity IDs that if changed, invalidate this cache entry), (2) onEntityChange(entityId) cascading invalidation across all queries that depend on that entity (use Redis pub/sub), (3) prefetchLikelyQueries(userId, context) analyzing user's query patterns + recent MCP requests to predict next N queries, proactively embedding/caching them in background, (4) getHitRate(queryHash) computing cache effectiveness (hits/total), (5) optimizeCacheTtl(queryHash) adaptive TTL (frequently-accessed queries stay longer, stale queries evict faster). Create migration 164 (query_dependencies, cache_statistics, user_query_patterns). Add REST endpoints: GET /api/v1/cache/stats (hit rates per query/entity type), GET /api/v1/cache/dependencies/:queryId (visualize what entity changes would invalidate), POST /api/v1/cache/prefetch (trigger prefetch for user), DELETE /api/v1/cache/entries/:queryId (manual invalidation). Add dashboard components: cache-efficiency-heatmap.tsx (query × hit rate matrix), dependency-graph.tsx (Mermaid: query → entity dependencies), prefetch-recommendations.tsx (predicted queries + confidence %). Include 20+ tests (12 unit cache logic + 8 integration entity-change cascading).
+- **Files**:
+  - packages/cache/src/smart-cache-manager.ts
+  - packages/cache/src/__tests__/smart-cache-manager.test.ts
+  - packages/cache/src/__tests__/smart-cache-manager.integration.test.ts
+  - apps/api/src/routes/cache-optimization.ts
+  - apps/api/src/__tests__/cache-optimization.test.ts
+  - apps/api/migrations/164_smart_cache.sql
+  - apps/dashboard/components/cache-efficiency-heatmap.tsx
+  - apps/dashboard/components/dependency-graph.tsx
+  - apps/dashboard/components/prefetch-recommendations.tsx
+- **Depends on**: nothing
+- **Added**: 2026-06-09
