@@ -7,6 +7,11 @@ dist/
 *.tsbuildinfo
 .DS_Store
 coverage/
+# Stray TypeScript build output emitted next to sources (real builds go to dist/)
+packages/*/src/**/*.js
+packages/*/src/**/*.js.map
+packages/*/src/**/*.d.ts
+packages/*/src/**/*.d.ts.map
 .claude/settings.local.json
 CLAUDE.local.md
 logs/
