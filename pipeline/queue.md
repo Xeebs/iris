@@ -25,6 +25,18 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 > While `docs/VERTICAL_SLICE.md` reads `NOT ACHIEVED`, the pipeline selects ONLY from this layer (plus the CI gate). All other layers are frozen. Goal: one command proving connect → sync → index → serve → query → measure, from a clean DB, with a ≥70% token-savings report.
 
+### Task: VS-0 Bootstrap workspace + API key for demo/CI mode
+- **Layer**: 78 — Vertical Slice
+- **Status**: UNWORKED
+- **Priority**: Critical
+- **Description**: Add an unauthenticated REST endpoint `POST /api/v1/demo/bootstrap` that creates a fresh workspace, generates an MCP API key, and returns both IDs. This endpoint is only enabled when `DEMO_MODE=true` env var is set; in production Clerk auth is mandatory. Validates that the endpoint is correctly wired in `apps/api/src/server.ts` (must be before the Clerk middleware to avoid requiring auth). The endpoint response includes: `{ workspaceId: string, apiKey: string }` — the API key is only shown once (per real API key practices). Use `SecretVault.generateApiKey()` and store the key in `mcp_api_keys` table. This unblocks scripts/slice-demo.sh from creating the initial workspace without manual DB seeding.
+- **Files**:
+  - apps/api/src/routes/demo-bootstrap.ts (new file)
+  - apps/api/src/server.ts (mount route before Clerk middleware when DEMO_MODE=true)
+  - apps/api/src/services/connector-service.ts (if needed to support workspace creation)
+- **Depends on**: nothing
+- **Added**: 2026-06-09
+
 ### Task: VS-1 Slice path audit — map and verify every link in the chain
 - **Layer**: 78 — Vertical Slice
 - **Status**: UNWORKED
@@ -33,6 +45,18 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 - **Files**:
   - docs/VERTICAL_SLICE.md (audit table)
   - apps/api/src/server.ts (slice-critical route mounts only)
+- **Depends on**: nothing
+- **Added**: 2026-06-09
+
+### Task: VS-1b Deterministic embedding provider for CI/demo
+- **Layer**: 78 — Vertical Slice
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Create a `DeterministicHashProvider` in `packages/semantic-core/src/providers/` that generates reproducible 1536-dimensional embeddings from entity text using a seeded hash function (e.g., `crypto.createHmac('sha256', seed)` repeated/expanded to fill 1536 dimensions). This provider is used in demo/test mode (`EMBEDDING_PROVIDER=hash-deterministic` env var) to avoid any dependency on external API keys or services in scripts/slice-demo.sh. Register it in `createEmbeddingProvider()` factory in embedding-provider.ts. The provider must be stable across runs (same input text always produces same vector) so the demo is reproducible. Tests: verify same entity consistently produces same embedding across multiple calls, and embedding dimensions match 1536.
+- **Files**:
+  - packages/semantic-core/src/providers/deterministic-hash-provider.ts
+  - packages/semantic-core/src/embedding-provider.ts (factory update)
+  - packages/semantic-core/src/providers/__tests__/deterministic-hash-provider.test.ts
 - **Depends on**: nothing
 - **Added**: 2026-06-09
 
@@ -53,11 +77,11 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 - **Layer**: 78 — Vertical Slice
 - **Status**: UNWORKED
 - **Priority**: High
-- **Description**: Create `scripts/slice-demo.sh` (plus a TypeScript driver `scripts/slice-demo.ts` if cleaner) that from a clean state: (1) resets the database (drop/recreate schema, run all migrations), (2) starts the API server, (3) creates a demo workspace, an API key, and a HubSpot connector instance in demoMode via real REST calls, (4) triggers a sync and waits for completion, (5) verifies indexed entity counts in the vector store match fixture counts, and exits non-zero with a clear message at the first broken step. This script is the slice's source of truth — it must need no manual steps beyond `docker-compose up -d` and env vars in `.env.local`. Keep it boring and observable: log each step, fail fast.
+- **Description**: Create `scripts/slice-demo.sh` (plus a TypeScript driver `scripts/slice-demo.ts` if cleaner) that from a clean state: (1) resets the database (drop/recreate schema, run all migrations), (2) sets DEMO_MODE=true and EMBEDDING_PROVIDER=hash-deterministic in the API server environment, (3) starts the API server, (4) calls POST /api/v1/demo/bootstrap to create a workspace and API key, (5) creates a HubSpot connector instance in demoMode via real REST POST /api/v1/connectors, (6) triggers sync and waits for completion, (7) verifies indexed entity counts in the vector store match fixture counts (select count from iris_entities where workspace_id = $1), and exits non-zero with a clear message at the first broken step. This script is the slice's source of truth — it must need no manual steps beyond `docker-compose up -d` and env vars in `.env.local`. Keep it boring and observable: log each step, fail fast.
 - **Files**:
   - scripts/slice-demo.sh
   - scripts/slice-demo.ts
-- **Depends on**: VS-2 Demo-mode HubSpot sync against fixtures
+- **Depends on**: VS-0 Bootstrap workspace + API key for demo/CI mode, VS-1b Deterministic embedding provider for CI/demo, VS-2 Demo-mode HubSpot sync against fixtures
 - **Added**: 2026-06-09
 
 ### Task: VS-4 MCP query verification — canonical questions answered correctly
