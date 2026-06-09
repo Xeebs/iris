@@ -5,9 +5,8 @@
   "last_cycle": "2026-06-09",
   "last_research": "2026-06-09",
   "last_commit": "2026-06-09",
-  "cycle_count": 345,
+  "cycle_count": 346,
   "rate_limit_hit": false,
   "mode": "SLICE",
-  "new_tasks_added": 9,
-  "new_layer": 78
+  "session_tasks_committed": 1
 }

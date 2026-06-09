@@ -4895,3 +4895,30 @@ the live queue small. Layer headings are repeated per archival batch.
   - apps/dashboard/components/__tests__/real-time-log-viewer.test.tsx
 - **Depends on**: nothing
 - **Added**: 2026-06-09
+
+---
+
+<!-- archived 2026-06-09 -->
+
+## Layer 78: VERTICAL SLICE — The Only Feature Work Allowed (see docs/VERTICAL_SLICE.md)
+### Task: VS-4 MCP query verification — canonical questions answered correctly
+- **Layer**: 78 — Vertical Slice
+- **Status**: COMMITTED
+- **Priority**: High
+- **Description**: Extend the slice demo: start the MCP server against the demo workspace, then drive it with a scripted MCP client (stdio or HTTP, whatever `apps/mcp-server` supports — the same transport a real Claude client would use, not direct function calls) calling `query-context` with the 5 canonical questions from docs/VERTICAL_SLICE.md. Assert each response contains the expected facts from the fixtures and respects the 2000-token contextBudget. Failures must print the question, the expected facts, and the actual response. Wire this into scripts/slice-demo.sh as the QUERY/ANSWER phase.
+- **Files**:
+  - scripts/slice-demo.ts (query phase)
+  - tests/e2e/slice-canonical-questions.spec.ts
+- **Depends on**: VS-3 One-command slice demo script
+- **Added**: 2026-06-09
+
+### Task: VS-5 Token-savings measurement and report
+- **Layer**: 78 — Vertical Slice
+- **Status**: COMMITTED
+- **Priority**: High
+- **Description**: For each canonical question, measure (a) the token count of the Iris `query-context` response and (b) the baseline: token count of the raw fixture JSON a user would otherwise paste to answer that question (the full relevant fixture file(s)). Print a per-question table and overall savings ratio at the end of scripts/slice-demo.sh, and write it to `pipeline/slice-report.md`. The slice requires ≥70% savings; if below, that is a real product finding — investigate the compression/retrieval path rather than gaming the baseline. Use the existing token-counting utilities (audit-table estimates per Token Efficiency Rules in CLAUDE.md) — do not hand-roll a new counter.
+- **Files**:
+  - scripts/slice-demo.ts (measure phase)
+  - pipeline/slice-report.md
+- **Depends on**: VS-4 MCP query verification
+- **Added**: 2026-06-09
