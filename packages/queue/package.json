@@ -9,7 +9,8 @@
     ".": "./dist/sync-job-queue.js",
     "./sync-schedule-service": "./dist/sync-schedule-service.js",
     "./connector-rate-limiter": "./dist/connector-rate-limiter.js",
-    "./connector-resilience": "./dist/connector-resilience.js"
+    "./connector-resilience": "./dist/connector-resilience.js",
+    "./*": "./dist/*.js"
   },
   "scripts": {
     "build": "tsc --build",
