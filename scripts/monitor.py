@@ -28,6 +28,7 @@ STATE_JSON   = IRIS / "pipeline" / "state.json"
 USAGE_JSON   = IRIS / "pipeline" / "usage.json"
 SESSION_JSON = IRIS / "pipeline" / "session-tokens.json"
 QUEUE_MD    = IRIS / "pipeline" / "queue.md"
+ARCHIVE_MD  = IRIS / "pipeline" / "queue-archive.md"
 CHANGE_MD   = IRIS / "pipeline" / "changelog.md"
 LOG_DIR     = IRIS / "logs"
 
@@ -135,6 +136,24 @@ def _parse_changelog(path: Path) -> list[str]:
     return entries
 
 
+def _fmt_tokens(n: int) -> str:
+    if n >= 1_000_000:
+        return f"{n / 1_000_000:.1f}M"
+    if n >= 1_000:
+        return f"{n / 1_000:.1f}k"
+    return str(n)
+
+
+def _today_tokens(usage: dict) -> int:
+    """Sum recorded session tokens since local midnight."""
+    midnight = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0).timestamp()
+    return sum(
+        s.get("input_tokens", 0) + s.get("output_tokens", 0)
+        for s in usage.get("sessions", [])
+        if s.get("timestamp", 0) > midnight
+    )
+
+
 def _window_tokens(usage: dict, window_hours: float) -> int:
     """Sum recorded session tokens inside the rolling budget window."""
     cutoff = time.time() - window_hours * 3600
@@ -214,10 +233,17 @@ def _summarize_line(line: str) -> list[tuple[str, str]]:
     elif etype == "result":
         ok     = not event.get("is_error")
         result = " ".join(str(event.get("result", "")).split())
-        cost   = event.get("total_cost_usd", event.get("cost_usd", 0)) or 0
+        u      = event.get("usage", {}) or {}
+        fin    = (
+            u.get("input_tokens", 0)
+            + u.get("cache_read_input_tokens", 0)
+            + u.get("cache_creation_input_tokens", 0)
+        )
+        fout = u.get("output_tokens", 0)
         out.append((
             "marker" if ok else "error",
-            f"■ run {'completed' if ok else 'FAILED'} — {result[:70]}  (${cost:.2f})",
+            f"■ run {'completed' if ok else 'FAILED'} — {result[:60]}  "
+            f"(in {_fmt_tokens(fin)} · out {_fmt_tokens(fout)})",
         ))
 
     return out
@@ -421,6 +447,7 @@ def _budget_panel(daemon: dict, usage: dict, session: dict) -> Panel:
     t.append("Limit     ", style="dim"); t.append(f"{limit:,} tokens\n",      style="white")
     t.append("Remaining ", style="dim"); t.append(f"{limit - used:,} tokens\n", style=pct_style)
     t.append("Window    ", style="dim"); t.append(f"{hours:.0f}h rolling\n",  style="white")
+    t.append("Today     ", style="dim"); t.append(f"{_today_tokens(usage) + live:,} tokens\n", style="white")
 
     if live > 0 or (daemon.get("status") == "running" and sess_msgs > 0):
         t.append("\nLive session\n", style="bold")
@@ -483,6 +510,7 @@ def _update(layout: Layout) -> None:
     usage     = _read_json(USAGE_JSON)
     session   = _read_json(SESSION_JSON)
     tasks     = _parse_queue(QUEUE_MD)
+    archived  = _parse_queue(ARCHIVE_MD)   # completed tasks live here, not in the queue
     changelog = _parse_changelog(CHANGE_MD)
     actions   = _recent_actions()
 
@@ -501,7 +529,7 @@ def _update(layout: Layout) -> None:
     ))
 
     layout["daemon"].update(_daemon_panel(daemon))
-    layout["pipeline"].update(_pipeline_panel(state, tasks))
+    layout["pipeline"].update(_pipeline_panel(state, tasks + archived))
     layout["budget"].update(_budget_panel(daemon, usage, session))
     layout["changelog"].update(_changelog_panel(changelog))
 

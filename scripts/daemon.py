@@ -19,8 +19,9 @@ import subprocess
 import sys
 import threading
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 IRIS        = Path(__file__).resolve().parent.parent
 STATE_FILE  = IRIS / "pipeline" / "state.json"
@@ -156,6 +157,23 @@ def _scan_for_limit(text: str) -> None:
         if epoch > 1e12:  # milliseconds → seconds
             epoch /= 1000.0
         _limit_reset_epoch = epoch
+        return
+    # Human-readable form: "resets 9pm (America/New_York)" / "resets 9:30am"
+    match = re.search(
+        r"resets\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)(?:\s*\(([^)]+)\))?", text, re.I
+    )
+    if match:
+        try:
+            hour   = int(match.group(1)) % 12 + (12 if match.group(3).lower() == "pm" else 0)
+            minute = int(match.group(2) or 0)
+            tz     = ZoneInfo(match.group(4)) if match.group(4) else None
+            now_dt = datetime.now(tz)
+            reset  = now_dt.replace(hour=hour, minute=minute, second=0, microsecond=0)
+            if reset <= now_dt:
+                reset += timedelta(days=1)
+            _limit_reset_epoch = reset.timestamp()
+        except Exception:
+            pass  # unparseable timezone/format — fall back to the default hold
 
 
 # ── usage file ────────────────────────────────────────────────────────────────
@@ -183,13 +201,22 @@ def get_window_tokens(usage: dict) -> int:
     )
 
 
-def record_session(input_tokens: int, output_tokens: int) -> None:
+def record_session(
+    input_tokens: int,
+    output_tokens: int,
+    cache_read: int = 0,
+    cache_creation: int = 0,
+    model: str | None = None,
+) -> None:
     usage    = read_usage()
     sessions = usage.get("sessions", [])
     sessions.append({
-        "timestamp":     time.time(),
-        "input_tokens":  input_tokens,
-        "output_tokens": output_tokens,
+        "timestamp":      time.time(),
+        "input_tokens":   input_tokens,
+        "output_tokens":  output_tokens,
+        "cache_read":     cache_read,
+        "cache_creation": cache_creation,
+        "model":          model,
     })
     # Prune entries older than 2× the window
     cutoff   = time.time() - (BUDGET_WINDOW_HOURS * 3600 * 2)
@@ -409,7 +436,6 @@ def _stdout_reader(proc: subprocess.Popen, log_file_path: Path) -> None:
                 if event.get("is_error") or str(event.get("subtype", "")).startswith("error"):
                     _scan_for_limit(json.dumps(event))
                 usage = event.get("usage", {})
-                cost  = event.get("cost_usd", 0)
                 dur   = event.get("duration_ms", 0)
                 with _session_tokens_lock:
                     # Authoritative totals override running estimates
@@ -425,7 +451,7 @@ def _stdout_reader(proc: subprocess.Popen, log_file_path: Path) -> None:
                 write_session_tokens(force=True)
                 lf.write(
                     f"[budget] Session total — in: {sess_in:,}  out: {sess_out:,}  "
-                    f"cost: ${cost:.4f}  dur: {dur / 1000:.1f}s\n"
+                    f"dur: {dur / 1000:.1f}s\n"
                 )
 
             # Mid-session budget check after every event
@@ -581,10 +607,12 @@ def main() -> None:
 
         # Persist this session's token usage
         with _session_tokens_lock:
-            sess_in  = _session_input_tokens
-            sess_out = _session_output_tokens
+            sess_in    = _session_input_tokens
+            sess_out   = _session_output_tokens
+            sess_cr    = _session_cache_read
+            sess_cc    = _session_cache_creation
         if sess_in + sess_out > 0:
-            record_session(sess_in, sess_out)
+            record_session(sess_in, sess_out, sess_cr, sess_cc, model)
 
         if not _running:
             break

@@ -17,6 +17,17 @@ env:
   NODE_OPTIONS: '--max-old-space-size=6144'
 
 jobs:
+  wiring-check:
+    name: Wiring Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: Verify route factories and MCP tools are reachable
+        run: node scripts/check-wiring.mjs
+
   unit-tests:
     name: Load Test Unit Tests
     runs-on: ubuntu-latest
