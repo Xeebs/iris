@@ -4386,7 +4386,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Sync Parallelism & Concurrency Auto-Optimizer
 - **Layer**: 69 — Data Freshness, Sync Observability & Quality Orchestration
-- **Status**: UNWORKED
+- **Status**: IN_PROGRESS
 - **Priority**: Medium
 - **Description**: Implement an adaptive sync optimizer that automatically tunes connector concurrency, batch sizes, and resource allocation based on observed throughput, latency, and error rates to maximize sync efficiency. Create packages/semantic-core/src/sync-parallelism-optimizer.ts with SyncParallelismOptimizer: (1) recommendConcurrency(connectorId, entityType, historicalMetrics) computing optimal parallel request count using hill-climbing search (maximize throughput/s while keeping p95 latency <threshold), (2) tuneRequestBatchSize(connectorId, currentBatch) adapting batch size based on error rate + payload size to find sweet spot, (3) allocateWorkerPool(workspace, connectorIds) distributing available BullMQ workers across connectors using weighted allocation (prioritize high-entity-count connectors, recently-degraded connectors lower priority), (4) detectOptimizationWindow(connectorId) identifying stable periods (no API changes, no rate limits) suitable for tuning experiments, (5) executeOptimizationExperiment(connectorId, variant) A/B testing a concurrency variant on 10% of next sync, measuring impact on throughput. Create migration 151 (sync_optimization_configs, optimization_experiments, experiment_results). Add REST routes: POST /api/v1/sync-optimizer/tuning/:connectorId (trigger auto-tuning), GET /api/v1/sync-optimizer/config/:connectorId (current settings + recommended), GET /api/v1/sync-optimizer/experiments (A/B test results). Add dashboard components: concurrency-tuning-wizard.tsx (interactive tuning simulator), optimization-history-chart.tsx (throughput improvement over time), experiment-results-table.tsx. Include 20+ tests (12 unit optimization math + 8 integration BullMQ allocation).
 - **Files**:
@@ -4399,5 +4399,104 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
   - apps/dashboard/components/concurrency-tuning-wizard.tsx
   - apps/dashboard/components/optimization-history-chart.tsx
   - apps/dashboard/components/experiment-results-table.tsx
+- **Depends on**: nothing
+- **Added**: 2026-06-08
+
+---
+
+## Layer 70: Test Coverage Completion & Enterprise Observability
+
+### Task: Critical Route Test Coverage Suite — Phase 1
+- **Layer**: 70 — Test Coverage Completion & Enterprise Observability
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Add comprehensive test coverage for 10 high-impact API routes that currently lack dedicated test files. Target routes: relationship-recommendations, custom-connectors, document-indexing, query-cost-analysis, metrics-anomalies, webhook-admin, circuit-breaker-admin, pii-config, admin-sync-monitoring, admin-sync-quality. For each route, create a test file covering: (1) happy path with valid inputs and expected outputs, (2) 400-level validation/auth errors, (3) 500-level error handling and recovery, (4) edge cases (empty results, pagination boundaries, concurrency), (5) integration with dependent services (database, connectors, cache). Follow test patterns in .claude/rules/testing.md: 80%+ coverage target, use Vitest + MSW for mocks. Each test file should have 20–30 tests covering all endpoints and error paths.
+- **Files**:
+  - apps/api/src/__tests__/relationship-recommendations.test.ts
+  - apps/api/src/__tests__/custom-connectors.test.ts
+  - apps/api/src/__tests__/document-indexing.test.ts
+  - apps/api/src/__tests__/query-cost-analysis.test.ts
+  - apps/api/src/__tests__/metrics-anomalies.test.ts
+  - apps/api/src/__tests__/webhook-admin.test.ts
+  - apps/api/src/__tests__/circuit-breaker-admin.test.ts
+  - apps/api/src/__tests__/pii-config.test.ts
+  - apps/api/src/__tests__/admin-sync-monitoring.test.ts
+  - apps/api/src/__tests__/admin-sync-quality.test.ts
+- **Depends on**: nothing
+- **Added**: 2026-06-08
+
+### Task: Distributed Request Tracing & Correlation ID Framework
+- **Layer**: 70 — Test Coverage Completion & Enterprise Observability
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Implement end-to-end request tracing with W3C TraceContext propagation across all services (API, MCP, connectors, workers). Create packages/semantic-core/src/request-tracer.ts with RequestTracer: (1) generateTraceId() and propagateTraceContext(parentSpanId, operation) creating linked trace chains, (2) recordSpan(name, durationMs, metadata, errors) capturing operation telemetry including API latency, database query time, embedding calls, (3) extractTraceFromHeaders(request) and injectTraceIntoHeaders(response) for HTTP propagation, (4) publishTraceToBackend(traceId, spans) sending structured traces to observability sink. Create migration 151 (request_traces table with trace_id, parent_span_id, operation_name, duration_ms, metadata, errors). Add REST middleware at apps/api/src/middleware/request-tracing.ts to inject/extract traces on all requests. Add MCP server interceptor to trace tool calls. Export tracing data via: GET /api/v1/traces (paginated search), GET /api/v1/traces/:traceId (trace waterfall), POST /api/v1/traces/analyze (latency heatmap, critical path analysis). Add dashboard components: trace-waterfall.tsx (Gantt-style visualization), latency-heatmap.tsx (operation × percentile), critical-path-analyzer.tsx. Include 24+ tests (16 unit tracing logic + 8 integration cross-service traces).
+- **Files**:
+  - packages/semantic-core/src/request-tracer.ts
+  - packages/semantic-core/src/__tests__/request-tracer.test.ts
+  - packages/semantic-core/src/__tests__/request-tracer.integration.test.ts
+  - apps/api/src/middleware/request-tracing.ts
+  - apps/api/src/middleware/__tests__/request-tracing.test.ts
+  - apps/api/src/routes/request-traces.ts
+  - apps/api/src/__tests__/request-traces.test.ts
+  - apps/api/migrations/151_request_traces.sql
+  - apps/mcp-server/src/middleware/trace-interceptor.ts
+  - apps/dashboard/components/trace-waterfall.tsx
+  - apps/dashboard/components/latency-heatmap.tsx
+  - apps/dashboard/components/critical-path-analyzer.tsx
+- **Depends on**: nothing
+- **Added**: 2026-06-08
+
+### Task: Multi-Connector Query Optimization & Execution Strategy Engine
+- **Layer**: 70 — Test Coverage Completion & Enterprise Observability
+- **Status**: UNWORKED
+- **Priority**: Medium
+- **Description**: Build an intelligent query planner that optimizes multi-connector queries by selecting optimal execution strategies (parallel vs. serial, early filtering vs. late filtering, source prioritization). Create packages/semantic-core/src/multi-connector-optimizer.ts with MultiConnectorQueryOptimizer: (1) analyzeQueryConnectorAffinity(query) determining which connectors are relevant (BFS on entity graph), (2) rankExecutionStrategies(connectorList, contextBudget, latencyBudget) scoring strategies: parallel execution (max throughput but high memory), sequential (low memory but slow), filtered-first (reduce result size early), cached-first (leverage semantic cache), (3) estimateExecutionCost(strategy, connectorList) predicting latency p95, token consumption, connector costs, (4) selectOptimalStrategy(query, budget, constraints) choosing winner based on SLA requirements. Create migration 152 (query_execution_plans, execution_strategy_history). Add REST routes: POST /api/v1/query-optimizer/plan (analyze and recommend strategy), GET /api/v1/query-optimizer/history (plan execution results). Add MCP tool: multi-connector-query-optimize (advise on query strategy for Claude). Add dashboard component: query-strategy-analyzer.tsx showing cost vs latency tradeoff, recommended strategy, historical accuracy. Include 20+ tests (12 unit strategy scoring + 8 integration multi-connector execution).
+- **Files**:
+  - packages/semantic-core/src/multi-connector-optimizer.ts
+  - packages/semantic-core/src/__tests__/multi-connector-optimizer.test.ts
+  - packages/semantic-core/src/__tests__/multi-connector-optimizer.integration.test.ts
+  - apps/api/src/routes/multi-connector-optimizer.ts
+  - apps/api/src/__tests__/multi-connector-optimizer.test.ts
+  - apps/api/migrations/152_query_execution_plans.sql
+  - apps/mcp-server/src/tools/multi-connector-query-optimize.ts
+  - apps/dashboard/components/query-strategy-analyzer.tsx
+- **Depends on**: nothing
+- **Added**: 2026-06-08
+
+### Task: Entity Change Stream & Real-Time Notification Hub
+- **Layer**: 70 — Test Coverage Completion & Enterprise Observability
+- **Status**: UNWORKED
+- **Priority**: Medium
+- **Description**: Implement a real-time notification system for entity changes using Server-Sent Events (SSE) and Redis Pub/Sub, enabling dashboards and agents to subscribe to live entity updates. Create packages/semantic-core/src/entity-change-stream.ts with EntityChangeStreamManager: (1) subscribeToEntityChanges(entityId, filters) creating a subscription for changes to specific entity type/fields/connectors, returning a subscription ID, (2) emitEntityChange(entityId, changeType, previousValue, newValue, source) broadcasting change events through Redis pub/sub, (3) createChangeNotification(change, subscribers) generating human-readable notifications ("Contact John's email changed from foo@old.com to foo@new.com"), (4) streamChangesToClient(subscriptionId, response) using SSE to push updates to connected clients, (5) replayChanges(entityId, sinceTimestamp) retrieving change history for clients that reconnect. Create migration 153 (entity_change_subscriptions, entity_change_events, change_notifications). Add REST endpoints: GET /api/v1/entities/:id/changes/stream (SSE), POST /api/v1/entities/subscriptions (create subscription), DELETE /api/v1/entities/subscriptions/:id (cancel). Add MCP resource: entities/:id/change-stream (entity-change with SSE delivery). Add dashboard components: entity-change-feed.tsx (live feed of changes), change-metrics.tsx (change frequency heatmap), notification-preferences.tsx. Include 22+ tests (14 unit notification logic + 8 integration SSE streaming + redis).
+- **Files**:
+  - packages/semantic-core/src/entity-change-stream.ts
+  - packages/semantic-core/src/__tests__/entity-change-stream.test.ts
+  - packages/semantic-core/src/__tests__/entity-change-stream.integration.test.ts
+  - apps/api/src/routes/entity-change-stream.ts
+  - apps/api/src/__tests__/entity-change-stream.test.ts
+  - apps/api/migrations/153_entity_change_subscriptions.sql
+  - apps/mcp-server/src/resources/entity-change-stream.ts
+  - apps/dashboard/components/entity-change-feed.tsx
+  - apps/dashboard/components/change-metrics.tsx
+  - apps/dashboard/components/notification-preferences.tsx
+- **Depends on**: nothing
+- **Added**: 2026-06-08
+
+### Task: AI-Assisted Query Generation & Natural Language Search Interface
+- **Layer**: 70 — Test Coverage Completion & Enterprise Observability
+- **Status**: UNWORKED
+- **Priority**: Medium
+- **Description**: Build a natural language query interface that converts business questions into optimized context queries using LLM-based intent classification and semantic mapping. Create packages/semantic-core/src/nl-query-generator.ts with NlQueryGenerator: (1) classifyQueryIntent(naturalLanguageQuery, workspace) identifying intent type (metric-lookup, entity-search, trend-analysis, comparison, aggregation) and confidence score, (2) mapEntitiesToTypes(intent, keywords, glossary) matching business terms in question to entity types using semantic similarity, (3) generateQueryPlan(intent, entityTypes, budget) creating a context-query plan with appropriate filters/aggregations, (4) suggestFollowUpQueries(question, result) recommending natural follow-up questions. Create REST route: POST /api/v1/queries/natural-language (convert to context-query + execute). Create MCP tool: generate-query-from-question (for Claude agents). Add dashboard page: natural-language-search/page.tsx with: query-input field, suggested-queries carousel, result-display with explanation (why this result, how cache hit), feedback thumbs (good/bad result). Create migration 154 (nlquery_sessions, nlquery_feedback). Include 18+ tests (12 unit intent classification + 6 integration LLM generation).
+- **Files**:
+  - packages/semantic-core/src/nl-query-generator.ts
+  - packages/semantic-core/src/__tests__/nl-query-generator.test.ts
+  - packages/semantic-core/src/__tests__/nl-query-generator.integration.test.ts
+  - apps/api/src/routes/nl-query-generator.ts
+  - apps/api/src/__tests__/nl-query-generator.test.ts
+  - apps/api/migrations/154_nlquery_feedback.sql
+  - apps/mcp-server/src/tools/generate-query-from-question.ts
+  - apps/dashboard/app/admin/natural-language-search/page.tsx
+  - apps/dashboard/components/query-input.tsx
+  - apps/dashboard/components/suggested-queries.tsx
 - **Depends on**: nothing
 - **Added**: 2026-06-08

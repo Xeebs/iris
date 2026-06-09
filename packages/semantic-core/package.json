@@ -72,7 +72,8 @@
     "./multi-tenant-manager": "./dist/multi-tenant-manager.js",
     "./freshness-tracker": "./dist/freshness-tracker.js",
     "./reliability-predictor": "./dist/reliability-predictor.js",
-    "./enrichment-quality-scorer": "./dist/enrichment-quality-scorer.js"
+    "./enrichment-quality-scorer": "./dist/enrichment-quality-scorer.js",
+    "./sync-parallelism-optimizer": "./dist/sync-parallelism-optimizer.js"
   },
   "scripts": {
     "build": "tsc --build",
