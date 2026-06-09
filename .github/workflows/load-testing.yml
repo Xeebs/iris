@@ -75,8 +75,13 @@ jobs:
         run: |
           pnpm --filter @iris/api run db:migrate 2>&1 | tee /tmp/migrate.log; EC=${PIPESTATUS[0]}
           if [ "$EC" != "0" ]; then
-            echo "::error::Migration failed (exit $EC). Last output:"
-            tail -30 /tmp/migrate.log | while IFS= read -r line; do echo "::error::  $line"; done
+            ERROR_LINE=$(grep "^MIGRATION_ERROR" /tmp/migrate.log || true)
+            LAST_RAN=$(grep "^  ran " /tmp/migrate.log | tail -1 || true)
+            echo "::error::Migration failed (exit $EC)"
+            [ -n "$ERROR_LINE" ] && echo "::error::$ERROR_LINE"
+            [ -n "$LAST_RAN" ]  && echo "::error::Last successful migration:$LAST_RAN"
+            echo "::error::--- Full log (last 40 lines) ---"
+            tail -40 /tmp/migrate.log | while IFS= read -r line; do echo "::error::  $line"; done
             exit 1
           fi
         env:

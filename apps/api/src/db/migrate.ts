@@ -16,6 +16,8 @@ const MIGRATIONS_DIR = join(__dirname, '..', '..', 'migrations');
 const DATABASE_URL =
   process.env['DATABASE_URL'] ?? 'postgres://postgres:postgres@localhost:5432/iris';
 
+let currentFile = '(unknown)';
+
 async function runMigrations(): Promise<void> {
   const sql = postgres(DATABASE_URL);
 
@@ -44,6 +46,7 @@ async function runMigrations(): Promise<void> {
         continue;
       }
 
+      currentFile = file;
       const content = await readFile(join(MIGRATIONS_DIR, file), 'utf-8');
       await sql.begin(async (tx) => {
         await tx.unsafe(content);
@@ -58,7 +61,8 @@ async function runMigrations(): Promise<void> {
   }
 }
 
-runMigrations().catch((err) => {
-  console.error('Migration failed:', err);
+runMigrations().catch((err: unknown) => {
+  const message = err instanceof Error ? err.message : String(err);
+  process.stderr.write(`MIGRATION_ERROR file=${currentFile} error=${message}\n`);
   process.exit(1);
 });
