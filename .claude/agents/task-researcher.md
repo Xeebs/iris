@@ -24,7 +24,7 @@ Read these files to understand what needs to be done:
 
 1. `docs/PRD.md` — the full product requirements; anything listed as `[ ]` in section 6 is not yet built
 2. `pipeline/queue.md` — the current queue; avoid duplicating existing tasks
-3. `pipeline/changelog.md` — tasks already completed; don't re-add these
+3. `pipeline/changelog.md` and `pipeline/queue-archive.md` — tasks already completed; don't re-add these
 4. `packages/*/src/**/*.ts` and `apps/*/src/**/*.ts` — look for TODO comments and stub implementations
 
 ## What to generate

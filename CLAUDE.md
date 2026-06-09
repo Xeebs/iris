@@ -136,9 +136,9 @@ Run `pnpm typecheck` and `pnpm test --filter=<affected-package>`. If tests fail,
 
 If tests pass:
 1. `git add` all affected files (never `git add -A`)
-2. `git commit -m "feat(<package>): <description>\n\nCo-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"`
+2. `git commit -m "feat(<package>): <description>\n\nCo-Authored-By: <the model you are actually running as, e.g. Claude Opus 4.8> <noreply@anthropic.com>"`
 3. `git push origin main`
-4. Mark task `COMMITTED` in `pipeline/queue.md`
+4. Mark task `COMMITTED` in `pipeline/queue.md`, then run `python3 scripts/archive-queue.py` to move it to `pipeline/queue-archive.md`
 5. Append a one-line entry to `pipeline/changelog.md`
 6. Write `pipeline/state.json` with `current_phase: COMMITTED, active_task: null`
 7. **Run the CI Green Gate check** — wait for the pushed run to complete and confirm it passes before proceeding
