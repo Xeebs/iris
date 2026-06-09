@@ -4533,7 +4533,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Entity Change Stream MCP Resource & Subscription Management
 - **Layer**: 71 — Advanced Integration & Production Hardening
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: Medium
 - **Description**: Wire the Entity Change Stream feature from Layer 70 as an MCP resource type and create comprehensive subscription management UX. Create apps/mcp-server/src/resources/entity-change-stream-resource.ts: (1) registerChangeStreamResource exposing /entities/:id/changes as an MCP resource, (2) implement SSE transport negotiation (clients declare capability), (3) serialize change events as structured JSON per entity changelog format, (4) support filter parameters (types=['contact','company'], fields=['email','status'], since=ISO8601timestamp), (5) respect context budget by truncating old events. Create REST subscription management routes in apps/api/src/routes/entity-change-subscriptions.ts: POST /subscriptions (create with filters), PUT /:id (update filters), DELETE /:id (unsubscribe), GET (list user subscriptions), GET /:id/events (change history paginated). Create migration 157 (add subscription_filters JSONB column if missing). Add dashboard pages: subscription-manager/page.tsx (table of active subscriptions, bulk delete), entity-monitor/page.tsx (real-time change feed for one entity, expandable timeline). Include 20+ tests (12 resource + 8 route).
 - **Files**:
