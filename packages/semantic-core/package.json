@@ -77,7 +77,8 @@
     "./request-tracer": "./dist/request-tracer.js",
     "./multi-connector-optimizer": "./dist/multi-connector-optimizer.js",
     "./entity-change-stream": "./dist/entity-change-stream.js",
-    "./nl-query-generator": "./dist/nl-query-generator.js"
+    "./nl-query-generator": "./dist/nl-query-generator.js",
+    "./resilience-middleware": "./dist/resilience-middleware.js"
   },
   "scripts": {
     "build": "tsc --build",

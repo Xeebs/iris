@@ -4519,7 +4519,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Production Error Handling & Resilience for Layer 70 Features
 - **Layer**: 71 — Advanced Integration & Production Hardening
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: High
 - **Description**: Add comprehensive error handling and resilience patterns to the 5 Layer 70 features (request-tracing, query-optimization, entity-change-stream, nl-query-generator, multi-connector-optimizer). For each feature module, implement: (1) graceful degradation — if tracer/cache/database fails, queries still succeed (with reduced observability/optimization), (2) timeout protection (5s default for external calls, 10s for multi-connector queries), (3) error categorization (transient/permanent/rate-limit with retry policies), (4) logging with correlation IDs, (5) circuit breaker for flaky services (3 failures → open for 30s). Create packages/semantic-core/src/resilience-middleware.ts: applyResilience(fn, options) wrapper. Create migration 156 (resilience_circuit_breaker_state table: service, failure_count, last_failure_time, state). Add tests: 24+ covering all degradation paths, timeout triggers, circuit breaker state transitions, error recovery. Update apps/api error handler to catch and wrap errors properly. Add dashboard resilience-status.tsx showing circuit breaker states per service.
 - **Files**:
