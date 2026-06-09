@@ -51,7 +51,7 @@ Completed tasks are moved to `pipeline/queue-archive.md` by `scripts/archive-que
 
 ### Task: VS-5 Token-savings measurement and report
 - **Layer**: 78 — Vertical Slice
-- **Status**: UNWORKED
+- **Status**: IN_PROGRESS
 - **Priority**: High
 - **Description**: For each canonical question, measure (a) the token count of the Iris `query-context` response and (b) the baseline: token count of the raw fixture JSON a user would otherwise paste to answer that question (the full relevant fixture file(s)). Print a per-question table and overall savings ratio at the end of scripts/slice-demo.sh, and write it to `pipeline/slice-report.md`. The slice requires ≥70% savings; if below, that is a real product finding — investigate the compression/retrieval path rather than gaming the baseline. Use the existing token-counting utilities (audit-table estimates per Token Efficiency Rules in CLAUDE.md) — do not hand-roll a new counter.
 - **Files**:
