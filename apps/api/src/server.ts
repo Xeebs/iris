@@ -67,9 +67,10 @@ import { createCostAnalyticsRoutes } from './routes/cost-analytics.js';
 import { createConnectorRecipeRoutes } from './routes/connector-recipes.js';
 import { createAdminIndexRoutes } from './routes/admin-index.js';
 import { createStreamingContextRoutes } from './routes/streaming-context.js';
+import { createStreamingQueryRoutes } from './routes/streaming-queries.js';
 import { createIndexCompositionRoutes } from './routes/index-composition.js';
 import { createAutoTuningRoutes } from './routes/auto-tuning.js';
-import { createProvidersRoutes } from './routes/providers.js';
+import { createProviderRoutes } from './routes/providers.js';
 import { createComplianceRoutes } from './routes/compliance.js';
 import { createLineageRoutes } from './routes/lineage.js';
 import { createDedupRoutes } from './routes/dedup-reconciliation.js';
@@ -217,12 +218,13 @@ function createApp(
   authed.route('/context', createStreamingContextRoutes(sql));
   authed.route('/analytics/index', createIndexCompositionRoutes(sql));
   authed.route('/optimization', createAutoTuningRoutes(sql));
-  authed.route('/providers', createProvidersRoutes(sql));
+  authed.route('/providers', createProviderRoutes(sql));
   authed.route('/compliance', createComplianceRoutes(sql));
   authed.route('/lineage', createLineageRoutes(sql));
   authed.route('/dedup', createDedupRoutes(sql));
   authed.route('/proactive', createProactiveContextRoutes(sql));
   authed.route('/nlp-config', createNlpConfigRoutes(sql));
+  authed.route('/streaming-queries', createStreamingQueryRoutes(sql));
 
   // Webhook routes: inbound (unauthenticated) + events status (authenticated)
   app.route('/api/v1/webhooks', createWebhookRoutes(sql));
