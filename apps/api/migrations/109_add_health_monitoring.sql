@@ -1,4 +1,6 @@
 -- Migration 109: connector health monitoring tables
+-- health_alerts may already exist from 089_add_connector_health.sql without acknowledged_at.
+ALTER TABLE health_alerts ADD COLUMN IF NOT EXISTS acknowledged_at TIMESTAMPTZ;
 
 CREATE TABLE IF NOT EXISTS connector_health_scores (
   connector_id   TEXT        NOT NULL,

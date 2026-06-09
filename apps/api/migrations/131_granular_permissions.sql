@@ -1,5 +1,7 @@
 -- Migration 131: granular permission management
 -- Tables for fine-grained RBAC: permissions, role_permissions, permission_audit, context_roles
+-- context_roles may already exist from 012_add_context_permissions.sql without user_id.
+ALTER TABLE context_roles ADD COLUMN IF NOT EXISTS user_id TEXT;
 
 CREATE TABLE IF NOT EXISTS permissions (
   id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),

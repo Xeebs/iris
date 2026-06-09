@@ -1,4 +1,15 @@
 -- Query learning: observed query patterns and missing context candidates.
+-- query_patterns may already exist from 076_add_query_analytics.sql with a different schema;
+-- add missing columns before creating indexes.
+ALTER TABLE query_patterns
+  ADD COLUMN IF NOT EXISTS query_hash            TEXT          NOT NULL DEFAULT '',
+  ADD COLUMN IF NOT EXISTS entity_types_queried  JSONB         NOT NULL DEFAULT '[]',
+  ADD COLUMN IF NOT EXISTS filters_used          JSONB         NOT NULL DEFAULT '{}',
+  ADD COLUMN IF NOT EXISTS avg_result_size       INTEGER       NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS success_rate          NUMERIC(4,3)  NOT NULL DEFAULT 1.0,
+  ADD COLUMN IF NOT EXISTS occurrences           INTEGER       NOT NULL DEFAULT 1,
+  ADD COLUMN IF NOT EXISTS similar_queries       JSONB,
+  ADD COLUMN IF NOT EXISTS updated_at            TIMESTAMPTZ   NOT NULL DEFAULT now();
 
 CREATE TABLE IF NOT EXISTS query_patterns (
   id                    UUID          PRIMARY KEY DEFAULT gen_random_uuid(),
