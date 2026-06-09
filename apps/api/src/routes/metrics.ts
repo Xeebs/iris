@@ -23,8 +23,9 @@ const defineMetricSchema = z.object({
  */
 export function createMetricRoutes(sql: SqlClient): Hono {
   const routes = new Hono();
-  const registry = new MetricRegistry(sql);
-  const formulaEngine = new MetricFormulaEngine(sql);
+  const sqlCast = sql as unknown as ConstructorParameters<typeof MetricRegistry>[0];
+  const registry = new MetricRegistry(sqlCast);
+  const formulaEngine = new MetricFormulaEngine(sql as unknown as ConstructorParameters<typeof MetricFormulaEngine>[0]);
 
   /** GET /api/v1/metrics?workspaceId= */
   routes.get('/', async (c) => {

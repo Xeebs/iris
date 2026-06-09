@@ -75,7 +75,7 @@ export function makeSearchQualityRouter(sql: ReturnType<typeof postgres>) {
     if (!parsed.success) return c.json({ error: { code: 'VALIDATION_ERROR', message: parsed.error.message } }, 400);
 
     const { workspaceId, name, description, queries } = parsed.data;
-    const result = await svc.defineTestSet(workspaceId, name, queries, description);
+    const result = await svc.defineTestSet(workspaceId, name, queries as Parameters<typeof svc.defineTestSet>[2], description);
     if (result.isErr()) return c.json({ error: { code: 'INTERNAL_ERROR', message: result.error.message } }, 500);
     return c.json({ data: result.value }, 201);
   });

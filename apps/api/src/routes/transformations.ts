@@ -111,7 +111,7 @@ export function createTransformationRoutes(sql: SqlClient): Hono {
       connectorId: parsed.data.connectorId,
       entityType: parsed.data.entityType,
       ruleName: parsed.data.ruleName,
-      steps: parsed.data.steps,
+      steps: parsed.data.steps as Parameters<typeof engine.createRule>[0]['steps'],
       isActive: parsed.data.isActive,
     });
 
@@ -177,7 +177,7 @@ export function createTransformationRoutes(sql: SqlClient): Hono {
       relationships: parsed.data.entity.relationships as never[],
     };
 
-    const testResult = engine.testTransformation(entity, parsed.data.steps);
+    const testResult = engine.testTransformation(entity, parsed.data.steps as Parameters<typeof engine.testTransformation>[1]);
     return c.json({ data: testResult });
   });
 

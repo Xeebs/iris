@@ -3,7 +3,8 @@ import { z } from 'zod';
 import { DataLineageService } from '@iris/semantic-core/data-lineage';
 import { logger } from '@iris/core/logger';
 
-type SqlFn = Parameters<typeof DataLineageService>[0];
+import type postgres from 'postgres';
+type SqlFn = ReturnType<typeof postgres>;
 
 const log = logger.child({ route: 'data-lineage' });
 

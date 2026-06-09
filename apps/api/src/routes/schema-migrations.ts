@@ -184,7 +184,7 @@ export function createSchemaMigrationRoutes(sql: SqlClient): Hono {
       return c.json({ error: { code: 'VALIDATION_ERROR', message: 'Invalid schema', details: parsed.error.issues } }, 400);
     }
 
-    const result = await getSvc().registerVersion(connectorId, parsed.data.schema);
+    const result = await getSvc().registerVersion(connectorId, parsed.data.schema as Parameters<ReturnType<typeof getSvc>['registerVersion']>[1]);
     if (result.isErr()) {
       return c.json({ error: { code: result.error.code, message: result.error.message } }, 422);
     }

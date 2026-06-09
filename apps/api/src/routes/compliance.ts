@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import type { Context } from 'hono';
 import { z } from 'zod';
 import type postgres from 'postgres';
 
@@ -33,7 +34,7 @@ export function createComplianceRoutes(sql: SqlClient) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const svc = new ComplianceReporter(sql as unknown as any);
 
-  const getWorkspaceId = (c: Parameters<typeof app.get>[1] extends (c: infer C) => unknown ? C : never) =>
+  const getWorkspaceId = (c: Context) =>
     (c.get('workspaceId') as string | undefined) ?? c.req.header('x-workspace-id');
 
   /** GET /compliance/report/:framework — generate compliance report */
@@ -81,7 +82,7 @@ export function createComplianceRoutes(sql: SqlClient) {
     if (!workspaceId) return c.json({ error: { code: 'UNAUTHORIZED', message: 'Missing workspace' } }, 401);
     const parsed = auditLogQuerySchema.safeParse(Object.fromEntries(new URL(c.req.url).searchParams));
     if (!parsed.success) return c.json({ error: { code: 'VALIDATION_ERROR', message: parsed.error.message } }, 400);
-    const result = await svc.getAuditLog(workspaceId, parsed.data);
+    const result = await svc.getAuditLog(workspaceId, parsed.data as Parameters<typeof svc.getAuditLog>[1]);
     if (result.isErr()) return c.json({ error: { code: 'INTERNAL_ERROR', message: result.error.message } }, 500);
     return c.json({ data: result.value });
   });

@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import type { Context } from 'hono';
 import { z } from 'zod';
 import {
   registerFederatedWorkspace,
@@ -33,7 +34,7 @@ const QuerySchema = z.object({
   maxTokenBudget: z.number().int().min(100).max(8000).default(2000),
 });
 
-function getSql(c: Parameters<typeof app.get>[1] extends (c: infer C) => unknown ? C : never) {
+function getSql(c: Context) {
   return (c.env as unknown as SqlBindings | undefined)?.sql;
 }
 

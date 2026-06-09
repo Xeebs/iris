@@ -16,6 +16,7 @@
   "dependencies": {
     "@hono/clerk-auth": "^2.0.0",
     "@hono/node-server": "^1.0.0",
+    "@hono/zod-validator": "^0.4.0",
     "@iris/connector-sdk": "workspace:*",
     "@iris/core": "workspace:*",
     "@iris/queue": "workspace:*",
@@ -35,6 +36,7 @@
   },
   "devDependencies": {
     "@types/node": "^20.14.0",
+    "@types/ws": "^8.0.0",
     "@vitest/coverage-v8": "^1.6.0",
     "ioredis-mock": "^8.9.0",
     "msw": "^2.3.5",

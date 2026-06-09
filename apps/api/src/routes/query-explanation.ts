@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { logger } from '@iris/core/logger';
 import { QueryExplainer } from '@iris/semantic-core/query-explainer';
 import type { VectorSearchResult } from '@iris/semantic-core/vector-store';
+import type { SemanticEntity } from '@iris/connector-sdk';
 
 const log = logger.child({ service: 'query-explanation-routes' });
 
@@ -47,6 +48,7 @@ export function createQueryExplanationRoutes(): Hono {
     const hydratedResults: VectorSearchResult[] = results.map((r) => ({
       entity: {
         ...r.entity,
+        attributes: r.entity.attributes as SemanticEntity['attributes'],
         lastModified: new Date(r.entity.lastModified),
       },
       score: r.score,

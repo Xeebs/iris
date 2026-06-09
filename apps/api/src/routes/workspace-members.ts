@@ -51,7 +51,7 @@ export function createWorkspaceMembersRoutes(sql: SqlClient): Hono {
   /** POST /workspace/members/invite — add a user to the workspace */
   app.post('/members/invite', async (c) => {
     const workspaceId = c.get('workspaceId') as string | undefined;
-    const currentUserId = c.get('userId') as string | undefined;
+    const currentUserId = c.get('userId' as never) as string | undefined;
     if (!workspaceId) return c.json({ error: { code: 'UNAUTHORIZED', message: 'Missing workspace context' } }, 401);
 
     let body: unknown;
@@ -121,7 +121,7 @@ export function createWorkspaceMembersRoutes(sql: SqlClient): Hono {
   /** POST /workspace/shares — share a resource with a user */
   app.post('/shares', async (c) => {
     const workspaceId = c.get('workspaceId') as string | undefined;
-    const currentUserId = c.get('userId') as string | undefined;
+    const currentUserId = c.get('userId' as never) as string | undefined;
     if (!workspaceId) return c.json({ error: { code: 'UNAUTHORIZED', message: 'Missing workspace context' } }, 401);
 
     let body: unknown;
@@ -173,7 +173,7 @@ export function createWorkspaceMembersRoutes(sql: SqlClient): Hono {
   /** GET /workspace/permissions/check — check if current user has a permission */
   app.get('/permissions/check', async (c) => {
     const workspaceId = c.get('workspaceId') as string | undefined;
-    const userId = c.get('userId') as string | undefined;
+    const userId = c.get('userId' as never) as string | undefined;
     if (!workspaceId || !userId) {
       return c.json({ error: { code: 'UNAUTHORIZED', message: 'Missing auth context' } }, 401);
     }

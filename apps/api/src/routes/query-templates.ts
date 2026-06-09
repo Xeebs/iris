@@ -49,7 +49,7 @@ export function makeQueryTemplatesRouter(sql: ReturnType<typeof postgres>) {
     const visibility = c.req.query('visibility') as TemplateVisibility | undefined;
     const limit = Math.min(Number(c.req.query('limit') ?? 50), 200);
     const cursor = c.req.query('cursor') ?? undefined;
-    const result = await mgr.listTemplates(workspaceId, { search, visibility, limit, cursor });
+    const result = await mgr.listTemplates(workspaceId, { ...(search !== undefined ? { search } : {}), ...(visibility !== undefined ? { visibility } : {}), limit, ...(cursor !== undefined ? { cursor } : {}) });
     if (result.isErr()) return c.json({ error: { code: 'db_error', message: result.error.message } }, 500);
     const { templates, nextCursor } = result.value;
     return c.json({ data: templates, meta: { hasMore: nextCursor !== null, nextCursor } });
@@ -62,7 +62,7 @@ export function makeQueryTemplatesRouter(sql: ReturnType<typeof postgres>) {
     const parsed = CreateTemplateSchema.safeParse(await c.req.json().catch(() => ({})));
     if (!parsed.success) return c.json({ error: { code: 'validation_error', message: 'Invalid body', details: parsed.error.flatten() } }, 400);
     const { name, query, parameters, description, tags, visibility, createdBy } = parsed.data;
-    const result = await mgr.createTemplate(name, query, parameters, description, tags, visibility, workspaceId, createdBy);
+    const result = await mgr.createTemplate(name, query, parameters as Parameters<typeof mgr.createTemplate>[2], description, tags, visibility, workspaceId, createdBy);
     if (result.isErr()) return c.json({ error: { code: 'db_error', message: result.error.message } }, 500);
     return c.json({ data: result.value }, 201);
   });

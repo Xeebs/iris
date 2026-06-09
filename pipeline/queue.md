@@ -4787,7 +4787,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Workflow Service Test Suite & Dashboard UI
 - **Layer**: 74 — Post-MVP Scale - Developer Experience & Advanced Analytics
-- **Status**: IN_PROGRESS
+- **Status**: COMMITTED
 - **Priority**: High
 - **Description**: Build a complete test suite and dashboard UI for the workflow service, enabling users to discover, preview, and execute pre-configured MCP workflows. The WorkflowService already exists in packages/semantic-core/src/workflow-service.ts but lacks integration tests and UI. Create packages/semantic-core/src/__tests__/workflow-service.test.ts (18+ tests covering): (1) getWorkflowTemplate(id) returns correct template metadata, (2) listWorkflowsByCategory(category) with filtering and pagination, (3) getContextPreview(workflowId) estimating token usage for workflow MCP calls, (4) saveWorkflowSession(userId, workflowId) persisting execution history with parameters, (5) getSessionHistory(userId) paginated workflow runs with results, (6) applyWorkflowTemplate(workflowId, customParams) modifying template for one-off execution. Create apps/dashboard/app/workflows/page.tsx with: (a) workflow-catalog-grid showing all 5 starter templates (sales-pipeline-review, financial-forecast, ops-pipeline-review, customer-success-review, engineering-sprint-review) as cards with category badge, description, recommended connectors, MCP tool count; (b) workflow-detail-panel (modal or sidebar) showing template details, context budget estimate, MCP tools used, example output; (c) execute-workflow-form for launching workflow with parameter input (connector selection, date range, entity type filters), real-time context budget calculation, preview MCP tool call sequence; (d) recent-workflows-list showing user's last 10 executed workflows with result summary, execution time, token usage. Expose REST routes in apps/api/src/routes/workflows.ts: GET /api/v1/workflows (list templates), GET /api/v1/workflows/:id (get detail), POST /api/v1/workflows/:id/execute (async job), GET /api/v1/workflows/sessions/:userId (history), GET /api/v1/workflows/sessions/:sessionId/result (fetch result). Create migration 170 (workflow_sessions, workflow_execution_logs) if not exists. Add 14+ route tests covering happy path execution, missing parameters, token budget exceeding limits.
 - **Files**:
@@ -4806,7 +4806,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Streaming Context Endpoint & Integration Tests
 - **Layer**: 74 — Post-MVP Scale - Developer Experience & Advanced Analytics
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: High
 - **Description**: Complete the streaming-context.ts module (currently 53 lines without tests) by adding full integration tests and REST/MCP endpoint wiring. The module handles large context responses via SSE (Server-Sent Events) chunking. Create packages/semantic-core/src/__tests__/streaming-context.test.ts (16+ tests): (1) createStreamContext(query, contextBudget, chunkSize) returns a stream instance with correct headers, (2) streamChunk(chunk, estimatedTokens) properly formats SSE chunks with field boundaries, (3) estimateChunkTokenCount(chunk) accurately counts tokens per chunk, (4) handleStreamError(error) gracefully sends error chunk and closes stream, (5) trackStreamMetrics(streamId) logging bytes/chunks/latency to audit table, (6) closeStream(streamId) finalizes stream and records completion stats. Integrate into apps/api/src/routes/queries.ts as POST /api/v1/queries/:id/stream endpoint supporting: Accept header for stream format selection, contextBudget as query param, optional entity type filters for progressive loading. Create apps/api/migrations/171_stream_metrics.sql with: streaming_sessions (stream_id, workspace_id, query_id, started_at, closed_at, total_chunks, total_bytes, latency_p95_ms), stream_errors (stream_id, error_type, error_message, chunk_index, occurred_at). Add 12+ integration tests with mock HTTP client simulating SSE consumption. Create dashboard component apps/dashboard/components/stream-progress-monitor.tsx showing real-time stream progress (bytes received, chunks, ETA, cancel button). Include handler for streaming scenarios: (a) entity-heavy queries returning 100K+ entities, (b) relationship-dense contexts needing incremental loading, (c) token-budget exhaustion mid-stream with graceful truncation.
 - **Files**:
@@ -4821,7 +4821,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Vector Store Integration Tests & Performance Tuning
 - **Layer**: 74 — Post-MVP Scale - Developer Experience & Advanced Analytics
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: High
 - **Description**: Complete the vector-store.ts module with comprehensive integration tests against real Postgres/pgvector and Qdrant backends, and implement performance tuning (index optimization, batch operation profiling). The VectorStore interface exists but lacks integration coverage. Create packages/semantic-core/src/__tests__/vector-store.integration.test.ts (20+ tests): (1) insertVectors (single, batch of 100, batch of 1000) measuring throughput (vectors/sec) and latency p95/p99, (2) searchSimilar with various similarity thresholds (0.70, 0.85, 0.92) validating recall/precision, (3) deleteVectors by connector (cascade test: delete 500 contact vectors, verify related entities unindexed), (4) upsertVectors preserving existing embeddings if hash unchanged (test atomic updates), (5) getVectorStats returning count/dimensionality/index_status, (6) tunePgvectorIndex(tableName) automatically computing optimal IVFFlat lists parameter based on table size (lists = sqrt(row_count)). Add packages/semantic-core/src/vector-store-tuner.ts with VectorStoreTuner: (1) analyzeIndexHealth(vectorStore) returning fragmentation %, query latency trend, inefficient index configs, (2) recommendIndexStrategy(rowCount, queryLatencySla) suggesting IVFFlat vs HNSW parameters, (3) executeReindexing(tableName) vacuuming and rebuilding indices in background job. Create performance benchmarks in apps/api/src/__tests__/vector-store-performance.test.ts using k6 patterns: 1K vectors search QPS, 100K vector batch insert time, similarity search latency distribution. Expose REST route GET /api/v1/admin/vector-store/health returning: index_status, fragmentation%, recommendations. Add 18+ tests covering edge cases: empty vector search, out-of-range thresholds, concurrent operations (thread safety).
 - **Files**:
@@ -4863,5 +4863,63 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
   - apps/api/src/__tests__/query-recommendations.test.ts
   - apps/api/migrations/173_query_recommendations.sql
   - apps/dashboard/components/query-recommendation-panel.tsx
+- **Depends on**: nothing
+- **Added**: 2026-06-09
+
+---
+
+## Layer 75: Critical Infrastructure & Test Coverage
+
+### Task: API Middleware Integration Tests
+- **Layer**: 75 — Critical Infrastructure & Test Coverage
+- **Status**: COMMITTED
+- **Priority**: High
+- **Description**: Create comprehensive test suites for all untested API middleware components, which are critical to request handling, authentication, and rate limiting. The following middleware files exist but have no test coverage: api-version.ts, auth.ts, error-handler.ts, error-handler-resilience.ts, content-negotiation.ts, quota-manager.ts, rate-limiting.ts, admin-auth.ts. Create apps/api/src/__tests__/middleware/ directory with individual test files. For each middleware, write 8-12 tests covering: (1) happy path (valid input/output), (2) invalid input handling (missing headers, malformed data), (3) error propagation and context preservation, (4) isolation from other middleware (no side effects), (5) performance (< 5ms per middleware). Key test areas: api-version.ts (version negotiation, deprecation headers, unsupported version rejection); auth.ts (valid token validation, expired token rejection, workspace isolation enforcement); rate-limiter.ts (quota tracking per workspace, burst allowance, reset cycles); error-handler.ts (error envelope format, status code mapping, PII scrubbing in logs). Use Hono testing utilities and mock Clerk auth. Total: 70+ tests. Reference api-conventions.md for auth patterns and testing.md for coverage targets (70% for apps/api).
+- **Files**:
+  - apps/api/src/__tests__/middleware/api-version.test.ts
+  - apps/api/src/__tests__/middleware/auth.test.ts
+  - apps/api/src/__tests__/middleware/error-handler.test.ts
+  - apps/api/src/__tests__/middleware/error-handler-resilience.test.ts
+  - apps/api/src/__tests__/middleware/content-negotiation.test.ts
+  - apps/api/src/__tests__/middleware/quota-manager.test.ts
+  - apps/api/src/__tests__/middleware/rate-limiting.test.ts
+  - apps/api/src/__tests__/middleware/admin-auth.test.ts
+- **Depends on**: nothing
+- **Added**: 2026-06-09
+
+### Task: Resource Builder & Entity Resource Tests
+- **Layer**: 75 — Critical Infrastructure & Test Coverage
+- **Status**: COMMITTED
+- **Priority**: High
+- **Description**: Complete test coverage for packages/semantic-core/src/resource-builder.ts, which builds MCP resources for entities and relationship graphs but currently lacks any tests. Create packages/semantic-core/src/__tests__/resource-builder.test.ts with 18+ tests covering: (1) buildEntityResource(entityId, workspaceId, vectorStore) returning proper JSON structure with uri, mimeType, text fields, (2) null handling when entity not found, (3) circular reference prevention when building graph resources (entity -> related -> back to root), (4) depth clamping (requested depth=5 clamped to 2 max), (5) missing related entities gracefully skipped without errors, (6) graph generation at depth 0 (root only), depth 1 (direct relationships), depth 2 (two-hop neighbors), (7) listEntityResourceURIs(workspaceId, vectorStore, limit) returning correct cursor pagination, entity type filtering, (8) URI format validation (entity://{workspace}/{id}, graph://{workspace}/{id}?depth=N), (9) performance: building graph for 1000-entity network < 500ms, (10) concurrent requests to vectorStore don't cause race conditions. Also test edge cases: empty relationship arrays, null targetIds, malformed entity data. Add integration tests with real vector store and 100+ synthetic entities. Reference code-style.md for Result pattern and error handling.
+- **Files**:
+  - packages/semantic-core/src/__tests__/resource-builder.test.ts
+  - packages/semantic-core/src/__tests__/resource-builder.integration.test.ts
+- **Depends on**: Vector Store Interface
+- **Added**: 2026-06-09
+
+### Task: Data Quality Engine Routes & Tests
+- **Layer**: 75 — Critical Infrastructure & Test Coverage
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Create the missing apps/api/src/routes/data-quality-engine-routes.ts file and comprehensive test suite. The semantic-core data-quality-engine.ts service exists but has no REST API exposure. Build the routes file with endpoints: GET /api/v1/data-quality/scan/:connectorId (async job to scan connector's entities for schema violations, missing required fields, type mismatches), GET /api/v1/data-quality/scan/:scanId (fetch scan results with issue counts by type), GET /api/v1/data-quality/issues (paginated list of detected issues across workspace with filters by severity/entity-type/connector), POST /api/v1/data-quality/issues/:issueId/resolve (mark issue resolved with remediation notes), GET /api/v1/data-quality/report (generate summary report: issues count, top problematic connectors, trend over 30 days). Create apps/api/migrations/174_data_quality_issues.sql with: data_quality_scans (scan_id, connector_id, workspace_id, started_at, completed_at, total_entities, issues_found), data_quality_issues (issue_id, scan_id, entity_id, issue_type [required_field_missing, type_mismatch, invalid_format, outlier], severity [low/medium/high], field_name, expected_type, actual_value, resolved_at). Create apps/api/src/__tests__/data-quality-engine-routes.test.ts with 14+ tests: scan submission, async result polling, issue listing with filters, issue resolution, report generation. Build dashboard page apps/dashboard/app/admin/data-quality/page.tsx showing: recent scans summary, issues table sortable by severity, remediation workflow. Reference testing.md for 70% coverage target on routes.
+- **Files**:
+  - apps/api/src/routes/data-quality-engine-routes.ts
+  - apps/api/src/__tests__/data-quality-engine-routes.test.ts
+  - apps/api/migrations/174_data_quality_issues.sql
+  - apps/dashboard/app/admin/data-quality/page.tsx
+  - apps/dashboard/components/data-quality-scan-form.tsx
+  - apps/dashboard/components/data-quality-issues-table.tsx
+- **Depends on**: Data Quality Scoring Service
+- **Added**: 2026-06-09
+
+### Task: NLP Config Parser & Integration Tests
+- **Layer**: 75 — Critical Infrastructure & Test Coverage
+- **Status**: UNWORKED
+- **Priority**: Medium
+- **Description**: Complete test coverage for packages/semantic-core/src/nlp-config-parser.ts (221 lines), which parses natural language configuration statements via gpt-4o-mini but currently lacks tests. Create packages/semantic-core/src/__tests__/nlp-config-parser.test.ts with 16+ tests covering: (1) parseConfigNL(text) correctly identifies config types (fiscal_calendar, metric_definition, date_interpretation, custom), (2) fiscal year parsing: "fiscal year starts in February" → {fiscalYearStartMonth: 2}, "fiscal starts Feb 15" → {fiscalYearStartMonth: 2, fiscalYearStartDay: 15}, (3) metric definitions: "ARR is MRR × 12" → {metric: "ARR", formula: "MRR * 12"}, "LTV = contract value / churn rate" → correct formula parsing, (4) date interpretation: "end of quarter" → {periodEnd: "quarter"}, "rolling 90 days" → {window: 90, unit: "day"}, (5) confidence scoring (high >0.90 for unambiguous inputs, lower for multi-interpretation), (6) LLM response parsing robustness (malformed JSON handling, missing fields with defaults), (7) token budget enforcement (input >MAX_INPUT_TOKENS truncated with warning), (8) PII filtering (doesn't parse names/emails in input), (9) edge cases: empty input, special characters, code injection attempts, (10) caching of repeated queries. Add integration tests with real Postgres storage and Clerk auth. Mock OpenAI API calls with MSW. Reference embedding-patterns.md for token budgeting and code-style.md for error handling with Result pattern.
+- **Files**:
+  - packages/semantic-core/src/__tests__/nlp-config-parser.test.ts
+  - packages/semantic-core/src/__tests__/nlp-config-parser.integration.test.ts
 - **Depends on**: nothing
 - **Added**: 2026-06-09

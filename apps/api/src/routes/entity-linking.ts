@@ -1,12 +1,13 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
+import type postgres from 'postgres';
 
 import { logger } from '@iris/core/logger';
 import { EntityLinker } from '@iris/semantic-core/entity-linker';
 
 const log = logger.child({ route: 'entity-linking' });
 
-type SqlFn = (strings: TemplateStringsArray, ...values: unknown[]) => Promise<unknown[]>;
+type SqlFn = ReturnType<typeof postgres>;
 
 const updateStatusSchema = z.object({
   status: z.enum(['confirmed', 'rejected']),
@@ -29,7 +30,7 @@ const confirmMergeSchema = z.object({
  */
 export function createEntityLinkingRoutes(sql: SqlFn): Hono {
   const app = new Hono();
-  const linker = new EntityLinker(sql);
+  const linker = new EntityLinker(sql as unknown as ConstructorParameters<typeof EntityLinker>[0]);
 
   /** GET /api/v1/entity-linking/suggestions — list proposed cross-connector links */
   app.get('/suggestions', async (c) => {

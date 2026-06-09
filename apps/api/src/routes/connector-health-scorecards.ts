@@ -53,7 +53,7 @@ type SlaBreachRow = {
  */
 export function createConnectorHealthScorecardsRoutes(sql: Sql) {
   const app = new Hono();
-  const scorer = new ConnectorHealthScorer(sql as unknown as Parameters<typeof ConnectorHealthScorer>[0]);
+  const scorer = new ConnectorHealthScorer(sql as unknown as ConstructorParameters<typeof ConnectorHealthScorer>[0]);
 
   // GET /:id/health-score — current score + 7-day history
   app.get('/:id/health-score', async (c) => {

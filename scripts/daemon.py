@@ -22,6 +22,7 @@ IRIS        = Path(__file__).resolve().parent.parent
 STATE_FILE  = IRIS / "pipeline" / "state.json"
 DAEMON_FILE = IRIS / "pipeline" / "daemon.json"
 USAGE_FILE  = IRIS / "pipeline" / "usage.json"
+QUEUE_MD    = IRIS / "pipeline" / "queue.md"
 LOG_DIR     = IRIS / "logs"
 CLAUDE      = Path.home() / ".local" / "bin" / "claude"
 ENV_FILE    = IRIS / ".env"
@@ -45,13 +46,12 @@ Rules:
 - Read pipeline/state.json first and resume from the recorded phase and active task
 - Run all phases in direct sequence for each task: Plan → Implement → Test → Commit → next task
 - After committing a task, immediately pick the next UNWORKED High task and continue — do NOT stop
-- Run task research (spawn the task-researcher subagent) whenever fewer than 3 UNWORKED items remain — \
-no date restriction; the researcher will generate the next batch and update last_research in state
-- Only stop if: (a) the Claude API returns a rate-limit error, (b) the queue has no UNWORKED \
-High or Medium tasks left AND task research produced 0 new tasks, or (c) the token budget \
-is at or above 95% of the session limit (see TOKEN BUDGET below)
+- Spawn the task-researcher subagent whenever fewer than 3 UNWORKED items remain in pipeline/queue.md
+- If you find the queue has no UNWORKED High or Medium tasks, write current_phase=IDLE and exit.
+- Only stop if: (a) the Claude API returns a rate-limit error, (b) no UNWORKED tasks remain, \
+or (c) the token budget is at or above 95% of the session limit (see TOKEN BUDGET below)
 - On rate-limit: write rate_limit_hit=true and current phase/task to pipeline/state.json, then exit
-- On queue exhausted after research: write current_phase=IDLE to pipeline/state.json, then exit
+- On queue exhausted: write current_phase=IDLE to pipeline/state.json, then exit
 - On budget threshold reached: write current phase/task to pipeline/state.json, then exit cleanly \
 (do NOT start a new task if you estimate it cannot complete within the remaining budget)
 - Write pipeline/state.json after every phase transition so a crash is recoverable
@@ -342,6 +342,7 @@ def main() -> None:
             continue
 
         log_file = LOG_DIR / f"daemon-{datetime.now().strftime('%Y%m%d')}.log"
+
         write_daemon("running", "Pipeline running")
 
         with open(log_file, "a") as lf:

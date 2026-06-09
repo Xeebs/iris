@@ -37,7 +37,7 @@ type BaselineRow = {
  */
 export function createConnectorBenchmarksRoutes(sql: Sql) {
   const app = new Hono();
-  const benchmarker = new ConnectorBenchmarker(sql as unknown as Parameters<typeof ConnectorBenchmarker.prototype.constructor>[0]);
+  const benchmarker = new ConnectorBenchmarker(sql as unknown as ConstructorParameters<typeof ConnectorBenchmarker>[0]);
 
   // POST /connectors/:id/benchmark — run benchmark (uses synthetic data since real connectors aren't wired)
   app.post('/:id/benchmark', zValidator('json', RunBenchmarkSchema), async (c) => {
@@ -87,7 +87,7 @@ export function createConnectorBenchmarksRoutes(sql: Sql) {
               yield { id: `${connectorId}:${entityType}:${i}`, type: entityType, label: `Entity ${i}`, attributes: { index: i } };
             }
           }
-          return benchmarker.executeBenchmark(connectorId, entityType, syntheticSync, { dataSize: Math.min(dataSize, 1000) });
+          return benchmarker.executeBenchmark(connectorId, entityType, syntheticSync, { dataSize: Math.min(dataSize, 1000) as 1000 });
         })
       );
 

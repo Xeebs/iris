@@ -107,7 +107,7 @@ export function makeLifecycleAdminRouter(sql: ReturnType<typeof postgres>) {
     }
     const limit = Math.min(Number(c.req.query('limit') ?? 50), 200);
     const cursor = c.req.query('cursor') ?? undefined;
-    const result = await mgr.queryEntitiesByLifecycle({ status, limit, cursor });
+    const result = await mgr.queryEntitiesByLifecycle({ ...(status !== undefined ? { status } : {}), limit, ...(cursor !== undefined ? { cursor } : {}) });
     if (result.isErr()) return c.json({ error: { code: 'db_error', message: result.error.message } }, 500);
     const { states, nextCursor } = result.value;
     return c.json({ data: states, meta: { hasMore: nextCursor !== null, nextCursor } });

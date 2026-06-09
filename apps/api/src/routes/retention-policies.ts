@@ -53,7 +53,7 @@ export function makeRetentionPoliciesRouter(sql: ReturnType<typeof postgres>) {
     const reason = c.req.query('reason');
     const limit = Math.min(Number(c.req.query('limit') ?? 50), 200);
     const cursor = c.req.query('cursor') ?? undefined;
-    const result = await svc.queryArchivedEntities({ entityType, reason, limit, cursor });
+    const result = await svc.queryArchivedEntities({ ...(entityType !== undefined ? { entityType } : {}), ...(reason !== undefined ? { reason } : {}), limit, ...(cursor !== undefined ? { cursor } : {}) });
     if (result.isErr()) return c.json({ error: { code: 'db_error', message: result.error.message } }, 500);
     const { entities, nextCursor } = result.value;
     return c.json({ data: entities, meta: { hasMore: nextCursor !== null, nextCursor } });

@@ -52,15 +52,13 @@ export function createEntityChangeSubscriptionsRoutes(sql: Sql) {
     const body = c.req.valid('json');
 
     try {
-      const subscription = await manager.subscribeToEntityChanges(
-        workspaceId,
-        body.entityId,
-        {
-          entityTypes: body.entityTypes,
-          changeTypes: body.changeTypes as ChangeType[] | undefined,
-          connectorIds: body.connectorIds,
-        }
-      );
+      const rawFilters = {
+        entityTypes: body.entityTypes,
+        changeTypes: body.changeTypes as ChangeType[] | undefined,
+        connectorIds: body.connectorIds,
+      };
+      const cleanFilters = Object.fromEntries(Object.entries(rawFilters).filter(([, v]) => v !== undefined)) as Parameters<typeof manager.subscribeToEntityChanges>[2];
+      const subscription = await manager.subscribeToEntityChanges(workspaceId, body.entityId, cleanFilters);
       return c.json({ data: subscription }, 201);
     } catch {
       return c.json({ error: { code: 'CREATE_FAILED', message: 'Failed to create subscription' } }, 500);

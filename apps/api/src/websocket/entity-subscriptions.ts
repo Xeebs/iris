@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { WebSocket, WebSocketServer } from 'ws';
+import type { WebSocket, WebSocketServer, RawData } from 'ws';
 import type { IncomingMessage } from 'http';
 
 import { logger } from '@iris/core/logger';
@@ -78,7 +78,7 @@ export class EntitySubscriptionManager {
       this.clients.set(ws, state);
       log.info('WebSocket client connected', { workspaceId });
 
-      ws.on('message', (data) => {
+      ws.on('message', (data: RawData) => {
         try {
           const parsed = clientMessageSchema.safeParse(JSON.parse(data.toString()));
           if (!parsed.success) {
@@ -96,7 +96,7 @@ export class EntitySubscriptionManager {
         log.info('WebSocket client disconnected', { workspaceId });
       });
 
-      ws.on('error', (e) => {
+      ws.on('error', (e: Error) => {
         log.warn('WebSocket error', { workspaceId, error: e.message });
         this.clients.delete(ws);
       });
@@ -170,8 +170,8 @@ export class EntitySubscriptionManager {
       state.subscriptions.set(msg.subscriptionId, {
         subscriptionId: msg.subscriptionId,
         workspaceId: msg.workspaceId,
-        entityType: msg.entityType,
-        entityId: msg.entityId,
+        ...(msg.entityType !== undefined ? { entityType: msg.entityType } : {}),
+        ...(msg.entityId !== undefined ? { entityId: msg.entityId } : {}),
       });
       ws.send(JSON.stringify({ type: 'subscribed', subscriptionId: msg.subscriptionId }));
       return;

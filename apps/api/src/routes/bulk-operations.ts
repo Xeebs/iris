@@ -136,8 +136,8 @@ export function createBulkOperationsRoutes(sql: Sql): Hono {
     const content = await ops.exportBatch(
       workspaceId,
       {
-        entityType: type,
-        updatedAfter: updatedAfter ? new Date(updatedAfter) : undefined,
+        ...(type !== undefined ? { entityType: type } : {}),
+        ...(updatedAfter ? { updatedAfter: new Date(updatedAfter) } : {}),
       },
       format,
     );

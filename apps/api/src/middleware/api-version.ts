@@ -13,7 +13,7 @@ manager.defineVersion({ version: 'v2', status: 'active', releasedAt: new Date('2
  * Hono middleware that validates X-API-Version header, injects version into context,
  * and appends deprecation headers to responses for deprecated versions.
  */
-export async function apiVersionMiddleware(c: Context, next: Next) {
+export async function apiVersionMiddleware(c: Context, next: Next): Promise<void | Response> {
   const requestedVersion = parseVersionHeader(c.req.header('x-api-version'));
   const check = manager.checkVersionSupport(requestedVersion);
 
@@ -34,6 +34,7 @@ export async function apiVersionMiddleware(c: Context, next: Next) {
     if (version.sunsetAt) c.header('Sunset', version.sunsetAt.toUTCString());
     c.header('Warning', `299 iris "API version ${requestedVersion} is deprecated. Please upgrade to ${MAX_VERSION}."`);
   }
+  return;
 }
 
 export { manager as versionManager, SUPPORTED_VERSIONS, MIN_VERSION, MAX_VERSION };

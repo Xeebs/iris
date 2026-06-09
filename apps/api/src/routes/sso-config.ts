@@ -73,7 +73,7 @@ export function createSsoConfigRoutes(sql: SqlClient): Hono {
     const parsed = upsertSchema.safeParse(body);
     if (!parsed.success) return c.json({ error: { code: 'VALIDATION_ERROR', message: parsed.error.message } }, 400);
     const { provider, providerName, attributeMappings = {}, ...rest } = parsed.data;
-    const result = await getSvc().upsertConfiguration(workspaceId, provider, providerName, rest, attributeMappings);
+    const result = await getSvc().upsertConfiguration(workspaceId, provider, providerName, rest as Parameters<ReturnType<typeof getSvc>['upsertConfiguration']>[3], attributeMappings);
     if (result.isErr()) {
       log.error('Failed to upsert SSO config', { workspaceId, provider, error: result.error });
       return c.json({ error: { code: 'INTERNAL_ERROR', message: result.error.message } }, 500);
@@ -104,7 +104,7 @@ export function createSsoConfigRoutes(sql: SqlClient): Hono {
     const body = await c.req.json().catch(() => null);
     const parsed = oidcClaimsSchema.safeParse(body);
     if (!parsed.success) return c.json({ error: { code: 'VALIDATION_ERROR', message: parsed.error.message } }, 400);
-    const result = await getSvc().provisionFromOidc(workspaceId, parsed.data);
+    const result = await getSvc().provisionFromOidc(workspaceId, parsed.data as Parameters<ReturnType<typeof getSvc>['provisionFromOidc']>[1]);
     if (result.isErr()) return c.json({ error: { code: 'PROVISION_ERROR', message: result.error.message } }, 422);
     return c.json({ data: result.value });
   });

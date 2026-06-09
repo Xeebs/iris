@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import type postgres from 'postgres';
 import type { IncomingMessage } from 'http';
-import type { WebSocket, WebSocketServer } from 'ws';
+import type { WebSocket, WebSocketServer, RawData } from 'ws';
 
 import { logger } from '@iris/core/logger';
 
@@ -58,7 +58,7 @@ async function* fetchEntities(
   sql: SqlClient,
   workspaceId: string,
   query: string,
-  filters: ClientMessage extends { type: 'subscribe' } ? ClientMessage['filters'] : never,
+  filters: Extract<ClientMessage, { type: 'subscribe' }>['filters'],
   signal: AbortSignal,
 ): AsyncGenerator<Record<string, unknown>> {
   const typeFilter =
@@ -107,12 +107,12 @@ function handleConnection(ws: WebSocket, req: IncomingMessage, sql: SqlClient): 
   };
 
   ws.on('close', cleanup);
-  ws.on('error', (err) => {
+  ws.on('error', (err: Error) => {
     log.error('WS error', { workspaceId, error: err.message });
     cleanup();
   });
 
-  ws.on('message', async (raw) => {
+  ws.on('message', async (raw: RawData) => {
     let parsed: ClientMessage;
     try {
       const text = raw.toString();

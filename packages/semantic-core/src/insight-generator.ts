@@ -143,13 +143,15 @@ export class InsightGenerator {
       const insights: GeneratedInsight[] = [];
       for (const entityType of entityTypes) {
         type MissingRow = { missing_count: number };
+        const wsId = filters?.workspaceId ?? null;
+        const since = filters?.sinceDate ?? null;
         const [missing] = await this.sql<MissingRow[]>`
           SELECT COUNT(*)::int AS missing_count
           FROM iris_entities
           WHERE type = ${entityType}
-            AND (${filters?.workspaceId ? this.sql`workspace_id = ${filters.workspaceId}` : this.sql`TRUE`})
+            AND (${wsId} IS NULL OR workspace_id = ${wsId})
+            AND (${since} IS NULL OR created_at >= ${since})
             AND (attributes->>'email' IS NULL AND attributes->>'phone' IS NULL)
-            AND (${filters?.sinceDate ? this.sql`created_at >= ${filters.sinceDate}` : this.sql`TRUE`})
         `;
         if ((missing?.missing_count ?? 0) > 0) {
           const count = missing!.missing_count;

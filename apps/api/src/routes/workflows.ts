@@ -144,6 +144,7 @@ export function createWorkflowRoutes(sql: SqlClient) {
       if (!result.success) {
         return c.json({ error: { code: 'VALIDATION_ERROR', message: result.error.message } }, 400);
       }
+      return;
     }),
     async (c) => {
       const templateId = c.req.param('id');

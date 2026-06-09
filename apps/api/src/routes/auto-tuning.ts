@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import type { Context } from 'hono';
 import { z } from 'zod';
 import type postgres from 'postgres';
 
@@ -30,7 +31,7 @@ export function createAutoTuningRoutes(sql: SqlClient) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const svc = new AutoTuningOptimizer(sql as unknown as any);
 
-  const getWorkspaceId = (c: Parameters<typeof app.get>[1] extends (c: infer C) => unknown ? C : never) =>
+  const getWorkspaceId = (c: Context) =>
     (c.get('workspaceId') as string | undefined) ?? c.req.header('x-workspace-id');
 
   /** GET /optimization/recommendations — list pending recommendations */

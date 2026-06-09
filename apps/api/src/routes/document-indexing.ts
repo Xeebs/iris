@@ -14,7 +14,7 @@ type SqlClient = ReturnType<typeof postgres>;
  */
 export function createDocumentIndexingRoutes(sql: SqlClient): Hono {
   const app = new Hono();
-  const indexer = new DocumentIndexer(sql as unknown as ReturnType<typeof import('postgres').default>);
+  const indexer = new DocumentIndexer(sql as unknown as ReturnType<typeof postgres>);
 
   /** GET /document-indexing/stats — per-connector document count and token stats */
   app.get('/stats', async (c) => {

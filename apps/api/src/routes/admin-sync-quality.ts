@@ -86,7 +86,7 @@ export function createAdminSyncQualityRoutes(sql: SqlClient): Hono {
       );
     }
 
-    const result = await monitor.configureThresholds(connectorId, workspaceIdRaw, parsed.data);
+    const result = await monitor.configureThresholds(connectorId, workspaceIdRaw, parsed.data as Parameters<typeof monitor.configureThresholds>[2]);
     if (result.isErr()) {
       return c.json({ error: { code: 'INTERNAL_ERROR', message: result.error.message } }, 500);
     }

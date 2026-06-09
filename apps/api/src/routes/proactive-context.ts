@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import type { Context } from 'hono';
 import { z } from 'zod';
 import type postgres from 'postgres';
 
@@ -31,7 +32,7 @@ export function createProactiveContextRoutes(sql: SqlClient) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const engine = new ProactiveContextEngine(sql as unknown as any);
 
-  const getWorkspaceId = (c: Parameters<typeof app.get>[1] extends (c: infer C) => unknown ? C : never) =>
+  const getWorkspaceId = (c: Context) =>
     (c.get('workspaceId') as string | undefined) ?? c.req.header('x-workspace-id');
 
   /** GET /agents/:agentId/proactive-preview — show what context would be suggested */
@@ -110,7 +111,7 @@ export function createProactiveContextRoutes(sql: SqlClient) {
       agentId: body.agentId,
       suggestionId: body.suggestionId,
       feedback: parsed.data.feedback,
-      feedbackScore: parsed.data.feedbackScore,
+      ...(parsed.data.feedbackScore !== undefined ? { feedbackScore: parsed.data.feedbackScore } : {}),
     });
     if (result.isErr()) return c.json({ error: { code: 'INTERNAL_ERROR', message: result.error.message } }, 500);
     return c.json({ data: { success: true } });

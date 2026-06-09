@@ -48,20 +48,20 @@ app.post('/estimate', async (c) => {
 
   const { query, contextTokens, provider, entityCount, relationshipDepth, maxCostCents, minAccuracy, maxLatencyMs } = parsed.data;
 
-  const complexity = classifyQueryComplexity(query, { contextTokens, entityCount, relationshipDepth });
+  const complexity = classifyQueryComplexity(query, { contextTokens, ...(entityCount !== undefined ? { entityCount } : {}), ...(relationshipDepth !== undefined ? { relationshipDepth } : {}) });
 
   if (provider) {
     const estimate = estimateTokenUsage(provider, query, contextTokens, complexity);
     return c.json({ data: { complexity, estimate } });
   }
 
-  const selectionResult = selectOptimalProvider(query, contextTokens, maxCostCents, { minAccuracy, maxLatencyMs });
+  const selectionResult = selectOptimalProvider(query, contextTokens, maxCostCents, { ...(minAccuracy !== undefined ? { minAccuracy } : {}), ...(maxLatencyMs !== undefined ? { maxLatencyMs } : {}) });
 
   if (selectionResult.isErr()) {
     return c.json({ error: { code: 'NO_PROVIDER', message: selectionResult.error.message } }, 422);
   }
 
-  const ranked = rankProvidersByValue(complexity, { maxCostCents, maxLatencyMs, minAccuracy });
+  const ranked = rankProvidersByValue(complexity, { ...(maxCostCents !== undefined ? { maxCostCents } : {}), ...(maxLatencyMs !== undefined ? { maxLatencyMs } : {}), ...(minAccuracy !== undefined ? { minAccuracy } : {}) });
   const allEstimates = (['anthropic', 'openai', 'azure', 'gemini'] as LLMProvider[]).map(p =>
     estimateTokenUsage(p, query, contextTokens, complexity)
   );

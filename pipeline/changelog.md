@@ -4,6 +4,12 @@ Completed tasks are logged here by the daemon after each successful commit.
 
 ---
 
+- 2026-06-09 | fix(semantic-core): CI build fix — AttributeValue type in applyFieldMasking (commit 94ce402)
+- 2026-06-09 | feat(semantic-core,api,dashboard): streaming context endpoint with SSE chunking — StreamingContextServer, /streaming-queries routes, stream_metrics migration, StreamProgressMonitor component, 34 tests (commit 93d808a)
+- 2026-06-09 | feat(semantic-core,api): vector store tuner with index health analysis and reindex — VectorStoreTuner, /admin/vector-store/health+reindex routes, 34 tests (commit 3032c5f)
+- 2026-06-09 | feat(api): middleware test suite — 69 tests across 8 middleware modules (commit c3789fe)
+- 2026-06-09 | test(semantic-core): resource-builder unit tests — 21 tests: URI format, depth clamping, circular refs, missing entities (commit 3330fde)
+
 - 2026-06-09 | feat(cache,api,dashboard): advanced query caching with smart invalidation & prefetching (Layer 72)
 - 2026-06-09 | feat(semantic-core,api,dashboard): computed metric engine with user-defined formula DSL (Layer 73)
 - 2026-06-09 | feat(semantic-core,api,dashboard): data quality scoring & automated remediation recommendations (Layer 73)
@@ -152,3 +158,4 @@ Custom Transformation Pipeline & Entity Mapping Language — TransformationDSLEn
 - 2026-06-09: feat(api,dashboard): enterprise data governance & compliance dashboard [SHA: 9577ee7]
 - 2026-06-09: feat(semantic-core,api,dashboard): MCP client SDK generation & developer portal [SHA: 439971d]
 - 2026-06-09: feat(api,dashboard): connector health score & SLA tracking system [SHA: a015534]
+feat(semantic-core,api,dashboard): workflow service test suite & curated catalog UI — 26 unit tests, 17 route tests, migration 170, catalog UI with execute form and session history

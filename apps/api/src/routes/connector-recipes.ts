@@ -87,12 +87,12 @@ export function createConnectorRecipeRoutes(sql: SqlClient) {
       return c.json({ error: { code: 'VALIDATION_ERROR', message: parsed.error.message } }, 400);
     }
 
-    const authorUserId = (c.get('userId') as string | undefined) ?? 'unknown';
+    const authorUserId = (c.get('userId' as never) as string | undefined) ?? 'unknown';
     const result = await manager.createRecipe({
       workspaceId,
       authorUserId,
       ...parsed.data,
-    });
+    } as Parameters<typeof manager.createRecipe>[0]);
 
     if (result.isErr()) {
       return c.json({ error: { code: 'INTERNAL_ERROR', message: result.error.message } }, 500);
@@ -117,7 +117,7 @@ export function createConnectorRecipeRoutes(sql: SqlClient) {
     const workspaceId = c.get('workspaceId') as string | undefined;
     if (!workspaceId) return c.json({ error: { code: 'UNAUTHORIZED', message: 'Missing workspace' } }, 401);
 
-    const authorUserId = (c.get('userId') as string | undefined) ?? 'unknown';
+    const authorUserId = (c.get('userId' as never) as string | undefined) ?? 'unknown';
     const result = await manager.cloneRecipe(c.req.param('id'), workspaceId, authorUserId);
     if (result.isErr()) {
       return c.json({ error: { code: 'INTERNAL_ERROR', message: result.error.message } }, 500);
@@ -168,12 +168,12 @@ export function createConnectorRecipeRoutes(sql: SqlClient) {
       return c.json({ error: { code: 'VALIDATION_ERROR', message: parsed.error.message } }, 400);
     }
 
-    const reviewerId = (c.get('userId') as string | undefined) ?? 'unknown';
+    const reviewerId = (c.get('userId' as never) as string | undefined) ?? 'unknown';
     const result = await manager.addReview({
       recipeId: c.req.param('id'),
       reviewerId,
       ...parsed.data,
-    });
+    } as Parameters<typeof manager.addReview>[0]);
     if (result.isErr()) {
       return c.json({ error: { code: 'INTERNAL_ERROR', message: result.error.message } }, 500);
     }

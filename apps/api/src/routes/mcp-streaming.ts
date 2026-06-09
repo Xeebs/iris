@@ -37,6 +37,7 @@ export function createMcpStreamingRoutes(): Hono {
     const { entities: rawEntities, maxTokensPerChunk } = parsed.data;
     const entities: SemanticEntity[] = rawEntities.map((e) => ({
       ...e,
+      attributes: e.attributes as SemanticEntity['attributes'],
       lastModified: new Date(e.lastModified),
     }));
 

@@ -13,7 +13,7 @@ type SqlClient = ReturnType<typeof postgres>;
  */
 export function createCostAnalyticsRoutes(sql: SqlClient): Hono {
   const app = new Hono();
-  const advisor = new CostOptimizationAdvisor(sql as unknown as ReturnType<typeof import('postgres').default>);
+  const advisor = new CostOptimizationAdvisor(sql as unknown as ReturnType<typeof postgres>);
 
   /** GET /cost-analytics/breakdown — cost breakdown by connector, entity type, trend */
   app.get('/breakdown', async (c) => {

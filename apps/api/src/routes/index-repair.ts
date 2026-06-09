@@ -87,7 +87,7 @@ export function createIndexRepairRoutes(sql: SqlClient): Hono {
     }
 
     const result = await service.rebuildIndex(workspaceId, {
-      entityTypeFilter: parsed.data.entityTypeFilter,
+      ...(parsed.data.entityTypeFilter !== undefined ? { entityTypeFilter: parsed.data.entityTypeFilter } : {}),
       dryRun: parsed.data.dryRun,
     });
 

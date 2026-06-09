@@ -70,7 +70,7 @@ app.post('/generate', async (c) => {
   }
 
   const workspaceId = c.req.header('x-workspace-id') ?? 'default';
-  const connectorSchema: ConnectorSchema = parsed.data;
+  const connectorSchema = parsed.data as unknown as ConnectorSchema;
   const tools = generateToolsFromConnectorSchema(connectorSchema, workspaceId);
 
   const sql = getSql(c);

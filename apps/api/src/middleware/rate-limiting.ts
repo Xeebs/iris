@@ -46,5 +46,6 @@ export function rateLimitMiddleware(
     }
 
     await next();
+    return;
   };
 }

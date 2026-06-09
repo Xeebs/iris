@@ -93,7 +93,7 @@ export function createEntityValidationRoutes(sql: SqlClient): Hono {
   /** POST /api/v1/validation/rules — create a new validation rule */
   app.post('/rules', async (c) => {
     const workspaceId = c.get('workspaceId') as string | undefined;
-    const userId = c.get('userId') as string | undefined;
+    const userId = c.get('userId' as never) as string | undefined;
     if (!workspaceId || !userId) {
       return c.json({ error: { code: 'UNAUTHORIZED', message: 'Missing workspace context' } }, 401);
     }
@@ -108,7 +108,7 @@ export function createEntityValidationRoutes(sql: SqlClient): Hono {
       workspaceId,
       entityType: parsed.data.entityType,
       ruleName: parsed.data.ruleName,
-      definition: parsed.data.definition,
+      definition: parsed.data.definition as Parameters<typeof engine.createRule>[0]['definition'],
       isBlocking: parsed.data.isBlocking,
       severity: parsed.data.severity,
       createdByUserId: userId,
@@ -179,10 +179,10 @@ export function createEntityValidationRoutes(sql: SqlClient): Hono {
         ? new Date(parsed.data.entity.lastModified)
         : new Date(),
       sourceId: parsed.data.entity.sourceId ?? parsed.data.entity.id,
-      relationships: parsed.data.entity.relationships as never[],
+      relationships: (parsed.data.entity.relationships ?? []) as [],
     };
 
-    const result = await engine.validateEntity(entity, workspaceId);
+    const result = await engine.validateEntity(entity as import('@iris/connector-sdk').SemanticEntity, workspaceId);
     if (result.isErr()) {
       return c.json({ error: { code: 'INTERNAL_ERROR', message: 'Validation failed' } }, 500);
     }
@@ -203,10 +203,10 @@ export function createEntityValidationRoutes(sql: SqlClient): Hono {
     }
 
     const result = await engine.listFailures(workspaceId, {
-      cursor: query.data.cursor,
+      ...(query.data.cursor !== undefined ? { cursor: query.data.cursor } : {}),
       limit: query.data.limit,
-      acknowledged: query.data.acknowledged,
-      ruleId: query.data.ruleId,
+      ...(query.data.acknowledged !== undefined ? { acknowledged: query.data.acknowledged } : {}),
+      ...(query.data.ruleId !== undefined ? { ruleId: query.data.ruleId } : {}),
     });
 
     if (result.isErr()) {

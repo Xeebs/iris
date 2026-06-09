@@ -95,7 +95,7 @@ export function createRelevanceRoutes(sql: Sql): Hono {
     }
 
     try {
-      await tuner.recordFeedback({ workspaceId, ...parsed.data });
+      await tuner.recordFeedback({ workspaceId, ...parsed.data } as Parameters<typeof tuner.recordFeedback>[0]);
       return c.json({ data: { recorded: true } });
     } catch (e) {
       log.error('Failed to record feedback', { error: String(e) });

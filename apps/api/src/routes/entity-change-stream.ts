@@ -41,7 +41,8 @@ export function createEntityChangeStreamRoutes(sql: Sql) {
     const { entityId, filters } = c.req.valid('json');
 
     try {
-      const sub = await manager.subscribeToEntityChanges(workspaceId, entityId, filters);
+      const cleanFilters = Object.fromEntries(Object.entries(filters).filter(([, v]) => v !== undefined)) as Parameters<typeof manager.subscribeToEntityChanges>[2];
+      const sub = await manager.subscribeToEntityChanges(workspaceId, entityId, cleanFilters);
       return c.json({ data: sub }, 201);
     } catch (e) {
       logger.error('Failed to create subscription', { workspaceId, error: e });

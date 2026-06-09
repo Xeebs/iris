@@ -35,7 +35,7 @@ const weightUpdateSchema = z.object({
  */
 export function createSearchTuningRoutes(sql: SqlClient): Hono {
   const app = new Hono();
-  const tuner = new RelevanceTuner(sql as unknown as ReturnType<typeof import('postgres').default>);
+  const tuner = new RelevanceTuner(sql as unknown as ReturnType<typeof postgres>);
 
   /** POST /search-tuning/feedback — record a click-through signal */
   app.post('/feedback', async (c) => {
@@ -52,7 +52,7 @@ export function createSearchTuningRoutes(sql: SqlClient): Hono {
     }
 
     try {
-      await tuner.recordFeedback({ workspaceId, ...parsed.data });
+      await tuner.recordFeedback({ workspaceId, ...parsed.data } as Parameters<typeof tuner.recordFeedback>[0]);
       return c.json({ data: { recorded: true } }, 201);
     } catch (e) {
       const error = e instanceof Error ? e : new Error(String(e));

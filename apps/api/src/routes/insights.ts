@@ -34,7 +34,7 @@ export function makeInsightsRouter(sql: ReturnType<typeof postgres>) {
     const entityType = c.req.query('entityType');
     const limit = Math.min(Number(c.req.query('limit') ?? 20), 100);
     const cursor = c.req.query('cursor') ?? undefined;
-    const result = await svc.listInsights({ insightType, severity, entityType, limit, cursor });
+    const result = await svc.listInsights({ ...(insightType !== undefined ? { insightType } : {}), ...(severity !== undefined ? { severity } : {}), ...(entityType !== undefined ? { entityType } : {}), limit, ...(cursor !== undefined ? { cursor } : {}) });
     if (result.isErr()) return c.json({ error: { code: 'db_error', message: result.error.message } }, 500);
     const { insights, nextCursor } = result.value;
     return c.json({ data: insights, meta: { hasMore: nextCursor !== null, nextCursor } });
@@ -44,7 +44,7 @@ export function makeInsightsRouter(sql: ReturnType<typeof postgres>) {
   app.post('/discover', async (c) => {
     const parsed = DiscoverSchema.safeParse(await c.req.json().catch(() => ({})));
     if (!parsed.success) return c.json({ error: { code: 'validation_error', message: 'Invalid body', details: parsed.error.flatten() } }, 400);
-    const result = await svc.discoverInsights(parsed.data.entityTypes, { workspaceId: parsed.data.workspaceId });
+    const result = await svc.discoverInsights(parsed.data.entityTypes, { ...(parsed.data.workspaceId !== undefined ? { workspaceId: parsed.data.workspaceId } : {}) });
     if (result.isErr()) return c.json({ error: { code: 'discovery_error', message: result.error.message } }, 500);
     const insights = result.value;
     for (const insight of insights) {
