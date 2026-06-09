@@ -62,7 +62,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: VS-2 Demo-mode HubSpot sync against fixtures
 - **Layer**: 78 — Vertical Slice
-- **Status**: UNWORKED
+- **Status**: IN_PROGRESS
 - **Priority**: High
 - **Description**: Make the real HubSpot connector run a full sync without a HubSpot account, using the existing fixture files (`packages/connectors/hubspot/tests/fixtures/{contacts,companies,deals}.json`) as the data source. Add a `demoMode: true` flag to the connector config (zod schema) that routes API calls to a local fixture-backed client instead of the live HubSpot API — same code path through `sync()`, transformers, pagination, and entity yielding; only the HTTP layer is swapped. Expand fixtures if needed so the canonical questions in docs/VERTICAL_SLICE.md have unambiguous answers (e.g., exactly N open deals with known total value, one clearly-largest deal with a known owner). Follow `.claude/rules/connector-patterns.md`. Tests: full demo-mode sync yields the expected entity counts and shapes.
 - **Files**:
