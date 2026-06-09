@@ -461,6 +461,7 @@ def main() -> None:
                 str(CLAUDE),
                 "--dangerously-skip-permissions",
                 "--output-format", "stream-json",
+                "--verbose",  # required by the CLI for stream-json in --print mode
                 "--model", model,
                 "-p", build_prompt(),
             ],
