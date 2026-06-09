@@ -75,7 +75,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: VS-2c Start the sync worker in the API process (slice blocker B1)
 - **Layer**: 78 — Vertical Slice
-- **Status**: UNWORKED
+- **Status**: RESOLVED_BY_VS-3 (commit 2731534) — `apps/api/src/workers/sync-worker.ts` now has a standalone bootstrap gated by `SYNC_WORKER_STANDALONE=true`, and `scripts/slice-demo.ts` spawns it as a separate worker process (env sets `SYNC_WORKER_STANDALONE=true`); `registerConnectors()` is also called in `server.ts:105`. The sync→index chain is wired. No separate change needed; do not pick up.
 - **Priority**: Critical
 - **Description**: Slice path audit (VS-1) found that `apps/api/src/workers/sync-worker.ts` (`createSyncWorker`) is never started in the API bootstrap — `server.ts main()` only starts the HTTP server, so enqueued `POST /api/v1/connectors/:id/sync` jobs are never consumed and entities never reach the indexer through the real REST path. Fix: in the API bootstrap, call `registerConnectors()` and start `createSyncWorker(sql, vectorStore, openAiKey, redisUrl)` so the BullMQ worker runs alongside the server (gate behind an env flag like `RUN_SYNC_WORKER=true` if a separate worker process is preferred — but the slice demo runs a single API process, so default it on when `DEMO_MODE=true`). Ensure clean shutdown on SIGTERM. Coordinate with VS-3 (which also edits `server.ts`/bootstrap) to avoid a collision. Verify with `scripts/slice-demo.sh`: after triggering sync, indexed entity count in the vector store must match fixture counts. This is the single ❌ blocker in the path audit table in docs/VERTICAL_SLICE.md.
 - **Files**:

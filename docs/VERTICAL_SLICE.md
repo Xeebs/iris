@@ -76,7 +76,7 @@ Traced 2026-06-09 (task VS-1). Each link of the connect → sync → index → s
 
 ### Blockers found (slice-critical)
 
-- **B1 (link 2b):** The BullMQ sync worker is never started in the API process. New task **VS-2c** added below. Until fixed, `scripts/slice-demo.sh` cannot get from "sync triggered" to "entities indexed" through the real REST path. *Not fixed here* because the API bootstrap (`server.ts`) is being edited concurrently by a parallel worker (VS-3); folding the worker startup into the demo path is cleaner and is captured as VS-2c.
+- **B1 (link 2b):** The BullMQ sync worker is never started in the API process. ~~New task **VS-2c** added below.~~ **RESOLVED by VS-3 (commit 2731534):** `sync-worker.ts` gained a standalone bootstrap (`SYNC_WORKER_STANDALONE=true`) that `scripts/slice-demo.ts` spawns as a dedicated worker process, and `registerConnectors()` is now called in `server.ts`. The sync → index chain is wired end to end; link 2b is ✅.
 
 ### Non-blocking notes (not slice-critical — do NOT fix in slice mode)
 
