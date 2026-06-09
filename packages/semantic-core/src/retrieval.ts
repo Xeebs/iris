@@ -3,6 +3,7 @@ import type { SemanticEntity } from '@iris/connector-sdk';
 import { logger } from '@iris/core/logger';
 import { IndexerError } from '@iris/core/errors';
 import { EMBEDDING_MODEL } from './embedding.js';
+import { createDefaultProvider } from './embedding-provider.js';
 import type { VectorStore } from './vector-store.js';
 import { detectEntityTypes, expandQuery } from './query-decomposer.js';
 import type { Result } from 'neverthrow';
@@ -181,6 +182,13 @@ export async function retrieveContext(
 }
 
 async function embedQuery(query: string): Promise<number[]> {
+  // Query and index embeddings must come from the same model, so an explicit
+  // EMBEDDING_PROVIDER env (as set at index time, e.g. hash-deterministic in
+  // demo mode) takes precedence over the legacy Azure path.
+  if (process.env['EMBEDDING_PROVIDER']) {
+    return createDefaultProvider().getEmbedding(query);
+  }
+
   const endpoint = process.env['AZURE_OPENAI_ENDPOINT'];
   const apiKey = process.env['AZURE_OPENAI_API_KEY'];
   const apiVersion = process.env['AZURE_OPENAI_API_VERSION'] ?? '2023-05-15';

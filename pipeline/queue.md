@@ -40,7 +40,7 @@ Completed tasks are moved to `pipeline/queue-archive.md` by `scripts/archive-que
 
 ### Task: VS-4 MCP query verification — canonical questions answered correctly
 - **Layer**: 78 — Vertical Slice
-- **Status**: IN_PROGRESS
+- **Status**: COMMITTED
 - **Priority**: High
 - **Description**: Extend the slice demo: start the MCP server against the demo workspace, then drive it with a scripted MCP client (stdio or HTTP, whatever `apps/mcp-server` supports — the same transport a real Claude client would use, not direct function calls) calling `query-context` with the 5 canonical questions from docs/VERTICAL_SLICE.md. Assert each response contains the expected facts from the fixtures and respects the 2000-token contextBudget. Failures must print the question, the expected facts, and the actual response. Wire this into scripts/slice-demo.sh as the QUERY/ANSWER phase.
 - **Files**:
