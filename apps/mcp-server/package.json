@@ -5,7 +5,7 @@
   "type": "module",
   "main": "./dist/server.js",
   "scripts": {
-    "build": "NODE_OPTIONS=--max-old-space-size=8192 tsc --build",
+    "build": "tsc --build",
     "dev": "tsx --watch src/server.ts",
     "start": "node dist/server.js",
     "test": "vitest run --coverage",
