@@ -82,7 +82,8 @@
     "./connector-benchmarker": "./dist/connector-benchmarker.js",
     "./sdk-generator": "./dist/sdk-generator.js",
     "./streaming-context": "./dist/streaming-context.js",
-    "./vector-store-tuner": "./dist/vector-store-tuner.js"
+    "./vector-store-tuner": "./dist/vector-store-tuner.js",
+    "./*": "./dist/*.js"
   },
   "scripts": {
     "build": "tsc --build",
