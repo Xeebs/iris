@@ -4292,7 +4292,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Multi-Connector Entity Matching & Reconciliation Engine
 - **Layer**: 68 — Advanced Retrieval, Analytics & Observability
-- **Status**: IN_PROGRESS
+- **Status**: COMMITTED
 - **Priority**: Medium
 - **Description**: Implement cross-connector entity matching that identifies the same real-world entity appearing in different systems (e.g., same customer in HubSpot and Salesforce) and provides reconciliation workflows. Create packages/semantic-core/src/entity-reconciler.ts with EntityReconciler: (1) findMatchCandidates(entityId, topK=5) using embedding similarity + fuzzy name matching + attribute overlap to find candidates from other connectors, (2) scoreMatchConfidence(entity1, entity2) computing confidence 0–1 based on attribute overlap (email, phone, address), embedding distance, and relationship patterns, (3) suggestReconciliation(sourceId, targetIds) grouping candidates and recommending merge order, (4) recordReconciliationDecision(sourceId, targetId, decision) logging accepts/rejects for active learning. Create migration 146 (entity_matches, reconciliation_records, match_artifacts). Add REST routes: GET /api/v1/entities/:id/matches (find cross-connector matches), POST /api/v1/entities/reconcile (execute merge/link), GET /api/v1/reconciliation-status (view pending decisions). Add dashboard component: entity-reconciliation-panel.tsx (show candidate matches with confidence scores, side-by-side attribute comparison, accept/reject/manual-review buttons). Include 22+ tests (12 unit matching scoring + 10 integration cross-connector patterns).
 - **Files**:
@@ -4309,7 +4309,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Semantic Query Caching with Time-Based Versioning & Hit Analysis
 - **Layer**: 68 — Advanced Retrieval, Analytics & Observability
-- **Status**: UNWORKED
+- **Status**: IN_PROGRESS
 - **Priority**: Medium
 - **Description**: Extend semantic caching to include temporal query versioning, cache hit analysis, and predictive cache warming based on query access patterns. Create packages/semantic-core/src/temporal-query-cache.ts with TemporalQueryCache: (1) cacheQueryResult(query, result, asOfDate, ttl) storing time-versioned query results with point-in-time semantics, (2) queryAsOfDate(query, targetDate) retrieving cached results from a specific date without re-executing, (3) analyzeCacheHits(interval) computing hit rate, miss patterns, and frequently-missed query combinations, (4) warmCacheProactively(interval) identifying high-value queries to pre-cache based on access patterns. Create migration 147 (temporal_query_cache, cache_hit_analysis). Add REST routes: GET /api/v1/cache/temporal/:queryId/:date (fetch cached result), GET /api/v1/cache/analytics (hit rate, miss patterns), POST /api/v1/cache/preload (trigger proactive warming). Add dashboard components: cache-hit-timeline.tsx (visualize cache hits over time), miss-pattern-analyzer.tsx (show why queries miss cache). Include 20+ tests (12 unit cache logic + 8 integration temporal queries).
 - **Files**:
@@ -4321,5 +4321,83 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
   - apps/api/migrations/147_temporal_query_cache.sql
   - apps/dashboard/components/cache-hit-timeline.tsx
   - apps/dashboard/components/miss-pattern-analyzer.tsx
+- **Depends on**: nothing
+- **Added**: 2026-06-08
+
+---
+
+## Layer 69: Data Freshness, Sync Observability & Quality Orchestration
+
+### Task: Data Freshness Tracking & Time-to-Update Analytics
+- **Layer**: 69 — Data Freshness, Sync Observability & Quality Orchestration
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Implement comprehensive data freshness monitoring that tracks entity staleness, sync latency, and time-to-update metrics per entity type and connector. Create packages/semantic-core/src/freshness-tracker.ts with FreshnessTracker: (1) recordEntitySync(entityId, entityType, connectorId, lastModified) capturing entity modification timestamps at sync time, (2) computeFreshness(entityId) returning age (now - lastModified), percentile freshness across entity type, and staleness warnings if age exceeds SLA, (3) analyzeFreshnessMetrics(connectorId, interval) computing mean time-to-index, sync frequency compliance, freshness percentiles (p50/p95/p99), (4) predictNextStaleEvent(entityId, connectorId) estimating when entity will exceed freshness SLA based on modification patterns. Create migration 148 (entity_freshness_tracking, freshness_events, freshness_slas). Add REST routes: GET /api/v1/freshness/entities/:id (entity age + SLA status), GET /api/v1/freshness/metrics/:connectorId (freshness stats per connector), GET /api/v1/freshness/slas (workspace freshness SLA config + compliance). Add dashboard components: freshness-timeline.tsx (age timeline per entity type), staleness-alerts-panel.tsx (entities approaching SLA), freshness-compliance-heatmap.tsx (entity type × connector freshness matrix). Include 24+ tests (14 unit freshness computation + 10 integration SLA enforcement).
+- **Files**:
+  - packages/semantic-core/src/freshness-tracker.ts
+  - packages/semantic-core/src/__tests__/freshness-tracker.test.ts
+  - packages/semantic-core/src/__tests__/freshness-tracker.integration.test.ts
+  - apps/api/src/routes/freshness-tracking.ts
+  - apps/api/src/__tests__/freshness-tracking.test.ts
+  - apps/api/migrations/148_freshness_tracking.sql
+  - apps/dashboard/components/freshness-timeline.tsx
+  - apps/dashboard/components/staleness-alerts-panel.tsx
+  - apps/dashboard/components/freshness-compliance-heatmap.tsx
+- **Depends on**: nothing
+- **Added**: 2026-06-08
+
+### Task: Connector Reliability Scoring & Proactive Degradation Alerts
+- **Layer**: 69 — Data Freshness, Sync Observability & Quality Orchestration
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Build a real-time connector reliability scoring system that predicts degradation before sync failures occur, enabling proactive intervention. Create packages/semantic-core/src/reliability-predictor.ts with ReliabilityPredictor: (1) computeReliabilityScore(connectorId, windowMs=86400000) calculating time-weighted reliability 0–100 from recent sync outcomes (success rate 40%, latency p95 30%, error rate 20%, schema stability 10%), (2) detectDegradationPattern(connectorId) using statistical analysis (Z-score) to identify anomalies in error rate, latency spike, or auth failures before total failure, (3) forecastNextFailure(connectorId) applying exponential smoothing to predict likelihood of next failure within 1h/24h/7d windows, (4) emitProactiveAlert(connectorId, alertType, reason) triggering severity-based alerts (warning: score <70, critical: score <40 or failure forecast >80%), (5) suggestMitigations(connectorId) recommending actions (reduce frequency, check credentials, manual refresh, enable fallback). Create migration 149 (reliability_scores, reliability_alerts, alert_suppressions). Add REST routes: GET /api/v1/connectors/:id/reliability (score + trend + forecast), GET /api/v1/connectors/:id/alerts (recent alerts + mitigation actions), POST /api/v1/connectors/:id/suppress-alert (silence false positives). Add MCP tool: connector-health-forecast (predict reliability issues for Claude agents). Add dashboard components: reliability-gauge.tsx (score + trend sparkline), degradation-predictor-panel.tsx (forecast alerts + confidence), alert-action-logger.tsx (mitigation history). Include 26+ tests (16 unit scoring + 10 integration forecast accuracy).
+- **Files**:
+  - packages/semantic-core/src/reliability-predictor.ts
+  - packages/semantic-core/src/__tests__/reliability-predictor.test.ts
+  - packages/semantic-core/src/__tests__/reliability-predictor.integration.test.ts
+  - apps/api/src/routes/reliability-scoring.ts
+  - apps/api/src/__tests__/reliability-scoring.test.ts
+  - apps/api/migrations/149_reliability_alerts.sql
+  - apps/mcp-server/src/tools/connector-health-forecast.ts
+  - apps/dashboard/components/reliability-gauge.tsx
+  - apps/dashboard/components/degradation-predictor-panel.tsx
+  - apps/dashboard/components/alert-action-logger.tsx
+- **Depends on**: nothing
+- **Added**: 2026-06-08
+
+### Task: Enrichment Quality Scoring & Completeness Analysis
+- **Layer**: 69 — Data Freshness, Sync Observability & Quality Orchestration
+- **Status**: UNWORKED
+- **Priority**: Medium
+- **Description**: Implement enrichment quality metrics that measure coverage, confidence, freshness, and source diversity for enriched entities. Create packages/semantic-core/src/enrichment-quality-scorer.ts with EnrichmentQualityScorer: (1) scoreEnrichmentCompletenessForEntity(entityId) computing attribute coverage 0–100 (% of attributes populated by enrichment) and required-attribute hit rate, (2) aggregateEnrichmentMetrics(connectorId, period) computing mean completeness per entity type, source reliability (accuracy via feedback + confidence scores), refresh lag (time since last enrichment refresh), (3) detectEnrichmentGaps(entityType, connectorId) identifying systematically unenriched field patterns (e.g., 90% of people missing "company_size"), (4) scoreSourceDiversity(entityId) measuring entropy of enrichment sources (high diversity = lower risk from single source failure), (5) assessEnrichmentROI(connectorId, period) computing token-per-entity cost vs. completeness improvement. Create migration 150 (enrichment_quality_scores, enrichment_gaps, source_reliability_feedback). Add REST routes: GET /api/v1/enrichment/quality/:connectorId (per-entity-type scores), GET /api/v1/enrichment/gaps (missing fields by frequency), GET /api/v1/enrichment/sources/:sourceId/reliability (source accuracy + feedback). Add dashboard page: enrichment-quality/page.tsx with: completeness heatmap (entity type × field), source reliability scorecard, gap frequency histogram, ROI analysis. Include 22+ tests (14 unit quality scoring + 8 integration source reliability).
+- **Files**:
+  - packages/semantic-core/src/enrichment-quality-scorer.ts
+  - packages/semantic-core/src/__tests__/enrichment-quality-scorer.test.ts
+  - packages/semantic-core/src/__tests__/enrichment-quality-scorer.integration.test.ts
+  - apps/api/src/routes/enrichment-quality.ts
+  - apps/api/src/__tests__/enrichment-quality.test.ts
+  - apps/api/migrations/150_enrichment_quality.sql
+  - apps/dashboard/app/admin/enrichment-quality/page.tsx
+  - apps/dashboard/components/completeness-heatmap.tsx
+  - apps/dashboard/components/source-reliability-scorecard.tsx
+  - apps/dashboard/components/enrichment-gap-histogram.tsx
+- **Depends on**: nothing
+- **Added**: 2026-06-08
+
+### Task: Sync Parallelism & Concurrency Auto-Optimizer
+- **Layer**: 69 — Data Freshness, Sync Observability & Quality Orchestration
+- **Status**: UNWORKED
+- **Priority**: Medium
+- **Description**: Implement an adaptive sync optimizer that automatically tunes connector concurrency, batch sizes, and resource allocation based on observed throughput, latency, and error rates to maximize sync efficiency. Create packages/semantic-core/src/sync-parallelism-optimizer.ts with SyncParallelismOptimizer: (1) recommendConcurrency(connectorId, entityType, historicalMetrics) computing optimal parallel request count using hill-climbing search (maximize throughput/s while keeping p95 latency <threshold), (2) tuneRequestBatchSize(connectorId, currentBatch) adapting batch size based on error rate + payload size to find sweet spot, (3) allocateWorkerPool(workspace, connectorIds) distributing available BullMQ workers across connectors using weighted allocation (prioritize high-entity-count connectors, recently-degraded connectors lower priority), (4) detectOptimizationWindow(connectorId) identifying stable periods (no API changes, no rate limits) suitable for tuning experiments, (5) executeOptimizationExperiment(connectorId, variant) A/B testing a concurrency variant on 10% of next sync, measuring impact on throughput. Create migration 151 (sync_optimization_configs, optimization_experiments, experiment_results). Add REST routes: POST /api/v1/sync-optimizer/tuning/:connectorId (trigger auto-tuning), GET /api/v1/sync-optimizer/config/:connectorId (current settings + recommended), GET /api/v1/sync-optimizer/experiments (A/B test results). Add dashboard components: concurrency-tuning-wizard.tsx (interactive tuning simulator), optimization-history-chart.tsx (throughput improvement over time), experiment-results-table.tsx. Include 20+ tests (12 unit optimization math + 8 integration BullMQ allocation).
+- **Files**:
+  - packages/semantic-core/src/sync-parallelism-optimizer.ts
+  - packages/semantic-core/src/__tests__/sync-parallelism-optimizer.test.ts
+  - packages/semantic-core/src/__tests__/sync-parallelism-optimizer.integration.test.ts
+  - apps/api/src/routes/sync-optimizer.ts
+  - apps/api/src/__tests__/sync-optimizer.test.ts
+  - apps/api/migrations/151_sync_optimization.sql
+  - apps/dashboard/components/concurrency-tuning-wizard.tsx
+  - apps/dashboard/components/optimization-history-chart.tsx
+  - apps/dashboard/components/experiment-results-table.tsx
 - **Depends on**: nothing
 - **Added**: 2026-06-08
