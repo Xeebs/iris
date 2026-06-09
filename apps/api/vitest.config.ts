@@ -97,6 +97,7 @@ export default defineConfig({
       '@iris/semantic-core/sync-parallelism-optimizer': path.resolve(__dirname, '../../packages/semantic-core/src/sync-parallelism-optimizer.ts'),
       '@iris/semantic-core/multi-connector-optimizer': path.resolve(__dirname, '../../packages/semantic-core/src/multi-connector-optimizer.ts'),
       '@iris/semantic-core/entity-change-stream': path.resolve(__dirname, '../../packages/semantic-core/src/entity-change-stream.ts'),
+      '@iris/semantic-core/nl-query-generator': path.resolve(__dirname, '../../packages/semantic-core/src/nl-query-generator.ts'),
       '@iris/semantic-core/freshness-tracker': path.resolve(__dirname, '../../packages/semantic-core/src/freshness-tracker.ts'),
       '@iris/semantic-core/reliability-predictor': path.resolve(__dirname, '../../packages/semantic-core/src/reliability-predictor.ts'),
       '@iris/semantic-core/enrichment-quality-scorer': path.resolve(__dirname, '../../packages/semantic-core/src/enrichment-quality-scorer.ts'),

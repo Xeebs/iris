@@ -76,7 +76,8 @@
     "./sync-parallelism-optimizer": "./dist/sync-parallelism-optimizer.js",
     "./request-tracer": "./dist/request-tracer.js",
     "./multi-connector-optimizer": "./dist/multi-connector-optimizer.js",
-    "./entity-change-stream": "./dist/entity-change-stream.js"
+    "./entity-change-stream": "./dist/entity-change-stream.js",
+    "./nl-query-generator": "./dist/nl-query-generator.js"
   },
   "scripts": {
     "build": "tsc --build",

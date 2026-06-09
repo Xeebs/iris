@@ -4484,7 +4484,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: AI-Assisted Query Generation & Natural Language Search Interface
 - **Layer**: 70 — Test Coverage Completion & Enterprise Observability
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: Medium
 - **Description**: Build a natural language query interface that converts business questions into optimized context queries using LLM-based intent classification and semantic mapping. Create packages/semantic-core/src/nl-query-generator.ts with NlQueryGenerator: (1) classifyQueryIntent(naturalLanguageQuery, workspace) identifying intent type (metric-lookup, entity-search, trend-analysis, comparison, aggregation) and confidence score, (2) mapEntitiesToTypes(intent, keywords, glossary) matching business terms in question to entity types using semantic similarity, (3) generateQueryPlan(intent, entityTypes, budget) creating a context-query plan with appropriate filters/aggregations, (4) suggestFollowUpQueries(question, result) recommending natural follow-up questions. Create REST route: POST /api/v1/queries/natural-language (convert to context-query + execute). Create MCP tool: generate-query-from-question (for Claude agents). Add dashboard page: natural-language-search/page.tsx with: query-input field, suggested-queries carousel, result-display with explanation (why this result, how cache hit), feedback thumbs (good/bad result). Create migration 154 (nlquery_sessions, nlquery_feedback). Include 18+ tests (12 unit intent classification + 6 integration LLM generation).
 - **Files**:
