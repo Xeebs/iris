@@ -4386,7 +4386,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Sync Parallelism & Concurrency Auto-Optimizer
 - **Layer**: 69 — Data Freshness, Sync Observability & Quality Orchestration
-- **Status**: IN_PROGRESS
+- **Status**: COMMITTED
 - **Priority**: Medium
 - **Description**: Implement an adaptive sync optimizer that automatically tunes connector concurrency, batch sizes, and resource allocation based on observed throughput, latency, and error rates to maximize sync efficiency. Create packages/semantic-core/src/sync-parallelism-optimizer.ts with SyncParallelismOptimizer: (1) recommendConcurrency(connectorId, entityType, historicalMetrics) computing optimal parallel request count using hill-climbing search (maximize throughput/s while keeping p95 latency <threshold), (2) tuneRequestBatchSize(connectorId, currentBatch) adapting batch size based on error rate + payload size to find sweet spot, (3) allocateWorkerPool(workspace, connectorIds) distributing available BullMQ workers across connectors using weighted allocation (prioritize high-entity-count connectors, recently-degraded connectors lower priority), (4) detectOptimizationWindow(connectorId) identifying stable periods (no API changes, no rate limits) suitable for tuning experiments, (5) executeOptimizationExperiment(connectorId, variant) A/B testing a concurrency variant on 10% of next sync, measuring impact on throughput. Create migration 151 (sync_optimization_configs, optimization_experiments, experiment_results). Add REST routes: POST /api/v1/sync-optimizer/tuning/:connectorId (trigger auto-tuning), GET /api/v1/sync-optimizer/config/:connectorId (current settings + recommended), GET /api/v1/sync-optimizer/experiments (A/B test results). Add dashboard components: concurrency-tuning-wizard.tsx (interactive tuning simulator), optimization-history-chart.tsx (throughput improvement over time), experiment-results-table.tsx. Include 20+ tests (12 unit optimization math + 8 integration BullMQ allocation).
 - **Files**:
@@ -4408,7 +4408,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Critical Route Test Coverage Suite — Phase 1
 - **Layer**: 70 — Test Coverage Completion & Enterprise Observability
-- **Status**: UNWORKED
+- **Status**: IN_PROGRESS
 - **Priority**: High
 - **Description**: Add comprehensive test coverage for 10 high-impact API routes that currently lack dedicated test files. Target routes: relationship-recommendations, custom-connectors, document-indexing, query-cost-analysis, metrics-anomalies, webhook-admin, circuit-breaker-admin, pii-config, admin-sync-monitoring, admin-sync-quality. For each route, create a test file covering: (1) happy path with valid inputs and expected outputs, (2) 400-level validation/auth errors, (3) 500-level error handling and recovery, (4) edge cases (empty results, pagination boundaries, concurrency), (5) integration with dependent services (database, connectors, cache). Follow test patterns in .claude/rules/testing.md: 80%+ coverage target, use Vitest + MSW for mocks. Each test file should have 20–30 tests covering all endpoints and error paths.
 - **Files**:
