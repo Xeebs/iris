@@ -4309,7 +4309,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Semantic Query Caching with Time-Based Versioning & Hit Analysis
 - **Layer**: 68 — Advanced Retrieval, Analytics & Observability
-- **Status**: IN_PROGRESS
+- **Status**: COMMITTED
 - **Priority**: Medium
 - **Description**: Extend semantic caching to include temporal query versioning, cache hit analysis, and predictive cache warming based on query access patterns. Create packages/semantic-core/src/temporal-query-cache.ts with TemporalQueryCache: (1) cacheQueryResult(query, result, asOfDate, ttl) storing time-versioned query results with point-in-time semantics, (2) queryAsOfDate(query, targetDate) retrieving cached results from a specific date without re-executing, (3) analyzeCacheHits(interval) computing hit rate, miss patterns, and frequently-missed query combinations, (4) warmCacheProactively(interval) identifying high-value queries to pre-cache based on access patterns. Create migration 147 (temporal_query_cache, cache_hit_analysis). Add REST routes: GET /api/v1/cache/temporal/:queryId/:date (fetch cached result), GET /api/v1/cache/analytics (hit rate, miss patterns), POST /api/v1/cache/preload (trigger proactive warming). Add dashboard components: cache-hit-timeline.tsx (visualize cache hits over time), miss-pattern-analyzer.tsx (show why queries miss cache). Include 20+ tests (12 unit cache logic + 8 integration temporal queries).
 - **Files**:
@@ -4330,7 +4330,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Data Freshness Tracking & Time-to-Update Analytics
 - **Layer**: 69 — Data Freshness, Sync Observability & Quality Orchestration
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: High
 - **Description**: Implement comprehensive data freshness monitoring that tracks entity staleness, sync latency, and time-to-update metrics per entity type and connector. Create packages/semantic-core/src/freshness-tracker.ts with FreshnessTracker: (1) recordEntitySync(entityId, entityType, connectorId, lastModified) capturing entity modification timestamps at sync time, (2) computeFreshness(entityId) returning age (now - lastModified), percentile freshness across entity type, and staleness warnings if age exceeds SLA, (3) analyzeFreshnessMetrics(connectorId, interval) computing mean time-to-index, sync frequency compliance, freshness percentiles (p50/p95/p99), (4) predictNextStaleEvent(entityId, connectorId) estimating when entity will exceed freshness SLA based on modification patterns. Create migration 148 (entity_freshness_tracking, freshness_events, freshness_slas). Add REST routes: GET /api/v1/freshness/entities/:id (entity age + SLA status), GET /api/v1/freshness/metrics/:connectorId (freshness stats per connector), GET /api/v1/freshness/slas (workspace freshness SLA config + compliance). Add dashboard components: freshness-timeline.tsx (age timeline per entity type), staleness-alerts-panel.tsx (entities approaching SLA), freshness-compliance-heatmap.tsx (entity type × connector freshness matrix). Include 24+ tests (14 unit freshness computation + 10 integration SLA enforcement).
 - **Files**:

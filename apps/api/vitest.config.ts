@@ -93,6 +93,7 @@ export default defineConfig({
       '@iris/semantic-core/cost-attribution': path.resolve(__dirname, '../../packages/semantic-core/src/cost-attribution.ts'),
       '@iris/semantic-core/entity-reconciler': path.resolve(__dirname, '../../packages/semantic-core/src/entity-reconciler.ts'),
       '@iris/semantic-core/temporal-query-cache': path.resolve(__dirname, '../../packages/semantic-core/src/temporal-query-cache.ts'),
+      '@iris/semantic-core/freshness-tracker': path.resolve(__dirname, '../../packages/semantic-core/src/freshness-tracker.ts'),
       '@iris/semantic-core': path.resolve(__dirname, '../../packages/semantic-core/src/index.ts'),
       '@iris/cache/response-cache': path.resolve(__dirname, '../../packages/cache/src/response-cache.ts'),
       '@iris/compression': path.resolve(__dirname, '../../packages/compression/src/index.ts'),

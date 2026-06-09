@@ -1,5 +1,7 @@
 'use client';
 
+import { useEffect, useState } from 'react';
+
 interface FreshnessSnapshot {
   date: string;
   totalEntities: number;
@@ -104,6 +106,82 @@ export function FreshnessTimeline({
             ))}
           </dl>
         </div>
+      )}
+    </div>
+  );
+}
+
+// ─── SLA-aware timeline (live, API-fetched) ───────────────────────────────────
+
+type AgeBreakpoint = { entityType: string; meanAgeSec: number; count: number };
+
+type FreshnessTimelineApiProps = {
+  connectorId: string;
+  intervalDays?: number;
+};
+
+/**
+ * Fetches live freshness metrics and renders age per entity type with SLA-breach colouring.
+ */
+export function FreshnessSlaTimeline({ connectorId, intervalDays = 7 }: FreshnessTimelineApiProps) {
+  const [breakdown, setBreakdown] = useState<AgeBreakpoint[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch(`/api/v1/freshness/metrics/${connectorId}?intervalDays=${intervalDays}`)
+      .then((r) => r.json())
+      .then((body) => setBreakdown(body.data?.entityTypeBreakdown ?? []))
+      .catch(() => setFetchError('Failed to load freshness data'))
+      .finally(() => setLoading(false));
+  }, [connectorId, intervalDays]);
+
+  function formatAge(sec: number): string {
+    if (sec < 60) return `${sec}s`;
+    if (sec < 3600) return `${Math.round(sec / 60)}m`;
+    if (sec < 86400) return `${Math.round(sec / 3600)}h`;
+    return `${Math.round(sec / 86400)}d`;
+  }
+
+  const maxAge = Math.max(...breakdown.map((b) => b.meanAgeSec), 1);
+
+  if (loading) {
+    return (
+      <div className="space-y-2 animate-pulse">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <div key={i} className="h-6 rounded bg-gray-100" />
+        ))}
+      </div>
+    );
+  }
+
+  if (fetchError) {
+    return <p className="text-sm text-red-600">{fetchError}</p>;
+  }
+
+  return (
+    <div className="space-y-3">
+      {breakdown.map((b) => {
+        const pct = Math.round((b.meanAgeSec / maxAge) * 100);
+        const warn = b.meanAgeSec > 3600;
+        const breach = b.meanAgeSec > 86400;
+        const color = breach ? 'bg-red-500' : warn ? 'bg-amber-400' : 'bg-green-400';
+        return (
+          <div key={b.entityType}>
+            <div className="mb-1 flex justify-between text-xs">
+              <span className="capitalize text-gray-700">{b.entityType}</span>
+              <span className={breach ? 'text-red-600' : warn ? 'text-amber-600' : 'text-green-600'}>
+                {formatAge(b.meanAgeSec)}
+              </span>
+            </div>
+            <div className="h-2 w-full overflow-hidden rounded-full bg-gray-100">
+              <div className={`h-2 rounded-full ${color}`} style={{ width: `${pct}%` }} />
+            </div>
+          </div>
+        );
+      })}
+      {breakdown.length === 0 && (
+        <p className="text-sm text-gray-400">No freshness data.</p>
       )}
     </div>
   );
