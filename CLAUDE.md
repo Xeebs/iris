@@ -74,9 +74,28 @@ pnpm mcp:inspect      # Open MCP inspector for debugging
 
 The Iris build pipeline runs continuously via `scripts/daemon.py`. The daemon fires `claude --dangerously-skip-permissions` in a loop, driving the project forward from the current empty scaffold toward a working MVP.
 
+### CI Green Gate — MANDATORY, Highest Priority
+
+**Before selecting any new feature task, the pipeline MUST verify that GitHub CI is passing.**
+
+Run `gh run list --limit 5` and check the most recent run status:
+- If **any run is failing**: immediately treat fixing it as a `Critical` priority task that supersedes all other queue items. Do not implement new features while CI is red.
+- Diagnose the failure with `gh run view <run-id>` and `gh run view <run-id> --log-failed`.
+- Fix the root cause, commit, push, then wait for the next run to confirm green before proceeding.
+- Repeat this check-fix-verify loop until CI is confirmed passing.
+- Only after CI is green may the pipeline select the next feature task from the queue.
+
+**After every commit & push** (Phase 5), pause and re-run the CI green gate check before starting the next task. A pushed commit that breaks CI must be fixed in the same pipeline cycle.
+
+This rule overrides all other priority ordering. A product with failing CI is not a working product.
+
 ### Startup — Resume Check
 
 Read `pipeline/state.json`. Identify `current_phase` and `active_task`. If a task is mid-flight, resume from that phase. If IDLE, start at Phase 1.
+
+### Phase 0 — CI Green Gate Check
+
+Run `gh run list --limit 5`. If the most recent run is not `success`, enter the CI fix loop (see CI Green Gate above) before proceeding to Phase 1.
 
 ### Phase 1 — Task Research (conditional)
 
@@ -110,7 +129,8 @@ If tests pass:
 4. Mark task `COMMITTED` in `pipeline/queue.md`
 5. Append a one-line entry to `pipeline/changelog.md`
 6. Write `pipeline/state.json` with `current_phase: COMMITTED, active_task: null`
-7. Immediately proceed to Phase 2 for the next task — do **not** stop
+7. **Run the CI Green Gate check** — wait for the pushed run to complete and confirm it passes before proceeding
+8. Immediately proceed to Phase 2 for the next task — do **not** stop
 
 ### When to Stop
 

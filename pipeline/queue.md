@@ -1,8 +1,21 @@
 # Iris — Build Pipeline Queue
 
-Tasks are listed in execution order, layer by layer. The pipeline works top-to-bottom, selecting the first UNWORKED High task, then Medium.
+Tasks are listed in execution order, layer by layer. The pipeline works top-to-bottom, selecting the first UNWORKED Critical task, then High, then Medium.
 
 **Statuses**: `UNWORKED` → `IN_PROGRESS` → `TESTING` → `COMMITTED` | `DEPRIORITIZED`
+
+---
+
+## Layer CI: GitHub CI Green Gate (Always-On)
+
+### Task: ci-green-gate
+- **Layer**: CI — GitHub CI Green Gate
+- **Status**: UNWORKED
+- **Priority**: Critical
+- **Description**: Verify all GitHub CI pipelines are passing before any feature work proceeds. Run `gh run list --limit 10` and inspect every failing run with `gh run view <id> --log-failed`. For each failure: identify the root cause (migration conflict, type error, test failure, missing dependency, etc.), fix it, commit, push, then confirm the subsequent CI run is green. Repeat until `gh run list --limit 5` shows all recent runs as `success`. This task is never permanently COMMITTED — it resets to UNWORKED at the start of every pipeline cycle. The pipeline must re-check CI before each new feature task.
+- **Files**: any broken migration, source, or config file identified by CI logs
+- **Depends on**: nothing
+- **Added**: 2026-06-09
 
 ---
 
@@ -4640,7 +4653,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Connector Health Score & SLA Tracking System
 - **Layer**: 72 — Platform Maturity & Ecosystem Expansion
-- **Status**: IN_PROGRESS
+- **Status**: COMMITTED
 - **Priority**: Medium
 - **Description**: Implement a comprehensive health scoring system for connectors with SLA tracking, incident detection, and automated alerting. Create packages/semantic-core/src/connector-health-scorer.ts with ConnectorHealthScorerService: (1) computeHealthScore(connectorId, window=30d) aggregating metrics (sync success rate weight 40%, avg sync latency weight 20%, data freshness weight 20%, error rate weight 10%, data quality weight 10%) into 0-100 score with grade (A/B/C/D/F), (2) trackSlaCompliance(connectorId, slaTarget) measuring uptime/latency SLA targets (e.g., "99.5% success rate, p95 latency <5min"), flagging breaches, (3) detectHealthAnomaly(connectorId, metricType) using exponential smoothing to flag sudden degradation (>2σ from baseline), (4) predictMaintenanceNeeded(connectorId) trend analysis suggesting proactive action (e.g., "API quota approaching limit in 3 days"). Create migration 163 (connector_health_scores, sla_targets, sla_breaches, health_incidents). Add REST routes: GET /api/v1/connectors/:id/health-score (current + history), POST /api/v1/connectors/:id/sla-config (set targets), GET /api/v1/connectors/health-summary (all connectors ranked by health), GET /api/v1/admin/incidents (active health incidents with remediation steps). Add dashboard page apps/dashboard/app/admin/connector-health-scorecard/page.tsx with: connector-grid (card per connector showing health grade, incidents, SLA status with trend sparkline), sla-compliance-tracker (timeline of breaches, root cause analysis), incident-response-workflow (escalation paths, runbooks). Include 24+ tests (14 unit health scoring + 10 integration SLA tracking + anomaly detection).
 - **Files**:
@@ -4659,7 +4672,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Advanced Query Caching with Smart Invalidation & Prefetching
 - **Layer**: 72 — Platform Maturity & Ecosystem Expansion
-- **Status**: UNWORKED
+- **Status**: IN_PROGRESS
 - **Priority**: Medium
 - **Description**: Build an intelligent multi-layer caching strategy with automatic invalidation based on entity change events and predictive prefetching to maximize token savings. Create packages/cache/src/smart-cache-manager.ts with SmartCacheManager: (1) cacheQuery(queryHash, result, ttl, dependencies) storing result with dependency tracking (list of entity IDs that if changed, invalidate this cache entry), (2) onEntityChange(entityId) cascading invalidation across all queries that depend on that entity (use Redis pub/sub), (3) prefetchLikelyQueries(userId, context) analyzing user's query patterns + recent MCP requests to predict next N queries, proactively embedding/caching them in background, (4) getHitRate(queryHash) computing cache effectiveness (hits/total), (5) optimizeCacheTtl(queryHash) adaptive TTL (frequently-accessed queries stay longer, stale queries evict faster). Create migration 164 (query_dependencies, cache_statistics, user_query_patterns). Add REST endpoints: GET /api/v1/cache/stats (hit rates per query/entity type), GET /api/v1/cache/dependencies/:queryId (visualize what entity changes would invalidate), POST /api/v1/cache/prefetch (trigger prefetch for user), DELETE /api/v1/cache/entries/:queryId (manual invalidation). Add dashboard components: cache-efficiency-heatmap.tsx (query × hit rate matrix), dependency-graph.tsx (Mermaid: query → entity dependencies), prefetch-recommendations.tsx (predicted queries + confidence %). Include 20+ tests (12 unit cache logic + 8 integration entity-change cascading).
 - **Files**:
