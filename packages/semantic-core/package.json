@@ -70,7 +70,8 @@
     "./schema-evolution": "./dist/schema-evolution.js",
     "./query-analytics-engine": "./dist/query-analytics-engine.js",
     "./multi-tenant-manager": "./dist/multi-tenant-manager.js",
-    "./freshness-tracker": "./dist/freshness-tracker.js"
+    "./freshness-tracker": "./dist/freshness-tracker.js",
+    "./reliability-predictor": "./dist/reliability-predictor.js"
   },
   "scripts": {
     "build": "tsc --build",
