@@ -78,6 +78,7 @@ import { createDedupRoutes } from './routes/dedup-reconciliation.js';
 import { createProactiveContextRoutes } from './routes/proactive-context.js';
 import { createNlpConfigRoutes } from './routes/nlp-config.js';
 import { createSsoConfigRoutes } from './routes/sso-config.js';
+import { createDataQualityEngineRoutes } from './routes/data-quality-engine-routes.js';
 import { openApiSpec } from './openapi.js';
 
 export { createApp };
@@ -225,6 +226,7 @@ function createApp(
   authed.route('/dedup', createDedupRoutes(sql));
   authed.route('/proactive', createProactiveContextRoutes(sql));
   authed.route('/nlp-config', createNlpConfigRoutes(sql));
+  authed.route('/data-quality', createDataQualityEngineRoutes(sql));
   authed.route('/streaming-queries', createStreamingQueryRoutes(sql));
   authed.route('/admin/vector-store', createVectorStoreAdminRoutes(sql));
 
