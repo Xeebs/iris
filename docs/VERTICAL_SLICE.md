@@ -57,6 +57,34 @@ These are asserted against known values in the HubSpot fixtures. If fixtures cha
 - Mounting the remaining orphaned routes (only slice-critical routes get mounted now; the rest resume post-slice)
 - Test-coverage padding on code the slice doesn't touch
 
+## Path audit
+
+Traced 2026-06-09 (task VS-1). Each link of the connect → sync → index → serve → query chain verified against the running code. Legend: ✅ works · ⚠️ works with caveat · ❌ broken (blocks slice).
+
+| # | Link | Code location | Exists | Wired / Mounted | Status |
+|---|------|---------------|--------|-----------------|--------|
+| 1a | `POST /api/v1/demo/bootstrap` (workspace + MCP API key) | `apps/api/src/routes/demo-bootstrap.ts`, mounted `server.ts:148` **before** Clerk, `DEMO_MODE=true` only | yes | yes | ✅ Uses `ApiKeyManager.createKey()` → `mcp_api_keys`. Returns `{ workspaceId, apiKey }`. |
+| 1b | `POST /api/v1/connectors` (create HubSpot instance) | `apps/api/src/routes/connectors.ts`, mounted `server.ts:174` on `authed` | yes | yes | ✅ Reachable with the demo API key via `demoApiKeyAuth`. |
+| 2a | `POST /api/v1/connectors/:id/sync` (trigger sync) | `connectors.ts:196` | yes | yes | ⚠️ Only enqueues to `SyncJobQueue` (BullMQ/Redis) when `redisUrl` is set; otherwise silently no-ops. |
+| 2b | **Sync worker consumes the queue** | `apps/api/src/workers/sync-worker.ts` (`createSyncWorker`) | yes | **NO** | ❌ **BLOCKER.** `server.ts main()` starts the HTTP server only — it never calls `createSyncWorker(...)` nor `registerConnectors()`. Enqueued jobs are never processed, so sync never reaches the indexer in the running API process. |
+| 2c | HubSpot demo-mode sync against fixtures | `packages/connectors/hubspot` (`demoMode` flag, VS-2) | yes | n/a | ✅ Committed (VS-2). Routes the HTTP layer to fixtures; same `sync()` path. |
+| 3a | `indexEntities` embeds + stores entities | `packages/semantic-core/src/indexer.ts:103`, called from `sync-worker.ts:10` | yes | via worker | ⚠️ Correct, but only runs if link 2b runs. |
+| 3b | Embedding provider (no external key in demo) | `embedding-provider.ts` `createEmbeddingProvider()` reads `EMBEDDING_PROVIDER`; `hash-deterministic` → `DeterministicHashProvider` (VS-1b) | yes | yes | ✅ Committed (VS-1b). |
+| 3c | Vector store | `PgvectorStore(DATABASE_URL)` in both `server.ts:297` and `mcp-server/src/server.ts:227` | yes | yes | ✅ pgvector (not Qdrant) on both sides, same `DATABASE_URL` → same store. |
+| 4 | MCP server authenticates with the workspace API key | `apps/mcp-server/src/server.ts:195` `validateMcpApiKey()` → `ApiKeyManager.validateKey()` (`auth.ts:41`) | yes | yes | ✅ Same `ApiKeyManager`/`mcp_api_keys` store the bootstrap wrote to. Key read from `IRIS_API_KEY` env. |
+| 5 | `query-context` retrieves indexed entities | `apps/mcp-server/src/tools/query-context.ts` → `retrieveContext(vectorStore)` + `compress` + `contextBudget` | yes | yes | ✅ Registered in `server.ts:70`; respects `contextBudget`. |
+
+### Blockers found (slice-critical)
+
+- **B1 (link 2b):** The BullMQ sync worker is never started in the API process. New task **VS-2c** added below. Until fixed, `scripts/slice-demo.sh` cannot get from "sync triggered" to "entities indexed" through the real REST path. *Not fixed here* because the API bootstrap (`server.ts`) is being edited concurrently by a parallel worker (VS-3); folding the worker startup into the demo path is cleaner and is captured as VS-2c.
+
+### Non-blocking notes (not slice-critical — do NOT fix in slice mode)
+
+- `/api/v1/api-keys` (`routes/api-key-management.ts`) is **not mounted**, but the slice does not need it — the demo bootstrap issues the key directly. Resume under the Layer 77 mounting sweep post-slice.
+- `POST /:id/sync` requires Redis to do anything (link 2a). The demo must run with `REDIS_URL` set (already required by `docker-compose`); acceptable for the slice.
+
+No slice-critical route was found unmounted, so `server.ts` is **not** modified by VS-1 (avoids colliding with the in-flight parallel edit). The one blocker is process wiring, tracked as VS-2c.
+
 ## After the slice
 
 When the status line at the top reads ACHIEVED, the pipeline returns to `pipeline/queue.md` breadth work — starting with the deprioritized route-mounting sweep — but every future feature task must state how it serves a user-visible flow.

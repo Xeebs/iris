@@ -39,7 +39,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: VS-1 Slice path audit — map and verify every link in the chain
 - **Layer**: 78 — Vertical Slice
-- **Status**: IN_PROGRESS
+- **Status**: COMMITTED
 - **Priority**: Critical
 - **Description**: Before writing any new code, trace the actual end-to-end path and document what exists, what is wired, and what is broken. The chain: (1) REST API creates workspace + HubSpot connector instance (which route? is it mounted in `apps/api/src/server.ts`? what auth does it need?), (2) sync is triggered (route or job? does it reach `HubspotConnector.sync()`? can the connector run against fixtures in `packages/connectors/hubspot/tests/fixtures/` without real OAuth — if not, what is the smallest fixture/sandbox mode to add?), (3) entities flow into `packages/semantic-core/src/indexer.ts` and embeddings land in the vector store (which store is actually used — pgvector or Qdrant? does indexing require a real OpenAI key, and if so does `.env.local` have one; otherwise add a deterministic local embedding fallback for demo mode), (4) MCP server starts and authenticates (does `apps/mcp-server` share the API-key store with the REST API? is `/api/v1/api-keys` mounted?), (5) `query-context` retrieves indexed entities. Write the findings as a status table (link → exists / mounted / works / broken+why) directly into `docs/VERTICAL_SLICE.md` under a new "## Path audit" section. Mount any slice-critical routes found unmounted (small batches per Layer 77 rules). Do NOT fix non-blocking issues — record them as new Layer 78 tasks instead.
 - **Files**:
@@ -71,6 +71,17 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
   - packages/connectors/hubspot/tests/fixtures/*.json
   - packages/connectors/hubspot/src/__tests__/demo-mode.test.ts
 - **Depends on**: VS-1 Slice path audit
+- **Added**: 2026-06-09
+
+### Task: VS-2c Start the sync worker in the API process (slice blocker B1)
+- **Layer**: 78 — Vertical Slice
+- **Status**: UNWORKED
+- **Priority**: Critical
+- **Description**: Slice path audit (VS-1) found that `apps/api/src/workers/sync-worker.ts` (`createSyncWorker`) is never started in the API bootstrap — `server.ts main()` only starts the HTTP server, so enqueued `POST /api/v1/connectors/:id/sync` jobs are never consumed and entities never reach the indexer through the real REST path. Fix: in the API bootstrap, call `registerConnectors()` and start `createSyncWorker(sql, vectorStore, openAiKey, redisUrl)` so the BullMQ worker runs alongside the server (gate behind an env flag like `RUN_SYNC_WORKER=true` if a separate worker process is preferred — but the slice demo runs a single API process, so default it on when `DEMO_MODE=true`). Ensure clean shutdown on SIGTERM. Coordinate with VS-3 (which also edits `server.ts`/bootstrap) to avoid a collision. Verify with `scripts/slice-demo.sh`: after triggering sync, indexed entity count in the vector store must match fixture counts. This is the single ❌ blocker in the path audit table in docs/VERTICAL_SLICE.md.
+- **Files**:
+  - apps/api/src/server.ts (start worker + registerConnectors in main())
+  - apps/api/src/workers/sync-worker.ts (if a startup helper/flag is needed)
+- **Depends on**: VS-2 Demo-mode HubSpot sync against fixtures
 - **Added**: 2026-06-09
 
 ### Task: VS-3 One-command slice demo script (connect → sync → index)

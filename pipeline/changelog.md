@@ -167,3 +167,4 @@ feat(semantic-core,api,dashboard): workflow service test suite & curated catalog
 - 2026-06-09 cycle 345: feat(api) VS-0 demo bootstrap route — workspace + MCP API key under DEMO_MODE (b1c6f8b)
 - 2026-06-09 cycle 345: feat(semantic-core) VS-1b deterministic hash embedding provider + EMBEDDING_PROVIDER wiring in generateEmbeddings
 - 2026-06-09 cycle 345: feat(connector-hubspot) VS-2 demo-mode fixture sync + canonical-question fixtures; fixed broken package entry point
+VS-1 (slice path audit): documented connect→sync→index→serve→query chain in docs/VERTICAL_SLICE.md; found blocker B1 (sync worker unstarted) → added VS-2c. — 2026-06-09
