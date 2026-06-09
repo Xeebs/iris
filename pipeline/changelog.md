@@ -166,3 +166,4 @@ feat(semantic-core,api,dashboard): workflow service test suite & curated catalog
 - 2026-06-09: fix(api): mount orphaned /workflows route (was 404; dashboard workflows page broken) [SHA: 0a81504]
 - 2026-06-09 cycle 345: feat(api) VS-0 demo bootstrap route — workspace + MCP API key under DEMO_MODE (b1c6f8b)
 - 2026-06-09 cycle 345: feat(semantic-core) VS-1b deterministic hash embedding provider + EMBEDDING_PROVIDER wiring in generateEmbeddings
+- 2026-06-09 cycle 345: feat(connector-hubspot) VS-2 demo-mode fixture sync + canonical-question fixtures; fixed broken package entry point

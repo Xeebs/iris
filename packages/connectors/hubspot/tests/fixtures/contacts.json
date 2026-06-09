@@ -29,6 +29,21 @@
         "lastmodifieddate": "2026-04-15T08:00:00.000Z",
         "associatedcompanyid": null
       }
+    },
+    {
+      "id": "1003",
+      "properties": {
+        "firstname": "Carol",
+        "lastname": "White",
+        "email": "carol@acme.com",
+        "company": "Acme Corp",
+        "phone": "+1-555-0103",
+        "lifecyclestage": "customer",
+        "hs_lead_status": null,
+        "hubspot_owner_id": "51",
+        "lastmodifieddate": "2026-05-05T16:20:00.000Z",
+        "associatedcompanyid": "2001"
+      }
     }
   ],
   "paging": {}

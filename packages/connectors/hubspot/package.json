@@ -3,10 +3,10 @@
   "version": "0.0.1",
   "private": true,
   "type": "module",
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "main": "./dist/hubspot-connector.js",
+  "types": "./dist/hubspot-connector.d.ts",
   "exports": {
-    ".": "./dist/index.js",
+    ".": "./dist/hubspot-connector.js",
     "./webhook-handler": "./src/webhook-handler.js"
   },
   "scripts": {

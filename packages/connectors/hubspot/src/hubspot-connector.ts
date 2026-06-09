@@ -7,12 +7,13 @@ import type { SemanticEntity, SyncOptions, ConnectorSchema, HealthStatus } from 
 import { logger } from '@iris/core/logger';
 
 import { manifest } from './manifest.js';
+import { fetchFixturePage } from './demo-fixture-client.js';
 import { transformContact, transformCompany, transformDeal } from './transformers.js';
 import type { HubSpotContact, HubSpotCompany, HubSpotDeal } from './transformers.js';
 
 export { manifest };
 
-const configSchema = z.object({ portalId: z.string().min(1) });
+const configSchema = z.object({ portalId: z.string().min(1), demoMode: z.boolean().optional() });
 export type HubSpotConfig = z.infer<typeof configSchema>;
 
 interface OAuthTokens {
@@ -34,16 +35,24 @@ const DEAL_PROPERTIES = ['dealname', 'amount', 'dealstage', 'pipeline', 'closeda
 
 export class HubSpotConnector extends BaseConnector<HubSpotConfig> {
   private tokens: OAuthTokens | null = null;
+  private demoMode = false;
   private readonly log = logger.child({ connector: 'hubspot' });
 
   /**
-   * @param config - Workspace-level config with portalId
+   * @param config - Workspace-level config with portalId (and optional demoMode)
    * @returns Result<void, ConnectorError>
    */
   async connect(config: HubSpotConfig): Promise<Result<void, ConnectorError>> {
     const parsed = configSchema.safeParse(config);
     if (!parsed.success) {
       return err(new ConnectorError('Invalid HubSpot config: portalId is required', 'INVALID_CONFIG', false));
+    }
+
+    if (parsed.data.demoMode === true) {
+      // Fixture-backed mode — no OAuth, no network; get() serves local fixtures.
+      this.demoMode = true;
+      this.log.info('Connected to HubSpot in demo mode (fixtures)', { portalId: parsed.data.portalId });
+      return ok(undefined);
     }
 
     if (!this.tokens) {
@@ -217,6 +226,10 @@ export class HubSpotConnector extends BaseConnector<HubSpotConfig> {
   }
 
   private async get<T>(path: string): Promise<T> {
+    if (this.demoMode) {
+      return fetchFixturePage<T>(path);
+    }
+
     if (!this.tokens) {
       throw new ConnectorError('Not authenticated', 'AUTH_MISSING', false);
     }

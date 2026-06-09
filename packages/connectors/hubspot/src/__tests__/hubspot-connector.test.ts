@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll, afterAll, afterEach } from 'vitest';
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
 import { HubSpotConnector } from '../hubspot-connector.js';
-import { assertEntityShape } from '@iris/connector-sdk';
+import { assertEntityShape } from '@iris/connector-sdk/test-utils';
 
 import contactsFixture from '../../tests/fixtures/contacts.json' assert { type: 'json' };
 import companiesFixture from '../../tests/fixtures/companies.json' assert { type: 'json' };
@@ -67,7 +67,7 @@ describe('HubSpotConnector', () => {
         entities.push(entity);
       }
 
-      expect(entities.length).toBe(4); // 2 contacts + 1 company + 1 deal
+      expect(entities.length).toBe(10); // 3 contacts + 2 companies + 5 deals
       const types = entities.map((e) => e.type);
       expect(types).toContain('contact');
       expect(types).toContain('company');
@@ -117,7 +117,7 @@ describe('HubSpotConnector', () => {
         entities.push(entity);
       }
       expect(entities.every((e) => e.type === 'company')).toBe(true);
-      expect(entities).toHaveLength(1);
+      expect(entities).toHaveLength(2);
     });
 
     it('handles 401 by throwing retryable ConnectorError', async () => {

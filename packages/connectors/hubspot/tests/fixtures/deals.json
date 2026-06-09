@@ -5,10 +5,62 @@
       "properties": {
         "dealname": "Acme Annual Contract",
         "amount": "120000",
-        "dealstage": "presentationscheduled",
+        "dealstage": "negotiation",
         "pipeline": "default",
         "closedate": "2026-12-31",
         "hs_lastmodifieddate": "2026-05-20T09:00:00.000Z",
+        "hubspot_owner_id": "50",
+        "associatedcompanyid": "2001"
+      }
+    },
+    {
+      "id": "3002",
+      "properties": {
+        "dealname": "Globex Pilot Expansion",
+        "amount": "45000",
+        "dealstage": "negotiation",
+        "pipeline": "default",
+        "closedate": "2026-09-30",
+        "hs_lastmodifieddate": "2026-05-18T11:30:00.000Z",
+        "hubspot_owner_id": "51",
+        "associatedcompanyid": "2002"
+      }
+    },
+    {
+      "id": "3003",
+      "properties": {
+        "dealname": "Acme Cloud Migration",
+        "amount": "30000",
+        "dealstage": "qualifiedtobuy",
+        "pipeline": "default",
+        "closedate": "2026-11-15",
+        "hs_lastmodifieddate": "2026-05-22T14:00:00.000Z",
+        "hubspot_owner_id": "50",
+        "associatedcompanyid": "2001"
+      }
+    },
+    {
+      "id": "3004",
+      "properties": {
+        "dealname": "Globex Support Renewal",
+        "amount": "25000",
+        "dealstage": "closedwon",
+        "pipeline": "default",
+        "closedate": "2026-03-31",
+        "hs_lastmodifieddate": "2026-04-01T08:00:00.000Z",
+        "hubspot_owner_id": "51",
+        "associatedcompanyid": "2002"
+      }
+    },
+    {
+      "id": "3005",
+      "properties": {
+        "dealname": "Acme Training Workshop",
+        "amount": "8000",
+        "dealstage": "closedlost",
+        "pipeline": "default",
+        "closedate": "2026-02-28",
+        "hs_lastmodifieddate": "2026-03-01T10:00:00.000Z",
         "hubspot_owner_id": "50",
         "associatedcompanyid": "2001"
       }

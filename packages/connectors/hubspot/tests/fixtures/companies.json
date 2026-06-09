@@ -13,6 +13,20 @@
         "hs_lastmodifieddate": "2026-05-10T12:00:00.000Z",
         "hubspot_owner_id": "50"
       }
+    },
+    {
+      "id": "2002",
+      "properties": {
+        "name": "Globex",
+        "domain": "globex.com",
+        "industry": "Manufacturing",
+        "city": "Chicago",
+        "country": "United States",
+        "numberofemployees": "1200",
+        "annualrevenue": "120000000",
+        "hs_lastmodifieddate": "2026-05-12T09:30:00.000Z",
+        "hubspot_owner_id": "51"
+      }
     }
   ],
   "paging": {}
