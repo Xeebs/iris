@@ -1,0 +1,86 @@
+name: Slice Demo
+
+# Vertical slice gate (docs/VERTICAL_SLICE.md): proves the full
+# connect → sync → index → serve → query → measure chain end to end against
+# real Postgres/pgvector + Redis, from a clean database, twice in a row.
+# scripts/slice-demo.sh exits 0 only if every canonical question answers
+# correctly within the contextBudget AND the token-savings gate (>=70%) holds.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  NODE_VERSION: '24'
+  NODE_OPTIONS: '--max-old-space-size=6144'
+
+jobs:
+  slice-demo:
+    name: Vertical Slice Demo
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: iris
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+      qdrant:
+        image: qdrant/qdrant:latest
+        ports:
+          - 6333:6333
+
+    env:
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/iris
+      REDIS_URL: redis://localhost:6379
+      QDRANT_URL: http://localhost:6333
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+
+      # The demo runs apps via tsx (source), but their @iris/* workspace deps
+      # resolve through package "exports" to dist/, so those must be built.
+      - name: Build slice packages (api, mcp-server + transitive deps)
+        run: pnpm exec turbo run build --filter=@iris/api --filter=@iris/mcp-server
+
+      # Acceptance criterion: passes twice in a row from clean state. The demo
+      # drops + recreates the schema and re-migrates at the start of every run,
+      # so two sequential runs prove there is no hidden state/ordering luck.
+      - name: Run slice demo (run 1 of 2)
+        run: bash scripts/slice-demo.sh
+
+      - name: Run slice demo (run 2 of 2 — determinism)
+        run: bash scripts/slice-demo.sh
+
+      - name: Upload token-savings report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: slice-report
+          path: pipeline/slice-report.md
+          if-no-files-found: ignore

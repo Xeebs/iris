@@ -28,7 +28,7 @@ const REDIS_URL = process.env['REDIS_URL'] ?? 'redis://localhost:6379';
 const PORT = Number(process.env['SLICE_DEMO_PORT'] ?? 3901);
 const BASE = `http://localhost:${PORT}`;
 
-const EXPECTED_ENTITY_COUNT = 10; // 3 contacts + 2 companies + 5 deals (HubSpot fixtures)
+const EXPECTED_ENTITY_COUNT = 22; // 8 contacts + 4 companies + 10 deals (HubSpot fixtures)
 
 const CHILD_ENV = {
   ...process.env,
@@ -167,7 +167,7 @@ async function main(): Promise<void> {
   const byType = Object.fromEntries(rows.map((r) => [r.type, Number(r.count)]));
   console.log(`Counts by type: ${JSON.stringify(byType)}`);
 
-  const expected = { company: 2, contact: 3, deal: 5 };
+  const expected = { company: 4, contact: 8, deal: 10 };
   for (const [type, count] of Object.entries(expected)) {
     if (byType[type] !== count) {
       fail(`Expected ${count} ${type} entities, found ${byType[type] ?? 0}`);

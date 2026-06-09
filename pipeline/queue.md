@@ -40,7 +40,7 @@ Completed tasks are moved to `pipeline/queue-archive.md` by `scripts/archive-que
 
 ### Task: VS-6 Slice in CI + double-run stability + flip the milestone
 - **Layer**: 78 — Vertical Slice
-- **Status**: UNWORKED
+- **Status**: IN_PROGRESS — CI job added (`.github/workflows/slice-demo.yml`: pgvector+redis+qdrant services, builds api/mcp-server deps, runs `scripts/slice-demo.sh` **twice** for determinism). Also fixed two slice-path defects this could only have surfaced at runtime: (a) `scripts/slice-demo.ts` hardcoded old fixture counts (10 / 2-3-5) → updated to 22 / 4-8-10 after the VS-5 fixture expansion; (b) `slice-demo.ts` imported `postgres` but it was unresolvable from repo root (demo never actually ran under VS-3 — no local Docker) → added `postgres` as a root devDependency. **Remaining before milestone flip:** the `slice-demo` workflow must go green on GitHub (no local Docker here to verify the live chain / ≥70% savings), then a human owner runs it locally per the last acceptance criterion in docs/VERTICAL_SLICE.md, then flip the status line to ACHIEVED. Do NOT flip until the workflow is observed green twice.
 - **Priority**: High
 - **Description**: (1) Add a `slice-demo` job to the GitHub Actions workflow that boots Postgres/Redis/Qdrant services and runs scripts/slice-demo.sh; it must be green and become a required signal alongside existing jobs. (2) Run the demo twice in a row from clean state locally to prove determinism — fix any state leakage it exposes. (3) When all acceptance criteria in docs/VERTICAL_SLICE.md hold, check them off, flip the status line to `ACHIEVED <date>`, commit, and leave a note in pipeline/changelog.md. The pipeline then exits slice mode (see CLAUDE.md CURRENT FOCUS) and the owner verifies by hand.
 - **Files**:
