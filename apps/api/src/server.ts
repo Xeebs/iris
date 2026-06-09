@@ -21,6 +21,9 @@ import { createWebhookRoutes, createWebhookEventsRoutes } from './routes/webhook
 import { createGraphRoutes } from './routes/graph.js';
 import { createPiiConfigRoutes } from './routes/pii-config.js';
 import { createSuggestionsRoutes } from './routes/suggestions.js';
+import { createEntitySearchRoutes } from './routes/entity-search.js';
+import { createGranularPermissionsRoutes } from './routes/granular-permissions.js';
+import { makePermissionRouter } from './routes/permission-management.js';
 import { createExportRoutes } from './routes/export.js';
 import { createWorkspaceConfigRoutes } from './routes/workspace-config.js';
 import { createIndexOptimizationRoutes } from './routes/index-optimization.js';
@@ -229,6 +232,17 @@ function createApp(
   authed.route('/data-quality', createDataQualityEngineRoutes(sql));
   authed.route('/streaming-queries', createStreamingQueryRoutes(sql));
   authed.route('/admin/vector-store', createVectorStoreAdminRoutes(sql));
+
+  // Permission management + granular field/connector-level permissions.
+  // Both routers share the /permissions prefix; their sub-paths do not overlap
+  // (roles/templates/evaluate vs fields/connectors).
+  authed.route('/permissions', makePermissionRouter(sql));
+  authed.route('/permissions', createGranularPermissionsRoutes(sql));
+
+  // Entity search + suggestions (paths are /entities/search, /entities/search-suggestions).
+  // The route uses a narrow tagged-template SqlFn (for mockability); the postgres
+  // Sql client satisfies that contract at runtime but differs nominally from Promise.
+  authed.route('/', createEntitySearchRoutes(sql as unknown as Parameters<typeof createEntitySearchRoutes>[0]));
 
   // Webhook routes: inbound (unauthenticated) + events status (authenticated)
   app.route('/api/v1/webhooks', createWebhookRoutes(sql));
