@@ -4118,7 +4118,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Data Retention Policies & Automated Entity Archival
 - **Layer**: 66 — Advanced Semantic Features & Intelligent Governance
-- **Status**: IN_PROGRESS
+- **Status**: COMMITTED
 - **Priority**: Medium
 - **Description**: Implement fine-grained data retention and archival policies with automated cleanup, audit trails, and recovery capabilities. Create packages/semantic-core/src/retention-manager.ts with RetentionPolicyService: (1) defineRetentionPolicy(entityType, retentionDays, archiveAction, conditions?) configuring retention by entity type with optional conditions (e.g., "keep indefinitely if belongs to top-100 accounts"), (2) computeArchivalDate(entity, policy) calculating when entity should be archived, (3) archiveEntity(entityId, reason, recoveryWindow) moving to cold storage with recovery window (default: 30 days), (4) restoreArchivedEntity(entityId) restoring from archive within recovery window, (5) runArchivalJobScheduled() batch archival process, (6) queryArchivedEntities(filters) searching archived entities by type/date/reason. Create migration 137 (retention_policies, archived_entities, archival_audit) with archival state tracking. Add REST routes: GET /api/v1/admin/retention-policies, PUT /api/v1/admin/retention-policies/:type (update policy), GET /api/v1/admin/archived-entities (paginated with filters), POST /api/v1/admin/archived-entities/:id/restore (restore within window). Add dashboard page /admin/retention with: policy matrix (entity type vs retention days), archived entity count by type/date, recovery window warnings, bulk restore interface. Include 28+ tests (16 unit archival logic + conditions + 12 integration scheduled jobs + recovery).
 - **Files**:
@@ -4137,7 +4137,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Entity Relationship Recommendations & Auto-Linking Engine
 - **Layer**: 66 — Advanced Semantic Features & Intelligent Governance
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: Medium
 - **Description**: Build an intelligent relationship recommendation engine that suggests missing entity links using semantic similarity, co-occurrence patterns, and domain knowledge. Create packages/semantic-core/src/relationship-recommender.ts with RelationshipRecommendationService: (1) suggestRelationships(entityId, topK=10) ranking potential relationship targets by confidence score (embedding similarity 40% + cooccurrence 30% + type compatibility 20% + domain rules 10%), (2) autoLinkEntities(fromId, toId, relationshipType, confidence) creating auto-links above confidence threshold (default: 0.75) with human-in-the-loop review, (3) denyRelationshipSuggestion(fromId, toId) recording negative feedback to avoid re-suggesting, (4) learnFromAcceptedRelationships() updating weighting model based on accepted vs rejected suggestions, (5) bulkSuggestRelationships(entityIds) batch recommendation for entity type reconciliation. Create migration 138 (relationship_suggestions, relationship_feedback, suggestion_metrics). Add REST routes: GET /api/v1/entities/:id/suggested-relationships (ranked suggestions with confidence + reasoning), POST /api/v1/entities/:id/relationships/auto-link (accept suggestions), POST /api/v1/entities/:id/relationship-feedback/:targetId (feedback signal). Add dashboard UI: suggestions widget on entity detail page (shows top 5 + "see all" modal), bulk linking interface for reconciliation, feedback history + model performance metrics. Include 30+ tests (18 unit scoring logic + ML model update + 12 route feedback handling).
 - **Files**:
@@ -4216,7 +4216,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: Batch Context Recommendations & Multi-Entity Analysis API
 - **Layer**: 67 — Advanced Insights, Automation & Quality Assurance
-- **Status**: UNWORKED
+- **Status**: IN_PROGRESS
 - **Priority**: Medium
 - **Description**: Extend the context recommendation system to support batch analysis of multiple entities, returning relevant contexts for each with deduplication and cross-entity insights. Create packages/semantic-core/src/batch-recommender.ts with BatchContextRecommender: (1) recommendContextForEntities(entityIds, topK=10) returning entity-specific recommendations and shared contexts across all, (2) analyzeEntityGroup(entityIds) finding common characteristics, gaps, and relationships among entities, (3) suggestGroupActions(entityIds) recommending bulk updates or linking based on group analysis, (4) computeGroupScore(entityIds, metric) aggregating metrics across entity group with variance/trend indicators. Create migration 142 (batch_analysis_cache, group_recommendations). Add REST routes: POST /api/v1/batch/recommend-contexts (body: entityIds, returns array of per-entity recommendations + group insights), POST /api/v1/batch/analyze (analyze group characteristics), GET /api/v1/batch/results/:sessionId (cache batch results). Add dashboard feature: multi-entity select mode with batch recommendation panel showing per-entity + group insights, suggested actions. Include 24+ tests (14 unit batch scoring + group analysis + 10 integration multi-entity patterns).
 - **Files**:
@@ -4247,5 +4247,79 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
   - apps/dashboard/components/ranking-explainer.tsx
   - apps/dashboard/components/ab-test-runner.tsx
   - apps/dashboard/components/quality-metrics-dashboard.tsx
+- **Depends on**: nothing
+- **Added**: 2026-06-08
+
+---
+
+## Layer 68: Advanced Retrieval, Analytics & Observability
+
+### Task: Multi-Stage Query Expansion & Iterative Context Refinement
+- **Layer**: 68 — Advanced Retrieval, Analytics & Observability
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Implement iterative query expansion that retrieves initial context, allows user feedback, and refines results in subsequent rounds. Create packages/semantic-core/src/query-expansion-engine.ts with QueryExpansionEngine: (1) expandQuery(query, stage=1, feedback=null) retrieving initial K results, then re-ranking based on feedback (stale, incomplete, irrelevant marks), (2) suggestExpansionDirections(query, results) identifying expansion axes (time range, entity types, attributes to explore), (3) computeExpansionRelevance(originalQuery, expansion) scoring how helpful an expansion dimension would be, (4) refineContextByFeedback(results, userFeedback) adjusting weights and retrieval strategy based on explicit user marks. Create migration 144 (query_expansion_sessions, expansion_feedback, expansion_suggestions). Add MCP tool: query-context-refined (takes original query + expansion params + feedback history, returns expanded results). Add REST routes: POST /api/v1/queries/:id/expand (execute expansion with optional direction), POST /api/v1/queries/:id/feedback (submit refinement feedback), GET /api/v1/expansion-sessions/:id (view expansion history). Add dashboard component: query-expansion-interface.tsx (show initial results, feedback buttons, suggested expansions, refined results). Include 26+ tests (15 unit expansion scoring + 11 integration multi-stage retrieval).
+- **Files**:
+  - packages/semantic-core/src/query-expansion-engine.ts
+  - packages/semantic-core/src/__tests__/query-expansion-engine.test.ts
+  - packages/semantic-core/src/__tests__/query-expansion-engine.integration.test.ts
+  - apps/api/src/routes/query-expansion.ts
+  - apps/api/src/__tests__/query-expansion.test.ts
+  - apps/api/migrations/144_query_expansion.sql
+  - apps/mcp-server/src/tools/query-context-refined.ts
+  - apps/dashboard/components/query-expansion-interface.tsx
+- **Depends on**: nothing
+- **Added**: 2026-06-08
+
+### Task: Advanced Cost Attribution & Per-Entity Chargeback Model
+- **Layer**: 68 — Advanced Retrieval, Analytics & Observability
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: Build a detailed cost attribution system that tracks token consumption, API calls, and compute costs at per-entity, per-connector, per-user, and per-query granularity. Create packages/semantic-core/src/cost-attribution.ts with CostAttributor: (1) attributeCostToEntity(queryId, entityId, tokensUsed, computeMs) recording entity-level cost contribution, (2) computeConnectorCost(connectorId, period) aggregating sync costs (API calls, bandwidth) + query retrieval costs per connector, (3) aggregateUserCosts(userId, period) summing all user queries + resulting infrastructure costs with per-connector breakdown, (4) computeCostForecast(entityId, interval) predicting entity retrieval costs based on access patterns. Create migration 145 (entity_cost_attribution, connector_cost_events, user_cost_ledger, cost_forecasts). Add REST routes: GET /api/v1/cost-attribution/entities/:id (entity cost breakdown by operation), GET /api/v1/cost-attribution/connectors/:id (connector cost summary), GET /api/v1/cost-attribution/users/:id (user cost ledger with daily/monthly aggregates), GET /api/v1/cost-attribution/forecasts (cost projections). Add dashboard page: cost-chargeback/page.tsx with: entity-centric cost heatmap, connector cost-per-record analysis, user cost allocation table, forecast trends. Include 24+ tests (14 unit cost aggregation + 10 integration forecast accuracy).
+- **Files**:
+  - packages/semantic-core/src/cost-attribution.ts
+  - packages/semantic-core/src/__tests__/cost-attribution.test.ts
+  - packages/semantic-core/src/__tests__/cost-attribution.integration.test.ts
+  - apps/api/src/routes/cost-attribution.ts
+  - apps/api/src/__tests__/cost-attribution.test.ts
+  - apps/api/migrations/145_cost_attribution.sql
+  - apps/dashboard/app/admin/cost-chargeback/page.tsx
+  - apps/dashboard/components/entity-cost-heatmap.tsx
+  - apps/dashboard/components/connector-cost-analysis.tsx
+  - apps/dashboard/components/user-cost-ledger.tsx
+- **Depends on**: nothing
+- **Added**: 2026-06-08
+
+### Task: Multi-Connector Entity Matching & Reconciliation Engine
+- **Layer**: 68 — Advanced Retrieval, Analytics & Observability
+- **Status**: UNWORKED
+- **Priority**: Medium
+- **Description**: Implement cross-connector entity matching that identifies the same real-world entity appearing in different systems (e.g., same customer in HubSpot and Salesforce) and provides reconciliation workflows. Create packages/semantic-core/src/entity-reconciler.ts with EntityReconciler: (1) findMatchCandidates(entityId, topK=5) using embedding similarity + fuzzy name matching + attribute overlap to find candidates from other connectors, (2) scoreMatchConfidence(entity1, entity2) computing confidence 0–1 based on attribute overlap (email, phone, address), embedding distance, and relationship patterns, (3) suggestReconciliation(sourceId, targetIds) grouping candidates and recommending merge order, (4) recordReconciliationDecision(sourceId, targetId, decision) logging accepts/rejects for active learning. Create migration 146 (entity_matches, reconciliation_records, match_artifacts). Add REST routes: GET /api/v1/entities/:id/matches (find cross-connector matches), POST /api/v1/entities/reconcile (execute merge/link), GET /api/v1/reconciliation-status (view pending decisions). Add dashboard component: entity-reconciliation-panel.tsx (show candidate matches with confidence scores, side-by-side attribute comparison, accept/reject/manual-review buttons). Include 22+ tests (12 unit matching scoring + 10 integration cross-connector patterns).
+- **Files**:
+  - packages/semantic-core/src/entity-reconciler.ts
+  - packages/semantic-core/src/__tests__/entity-reconciler.test.ts
+  - packages/semantic-core/src/__tests__/entity-reconciler.integration.test.ts
+  - apps/api/src/routes/entity-reconciliation.ts
+  - apps/api/src/__tests__/entity-reconciliation.test.ts
+  - apps/api/migrations/146_entity_reconciliation.sql
+  - apps/dashboard/components/entity-reconciliation-panel.tsx
+  - apps/dashboard/components/reconciliation-status-table.tsx
+- **Depends on**: nothing
+- **Added**: 2026-06-08
+
+### Task: Semantic Query Caching with Time-Based Versioning & Hit Analysis
+- **Layer**: 68 — Advanced Retrieval, Analytics & Observability
+- **Status**: UNWORKED
+- **Priority**: Medium
+- **Description**: Extend semantic caching to include temporal query versioning, cache hit analysis, and predictive cache warming based on query access patterns. Create packages/semantic-core/src/temporal-query-cache.ts with TemporalQueryCache: (1) cacheQueryResult(query, result, asOfDate, ttl) storing time-versioned query results with point-in-time semantics, (2) queryAsOfDate(query, targetDate) retrieving cached results from a specific date without re-executing, (3) analyzeCacheHits(interval) computing hit rate, miss patterns, and frequently-missed query combinations, (4) warmCacheProactively(interval) identifying high-value queries to pre-cache based on access patterns. Create migration 147 (temporal_query_cache, cache_hit_analysis). Add REST routes: GET /api/v1/cache/temporal/:queryId/:date (fetch cached result), GET /api/v1/cache/analytics (hit rate, miss patterns), POST /api/v1/cache/preload (trigger proactive warming). Add dashboard components: cache-hit-timeline.tsx (visualize cache hits over time), miss-pattern-analyzer.tsx (show why queries miss cache). Include 20+ tests (12 unit cache logic + 8 integration temporal queries).
+- **Files**:
+  - packages/semantic-core/src/temporal-query-cache.ts
+  - packages/semantic-core/src/__tests__/temporal-query-cache.test.ts
+  - packages/semantic-core/src/__tests__/temporal-query-cache.integration.test.ts
+  - apps/api/src/routes/temporal-cache.ts
+  - apps/api/src/__tests__/temporal-cache.test.ts
+  - apps/api/migrations/147_temporal_query_cache.sql
+  - apps/dashboard/components/cache-hit-timeline.tsx
+  - apps/dashboard/components/miss-pattern-analyzer.tsx
 - **Depends on**: nothing
 - **Added**: 2026-06-08
