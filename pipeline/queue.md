@@ -4915,7 +4915,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: NLP Config Parser & Integration Tests
 - **Layer**: 75 — Critical Infrastructure & Test Coverage
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: Medium
 - **Description**: Complete test coverage for packages/semantic-core/src/nlp-config-parser.ts (221 lines), which parses natural language configuration statements via gpt-4o-mini but currently lacks tests. Create packages/semantic-core/src/__tests__/nlp-config-parser.test.ts with 16+ tests covering: (1) parseConfigNL(text) correctly identifies config types (fiscal_calendar, metric_definition, date_interpretation, custom), (2) fiscal year parsing: "fiscal year starts in February" → {fiscalYearStartMonth: 2}, "fiscal starts Feb 15" → {fiscalYearStartMonth: 2, fiscalYearStartDay: 15}, (3) metric definitions: "ARR is MRR × 12" → {metric: "ARR", formula: "MRR * 12"}, "LTV = contract value / churn rate" → correct formula parsing, (4) date interpretation: "end of quarter" → {periodEnd: "quarter"}, "rolling 90 days" → {window: 90, unit: "day"}, (5) confidence scoring (high >0.90 for unambiguous inputs, lower for multi-interpretation), (6) LLM response parsing robustness (malformed JSON handling, missing fields with defaults), (7) token budget enforcement (input >MAX_INPUT_TOKENS truncated with warning), (8) PII filtering (doesn't parse names/emails in input), (9) edge cases: empty input, special characters, code injection attempts, (10) caching of repeated queries. Add integration tests with real Postgres storage and Clerk auth. Mock OpenAI API calls with MSW. Reference embedding-patterns.md for token budgeting and code-style.md for error handling with Result pattern.
 - **Files**:
