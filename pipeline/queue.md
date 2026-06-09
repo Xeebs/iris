@@ -27,7 +27,7 @@ Tasks are listed in execution order, layer by layer. The pipeline works top-to-b
 
 ### Task: VS-0 Bootstrap workspace + API key for demo/CI mode
 - **Layer**: 78 — Vertical Slice
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: Critical
 - **Description**: Add an unauthenticated REST endpoint `POST /api/v1/demo/bootstrap` that creates a fresh workspace, generates an MCP API key, and returns both IDs. This endpoint is only enabled when `DEMO_MODE=true` env var is set; in production Clerk auth is mandatory. Validates that the endpoint is correctly wired in `apps/api/src/server.ts` (must be before the Clerk middleware to avoid requiring auth). The endpoint response includes: `{ workspaceId: string, apiKey: string }` — the API key is only shown once (per real API key practices). Use `SecretVault.generateApiKey()` and store the key in `mcp_api_keys` table. This unblocks scripts/slice-demo.sh from creating the initial workspace without manual DB seeding.
 - **Files**:
