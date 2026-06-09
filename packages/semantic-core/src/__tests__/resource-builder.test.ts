@@ -148,6 +148,62 @@ describe('buildGraphResource', () => {
   });
 });
 
+describe('buildGraphResource depth 0', () => {
+  it('returns root entity only when depth is 0', async () => {
+    const root = makeEntity({ relationships: [{ type: 'belongs_to', targetId: 'should-not-fetch' }] });
+    const getById = vi.fn().mockResolvedValue(root);
+    const store = makeVectorStore({ getById });
+    const result = await buildGraphResource(root.id, WORKSPACE, store, 0);
+    const parsed = JSON.parse(result!.text) as { related: SemanticEntity[]; depth: number };
+    expect(parsed.related).toHaveLength(0);
+    expect(parsed.depth).toBe(0);
+    // getById called once for root, not for the relationship target
+    expect(getById).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('buildGraphResource depth 2 traversal', () => {
+  it('fetches second-hop entities', async () => {
+    const grandchild = makeEntity({ id: 'hubspot:deal:1', type: 'deal', label: 'Big Deal' });
+    const child = makeEntity({
+      id: 'hubspot:company:1',
+      type: 'company',
+      label: 'Acme',
+      relationships: [{ type: 'has_deal', targetId: grandchild.id }],
+    });
+    const root = makeEntity({ relationships: [{ type: 'belongs_to', targetId: child.id }] });
+    const getById = vi.fn()
+      .mockResolvedValueOnce(root)
+      .mockResolvedValueOnce(child)
+      .mockResolvedValueOnce(grandchild);
+    const store = makeVectorStore({ getById });
+    const result = await buildGraphResource(root.id, WORKSPACE, store, 2);
+    const parsed = JSON.parse(result!.text) as { related: SemanticEntity[]; depth: number };
+    expect(parsed.depth).toBe(2);
+    expect(parsed.related.some((e) => e.id === grandchild.id)).toBe(true);
+  });
+
+  it('prevents circular references via bidirectional edges at depth 2', async () => {
+    const nodeB = makeEntity({ id: 'entity:b', type: 'contact', label: 'B', relationships: [] });
+    const nodeA = makeEntity({ relationships: [{ type: 'knows', targetId: nodeB.id }] });
+    // Make nodeB point back to nodeA
+    nodeB.relationships = [{ type: 'knows', targetId: nodeA.id }];
+    const getById = vi.fn()
+      .mockImplementation((_ws: string, id: string) => {
+        if (id === nodeA.id) return Promise.resolve(nodeA);
+        if (id === nodeB.id) return Promise.resolve(nodeB);
+        return Promise.resolve(null);
+      });
+    const store = makeVectorStore({ getById });
+    const result = await buildGraphResource(nodeA.id, WORKSPACE, store, 2);
+    const parsed = JSON.parse(result!.text) as { related: SemanticEntity[] };
+    // nodeA (root) must not appear in related
+    expect(parsed.related.some((e) => e.id === nodeA.id)).toBe(false);
+    // nodeB should appear exactly once
+    expect(parsed.related.filter((e) => e.id === nodeB.id)).toHaveLength(1);
+  });
+});
+
 describe('listEntityResourceURIs', () => {
   it('returns empty array when no entities found', async () => {
     const store = makeVectorStore({ search: vi.fn().mockResolvedValue([]) });
@@ -170,5 +226,38 @@ describe('listEntityResourceURIs', () => {
     await listEntityResourceURIs(WORKSPACE, store);
     const [, limit] = search.mock.calls[0] as [unknown, number];
     expect(limit).toBe(100);
+  });
+
+  it('passes custom limit to search', async () => {
+    const search = vi.fn().mockResolvedValue([]);
+    const store = makeVectorStore({ search });
+    await listEntityResourceURIs(WORKSPACE, store, undefined, 25);
+    const [, limit] = search.mock.calls[0] as [unknown, number];
+    expect(limit).toBe(25);
+  });
+
+  it('passes entityTypes filter in search options when provided', async () => {
+    const search = vi.fn().mockResolvedValue([]);
+    const store = makeVectorStore({ search });
+    await listEntityResourceURIs(WORKSPACE, store, ['contact', 'company']);
+    const [, , filter] = search.mock.calls[0] as [unknown, unknown, { entityTypes?: string[] }];
+    expect(filter?.entityTypes).toEqual(['contact', 'company']);
+  });
+
+  it('omits entityTypes from filter when not provided', async () => {
+    const search = vi.fn().mockResolvedValue([]);
+    const store = makeVectorStore({ search });
+    await listEntityResourceURIs(WORKSPACE, store);
+    const [, , filter] = search.mock.calls[0] as [unknown, unknown, Record<string, unknown>];
+    expect(filter?.entityTypes).toBeUndefined();
+  });
+
+  it('uses a zero vector of length 1536 for the search query', async () => {
+    const search = vi.fn().mockResolvedValue([]);
+    const store = makeVectorStore({ search });
+    await listEntityResourceURIs(WORKSPACE, store);
+    const [vector] = search.mock.calls[0] as [number[], ...unknown[]];
+    expect(vector).toHaveLength(1536);
+    expect(vector.every((v) => v === 0)).toBe(true);
   });
 });
