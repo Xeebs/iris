@@ -27,21 +27,9 @@ Completed tasks are moved to `pipeline/queue-archive.md` by `scripts/archive-que
 
 > While `docs/SLICE_2.md` reads `NOT ACHIEVED`, the pipeline selects ONLY from this layer, the CI gate, and the in-flight Layer 77 task. Goal: the owner connects a real data source, registers Iris in their own Claude Code, and gets correct answers with real embeddings — accuracy and token cost measured by an eval harness.
 
-### Task: S2-2 Real data source — seeded business Postgres through the postgres connector
-- **Layer**: 79 — Slice 2
-- **Status**: COMMITTED
-- **Priority**: Critical
-- **Description**: Replace fixture JSON with a live data source. Write `scripts/seed-business-db.sql`: a realistic small-business dataset (~50 contacts, ~20 companies, ~30 deals/orders with owners, stages, amounts, dates — realistic names and relationships, no PII patterns that would trip the pii exclusion rules) loaded into a dedicated local Postgres database (`iris_demo_source`). Then verify the existing postgres connector (`packages/connectors/postgres/`) can connect to it, discover the schema, and `sync()` SemanticEntities through the real REST + BullMQ worker path established by Slice 1 (`POST /api/v1/connectors` → `POST /:id/sync` → sync-worker → indexer). Fix whatever breaks — transformer gaps, type mapping, relationship extraction from foreign keys. The seeded dataset must support aggregate questions (count/sum/largest) and relationship questions (who works where, which contacts belong to which company). Document the expected facts in `scripts/eval-questions.json` alongside S2-3. Verify locally with a full sync run and an entity-count + relationship spot check against the vector store.
-- **Files**:
-  - scripts/seed-business-db.sql
-  - packages/connectors/postgres/src/postgres-connector.ts (fixes as discovered)
-  - packages/connectors/postgres/src/transformers.ts (fixes as discovered)
-- **Depends on**: nothing
-- **Added**: 2026-06-10
-
 ### Task: S2-3 Retrieval eval harness — 20+ questions scored for accuracy and tokens
 - **Layer**: 79 — Slice 2
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: High
 - **Description**: Build `scripts/eval-retrieval.ts`: loads `scripts/eval-questions.json` (≥20 questions, each with `question`, `expectedFacts: string[]`, `category`), calls `query-context` through the real MCP server for each, and scores: (1) fact accuracy — every expectedFact substring/regex present in the response, (2) token cost vs. a raw-data-paste baseline computed from the seeded source tables, (3) contextBudget compliance, (4) query latency p50/p95. Output a markdown report to `pipeline/slice2-eval-report.md` (same shape as `pipeline/slice-report.md`) plus a machine-readable JSON summary with pass/fail per the thresholds in docs/SLICE_2.md (≥90% accuracy, ≥70% total token savings). The question set must include ≥4 aggregate/superlative questions ("largest", "how many", "total value") — Slice 1's Q4 (33% savings) showed these stress retrieval; if they fail, improving retrieval for them IS slice work. Reuse the shared length/4 token estimator from Slice 1 for comparability.
 - **Files**:
