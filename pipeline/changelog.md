@@ -174,3 +174,6 @@ VS-1 (slice path audit): documented connect→sync→index→serve→query chain
 - 2026-06-09 cycle 345: feat(api,semantic-core,scripts) VS-3 slice-demo script + 4 slice-path fixes (workspace_id at index time, registry bootstrap, sync queue wiring, demo API-key auth)
 - 2026-06-09 cycle 345: feat(mcp-server,scripts) VS-4 MCP query phase — canonical questions over stdio + query-embedding provider fix
 - 2026-06-09 cycle 346: feat(mcp-server,connector-hubspot,semantic-core) VS-5 token-savings measure phase — per-question Iris-vs-raw-paste report → pipeline/slice-report.md, ≥70% gate; derived open/closed deal status; expanded fixtures (8c/4co/10d) + updated count assertions
+2026-06-10 | feat(api): mount batch-4 routes in server.ts (Layer 77) — dedup-admin, entity-change-stream, enrichment-quality, freshness-tracking, governance-dashboard, admin-cost-audit, workspace-costs, computed-metrics
+2026-06-10 | feat(api): mount batch-5 routes in server.ts (Layer 77) — api-version-admin, business-rules, cache-optimization, cache-prewarming, connector-performance, data-quality, quota-management, slo-admin
+2026-06-10 | feat(api): mount batch-6 routes in server.ts (Layer 77) — backup-recovery, budget-management, circuit-breaker-admin, compliance-audit, connector-benchmarks, cost-attribution, data-lineage, entity-reconciliation
