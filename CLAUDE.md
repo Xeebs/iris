@@ -156,7 +156,7 @@ Tool output lands in your context and is paid for on every subsequent turn. Keep
 **Stop** under any of these conditions:
 0. **Task batch complete** — you have committed 3 tasks this session. Exit cleanly; the daemon respawns a fresh session in seconds (short sessions keep context lean — a long session pays for its entire history on every turn).
 1. **Rate limited** — write `rate_limit_hit: true` and current phase/task to state, then exit.
-2. **Queue exhausted after research** — task-researcher ran and produced 0 new tasks. Write `current_phase: IDLE` to state, then exit. **In slice mode, before declaring exhaustion: run `scripts/slice-demo.sh` (if it exists). If it fails, each failure is a new slice task — add it and continue. If it passes all acceptance criteria in `docs/VERTICAL_SLICE.md`, flip its status line to `ACHIEVED`, commit, and exit IDLE so the owner can verify by hand.**
+2. **Queue exhausted after research** — task-researcher ran and produced 0 new tasks. Write `current_phase: IDLE` to state, then exit. **In slice mode, before declaring exhaustion: run `scripts/slice-demo.sh` (if it exists). If it fails, each failure is a new slice task — add it and continue. If it passes all acceptance criteria in `docs/VERTICAL_SLICE.md`, flip its status line to `ACHIEVED`, commit, push, and exit IDLE — green CI is authoritative, no owner sign-off is required, and the next session resumes normal queue-driven breadth work.**
 
 Never stop mid-task or after a single quick task unless rate-limited. Never stop because `last_research` is today — always attempt research when the queue is low. Within a session's 3-task batch, drive all work forward until genuinely blocked.
 

@@ -1,0 +1,12 @@
+# Logrotate policy for the Iris autonomous pipeline (install: sudo cp infra/logrotate/iris /etc/logrotate.d/iris)
+# copytruncate is required: systemd holds the append fds for *.log targets.
+/home/xhasan/my-projects/Iris/logs/*.log /home/xhasan/my-projects/Iris/pipeline/remediation/logs/*.log {
+    weekly
+    rotate 4
+    maxsize 50M
+    compress
+    missingok
+    notifempty
+    copytruncate
+    su xhasan xhasan
+}
