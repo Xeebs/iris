@@ -125,6 +125,12 @@ import { createConnectorBenchmarksRoutes } from './routes/connector-benchmarks.j
 import { makeCostAttributionRouter } from './routes/cost-attribution.js';
 import { createDataLineageRoutes } from './routes/data-lineage.js';
 import { makeEntityReconciliationRouter } from './routes/entity-reconciliation.js';
+import { makeBatchRecommendationsRouter } from './routes/batch-recommendations.js';
+import { createConnectorHealthScorecardsRoutes } from './routes/connector-health-scorecards.js';
+import { createDsrRoutes } from './routes/dsr.js';
+import { createEntityChangeSubscriptionsRoutes } from './routes/entity-change-subscriptions.js';
+import { makeEntityLifecycleRouter, makeLifecycleAdminRouter } from './routes/entity-lifecycle.js';
+import { createSyncOptimizerRoutes } from './routes/sync-optimizer.js';
 import { openApiSpec } from './openapi.js';
 
 export { createApp };
@@ -366,6 +372,16 @@ function createApp(
   authed.route('/cost-attribution', makeCostAttributionRouter(sql));
   authed.route('/', createDataLineageRoutes(sql));
   authed.route('/', makeEntityReconciliationRouter(sql));
+
+  // Batch 7: batch-recommendations, connector-health-scorecards, dsr,
+  // entity-change-subscriptions, entity-lifecycle, sync-optimizer.
+  authed.route('/batch', makeBatchRecommendationsRouter(sql));
+  authed.route('/health-scorecards', createConnectorHealthScorecardsRoutes(sql));
+  authed.route('/dsr', createDsrRoutes(sql));
+  authed.route('/entity-subscriptions', createEntityChangeSubscriptionsRoutes(sql));
+  authed.route('/entities', makeEntityLifecycleRouter(sql));
+  authed.route('/admin/lifecycle', makeLifecycleAdminRouter(sql));
+  authed.route('/sync-optimizer', createSyncOptimizerRoutes(sql));
 
   // Webhook routes: inbound (unauthenticated) + events status (authenticated)
   app.route('/api/v1/webhooks', createWebhookRoutes(sql));
