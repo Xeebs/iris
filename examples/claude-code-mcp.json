@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "iris": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["<absolute-path-to-iris>/apps/mcp-server/dist/server.js"],
+      "env": {
+        "DATABASE_URL": "postgresql://postgres:postgres@localhost:5432/iris",
+        "REDIS_URL": "redis://localhost:6379",
+        "IRIS_API_KEY": "iris_your_api_key_here",
+        "EMBEDDING_PROVIDER": "ollama",
+        "OLLAMA_ENDPOINT": "http://localhost:11434"
+      }
+    }
+  }
+}

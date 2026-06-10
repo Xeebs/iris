@@ -29,7 +29,7 @@ Completed tasks are moved to `pipeline/queue-archive.md` by `scripts/archive-que
 
 ### Task: S2-6 Claude Code MCP registration — docs, config template, stdio smoke test
 - **Layer**: 79 — Slice 2
-- **Status**: UNWORKED
+- **Status**: IN_PROGRESS
 - **Priority**: Medium
 - **Description**: Make connecting a real Claude client a documented 5-minute step. Write `docs/CONNECT_CLAUDE.md`: exact steps to register the Iris MCP server in Claude Code (`claude mcp add` command and the equivalent `.mcp.json` block), including env (`IRIS_API_KEY`, `DATABASE_URL`, `EMBEDDING_PROVIDER`), how to get the API key (from the demo bootstrap or the dashboard snippet screen from S2-5), and the canonical questions to try. Add a checked-in template `examples/claude-code-mcp.json`. Add `scripts/mcp-smoke.ts`: connects to the MCP server over stdio exactly as Claude Code would (official MCP SDK client), lists tools, calls `query-context` once, asserts a non-empty in-budget response — this is the CI-checkable proxy for the owner-verified criterion. The final acceptance checkbox in docs/SLICE_2.md (owner uses it in a live Claude Code session) is flipped by the OWNER ONLY — the pipeline must never mark it done.
 - **Files**:
@@ -37,6 +37,42 @@ Completed tasks are moved to `pipeline/queue-archive.md` by `scripts/archive-que
   - examples/claude-code-mcp.json
   - scripts/mcp-smoke.ts
 - **Depends on**: S2-4
+- **Added**: 2026-06-10
+
+### Task: S2-7 Create Ollama-specific embedding dimension migration + hardening
+- **Layer**: 79 — Slice 2
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: The slice2-demo.ts script performs embedding dimension alignment by hand (DROP + ALTER TABLE with vector(768)). This works but is not a checked-in migration. Create `apps/api/migrations/183_embedding_dimension_ollama.sql` that drops the iris_entities embedding column and recreates it as vector(768) for Ollama deployments, including index and view recreation per migration 182 pattern. This migration must be idempotent (safe to run multiple times) and include a clear comment that it applies only when EMBEDDING_PROVIDER=ollama. The init process (or a new startup validation script) must verify that if a provider is configured, its vector dimension matches the schema; if not, the server must refuse to start with a clear error message. Add `packages/semantic-core/src/validate-embedding-dimension.ts`: a startup hook called by both API and MCP server that (1) reads the configured EMBEDDING_PROVIDER and gets dimensions, (2) queries the iris_entities table embedding column dimension, (3) throws IndexerError if they don't match with the message "Embedding dimension mismatch: schema has vector(X) but EMBEDDING_PROVIDER=Y provides Z-dimensional vectors. Run migration 183 (ollama) or drop iris_entities and re-migrate." Tests: validate that the migration drops/recreates the column correctly, validate the startup hook detects a mismatch and rejects startup.
+- **Files**:
+  - apps/api/migrations/183_embedding_dimension_ollama.sql
+  - packages/semantic-core/src/validate-embedding-dimension.ts
+  - packages/semantic-core/src/__tests__/validate-embedding-dimension.test.ts
+  - apps/api/src/server.ts (call validateEmbeddingDimension on startup)
+  - apps/mcp-server/src/server.ts (call validateEmbeddingDimension on startup)
+- **Depends on**: S2-2
+- **Added**: 2026-06-10
+
+### Task: S2-8 Verify slice2-demo Ollama robustness + timeout tuning
+- **Layer**: 79 — Slice 2
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: The recent fix (commit 8160c9e) separated embedding generation from the resilience timeout boundary to prevent Ollama embedding jobs (>10s on CI CPU-only) from timing out. This fix is correct but the demo script may have other timeout fragility: (1) the API server startup waits 90s for /health endpoint to be ready — this might be tight on CI if Ollama is slow; (2) the eval harness queries the MCP server via stdio with no explicit timeout per question, so a slow embedding query could hang the eval; (3) no fallback if Ollama becomes unavailable mid-sync. Harden scripts/slice2-demo.ts: (1) increase API health wait from 90s to 120s with explicit logging of waited time; (2) add a `queryTimeoutMs` parameter to the MCP client's callTool invocation (10s per question) so eval hangs don't stall the whole demo; (3) add explicit Ollama availability check before syncing ("ollama list" or a POST to /api/embeddings with a test prompt) and fail clearly if Ollama is not responding. Add inline comments explaining each timeout rationale. Tests: mock slow Ollama responses and verify the demo still passes (by advancing the timeouts in test env or by simulating delays with prom).
+- **Files**:
+  - scripts/slice2-demo.ts (timeout tuning)
+  - scripts/slice2-demo.sh (documentation of timeout env vars if configurable)
+- **Depends on**: S2-4
+- **Added**: 2026-06-10
+
+### Task: S2-9 Eval harness CI job robustness + troubleshooting UX
+- **Layer**: 79 — Slice 2
+- **Status**: UNWORKED
+- **Priority**: Medium
+- **Description**: The eval harness (apps/mcp-server/src/eval-retrieval.ts) is embedded in scripts/slice2-demo.ts as a subprocess. When it fails (accuracy <90% or savings <70%), the demo logs appear in the CI artifact but the root cause (missing facts in responses, dim mismatches, query errors) can be hard to spot. Improve debuggability: (1) when a question fails (missing facts, over-budget, or error), log the full response text before trimming; (2) add a `--verbose` flag to eval-retrieval.ts that prints the raw MCP query-context response for every question (useful for debugging); (3) ensure the slice2-eval-report.md includes a "Debugging Failed Questions" section listing which questions failed and their raw responses; (4) add a new `scripts/debug-eval-locally.sh` that runs the eval harness standalone against a local MCP server without needing the full demo setup (useful for iteration — just point it at a running instance). These changes make it faster to iterate on eval failures in CI without re-running the full 30+ minute demo.
+- **Files**:
+  - apps/mcp-server/src/eval-retrieval.ts (verbose logging + response capture)
+  - scripts/debug-eval-locally.sh (new)
+- **Depends on**: S2-3
 - **Added**: 2026-06-10
 
 ---
