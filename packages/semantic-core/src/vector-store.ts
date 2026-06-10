@@ -314,10 +314,16 @@ export class PgvectorStore implements VectorStore {
 
   /**
    * Full-text BM25 search using Postgres ts_rank_cd.
-   * Requires migration 049_add_fts_vector.sql to have run.
+   * Requires migrations 049_add_fts_vector.sql and 175_fts_vector_attributes.sql.
+   *
+   * Terms are OR-combined (via websearch_to_tsquery), not AND-combined: natural
+   * language questions routinely contain words absent from the corpus ("how many",
+   * "total value"), and plainto_tsquery's implicit AND made such queries match
+   * zero rows, silently disabling the lexical leg of hybrid retrieval. With OR
+   * semantics, ts_rank_cd still ranks entities matching more terms higher.
    *
    * @param workspaceId - Workspace to search within
-   * @param queryText   - Natural language query (converted to tsquery via plainto_tsquery)
+   * @param queryText   - Natural language query (tokenized into an OR tsquery)
    * @param topK        - Maximum results to return
    * @param entityTypes - Optional entity type filter
    */
@@ -338,13 +344,20 @@ export class PgvectorStore implements VectorStore {
       score: number;
     };
 
+    const terms = queryText
+      .toLowerCase()
+      .split(/[^a-z0-9']+/)
+      .filter((t) => t.length > 1 && t !== 'or' && t !== 'and');
+    if (terms.length === 0) return [];
+    const orQuery = terms.join(' or ');
+
     const rows = await this.sql<BM25Row[]>`
       SELECT
         id, type, label, attributes, relationships, last_modified, source_id,
-        ts_rank_cd(fts_vector, plainto_tsquery('english', ${queryText})) AS score
+        ts_rank_cd(fts_vector, websearch_to_tsquery('english', ${orQuery})) AS score
       FROM iris_entities
       WHERE workspace_id = ${workspaceId}
-        AND fts_vector @@ plainto_tsquery('english', ${queryText})
+        AND fts_vector @@ websearch_to_tsquery('english', ${orQuery})
         ${entityTypes?.length ? this.sql`AND type = ANY(${entityTypes})` : this.sql``}
       ORDER BY score DESC
       LIMIT ${topK}
