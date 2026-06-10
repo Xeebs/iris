@@ -21,3 +21,7 @@ pipeline/worker.lock
 pipeline/usage.json
 __pycache__/
 *.pyc
+
+# CI remediator runtime state (reports in pipeline/remediation/*.md ARE committed)
+pipeline/remediation/state.json
+pipeline/remediation/logs/
