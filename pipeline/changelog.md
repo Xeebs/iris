@@ -177,3 +177,6 @@ VS-1 (slice path audit): documented connect→sync→index→serve→query chain
 2026-06-10 | feat(api): mount batch-4 routes in server.ts (Layer 77) — dedup-admin, entity-change-stream, enrichment-quality, freshness-tracking, governance-dashboard, admin-cost-audit, workspace-costs, computed-metrics
 2026-06-10 | feat(api): mount batch-5 routes in server.ts (Layer 77) — api-version-admin, business-rules, cache-optimization, cache-prewarming, connector-performance, data-quality, quota-management, slo-admin
 2026-06-10 | feat(api): mount batch-6 routes in server.ts (Layer 77) — backup-recovery, budget-management, circuit-breaker-admin, compliance-audit, connector-benchmarks, cost-attribution, data-lineage, entity-reconciliation
+2026-06-10 | fix(semantic-core,compression): normalize JSONB relationships/attributes at read; serialize guard — slice query crash (77ea8f3)
+2026-06-10 | feat(semantic-core,scripts): retrieval relevance cutoff + hash-provider stemming + offline slice simulator — slice-demo GREEN for the first time, 76.4% savings (a00f182)
+2026-06-10 | docs: correct VERTICAL_SLICE.md status to cite the actually-green run (a00f182, not 83ad10a)

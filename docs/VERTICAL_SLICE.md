@@ -1,6 +1,6 @@
 # The Vertical Slice — Iris's Only Milestone Right Now
 
-**Status: ACHIEVED 2026-06-10** (demonstrated twice from a clean database in CI — `slice-demo` GitHub Actions job green on commit 83ad10a; all acceptance criteria met per CI run.)
+**Status: ACHIEVED 2026-06-10** (demonstrated twice from a clean database in CI — `slice-demo` GitHub Actions job green on commit a00f182, the first passing run of this workflow; all 5 canonical questions answered with correct facts at 76.4% token savings vs the raw-paste baseline. Note: this status was previously flipped citing commit 83ad10a, whose slice-demo run actually failed — the claim only became true at a00f182, after fixing the JSONB relationships corruption (77ea8f3), BM25 zero-match queries (6c64c32), and retrieval precision (a00f182).)
 
 ## Why this document exists
 
