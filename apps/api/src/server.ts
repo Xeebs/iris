@@ -94,6 +94,13 @@ import { createMcpToolsRoutes } from './routes/mcp-tools.js';
 import { createQueryAnalyticsRoutes } from './routes/query-analytics.js';
 import { createConnectorHealthRoutes } from './routes/connector-health.js';
 import { createDocumentsRoutes } from './routes/documents.js';
+import { createSyncMetricsRoutes } from './routes/sync-metrics.js';
+import { createContextSearchRoutes } from './routes/context-search.js';
+import { createEnrichmentConfigRoutes } from './routes/enrichment-config.js';
+import { createEntityValidationRoutes } from './routes/entity-validation.js';
+import { createBulkOperationsRoutes } from './routes/bulk-operations.js';
+import { makeAnalyticsRouter } from './routes/analytics-pipeline.js';
+import { makeInsightsRouter } from './routes/insights.js';
 import { openApiSpec } from './openapi.js';
 
 export { createApp };
@@ -292,6 +299,16 @@ function createApp(
   authed.route('/query-analytics', createQueryAnalyticsRoutes(sql));
   authed.route('/connectors', createConnectorHealthRoutes(sqlFn));
   authed.route('/documents', createDocumentsRoutes(sql as never));
+
+  // Batch 3: sync-metrics (sub-paths under /connectors), context-search,
+  // enrichments, validation, bulk entity ops, analytics pipeline, insights.
+  authed.route('/connectors', createSyncMetricsRoutes(sqlFn));
+  authed.route('/mcp-responses', createContextSearchRoutes(sql));
+  authed.route('/enrichments', createEnrichmentConfigRoutes(sql));
+  authed.route('/validation', createEntityValidationRoutes(sql));
+  authed.route('/entities', createBulkOperationsRoutes(sql as never));
+  authed.route('/analytics', makeAnalyticsRouter(sql));
+  authed.route('/insights', makeInsightsRouter(sql));
 
   // Webhook routes: inbound (unauthenticated) + events status (authenticated)
   app.route('/api/v1/webhooks', createWebhookRoutes(sql));
