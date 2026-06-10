@@ -180,3 +180,4 @@ VS-1 (slice path audit): documented connect→sync→index→serve→query chain
 2026-06-10 | fix(semantic-core,compression): normalize JSONB relationships/attributes at read; serialize guard — slice query crash (77ea8f3)
 2026-06-10 | feat(semantic-core,scripts): retrieval relevance cutoff + hash-provider stemming + offline slice simulator — slice-demo GREEN for the first time, 76.4% savings (a00f182)
 2026-06-10 | docs: correct VERTICAL_SLICE.md status to cite the actually-green run (a00f182, not 83ad10a)
+2026-06-10 | fix(semantic-core,api,mcp-server): 51 integration-test failures repaired — 6 new migrations (176-181), 28 jsonb double-encoding sites → sql.json, alias/aggregate SQL fixes; integration suite green for the first time (8f9d407)
