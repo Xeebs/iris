@@ -101,6 +101,14 @@ import { createEntityValidationRoutes } from './routes/entity-validation.js';
 import { createBulkOperationsRoutes } from './routes/bulk-operations.js';
 import { makeAnalyticsRouter } from './routes/analytics-pipeline.js';
 import { makeInsightsRouter } from './routes/insights.js';
+import { createDedupAdminRoutes } from './routes/dedup-admin.js';
+import { createEntityChangeStreamRoutes } from './routes/entity-change-stream.js';
+import { createEnrichmentQualityRoutes } from './routes/enrichment-quality.js';
+import { createFreshnessTrackingRoutes } from './routes/freshness-tracking.js';
+import { createGovernanceDashboardRoutes } from './routes/governance-dashboard.js';
+import { createAdminCostAuditRoutes } from './routes/admin-cost-audit.js';
+import { createWorkspaceCostRoutes } from './routes/workspace-costs.js';
+import { createComputedMetricsRoutes } from './routes/computed-metrics.js';
 import { openApiSpec } from './openapi.js';
 
 export { createApp };
@@ -309,6 +317,17 @@ function createApp(
   authed.route('/entities', createBulkOperationsRoutes(sql as never));
   authed.route('/analytics', makeAnalyticsRouter(sql));
   authed.route('/insights', makeInsightsRouter(sql));
+
+  // Batch 4: dedup-admin, entity-change-stream, enrichment-quality, freshness-tracking,
+  // governance-dashboard, admin-cost-audit, workspace-costs, computed-metrics.
+  authed.route('/admin/dedup', createDedupAdminRoutes(sql));
+  authed.route('/entities', createEntityChangeStreamRoutes(sql));
+  authed.route('/enrichment', createEnrichmentQualityRoutes(sql as never));
+  authed.route('/freshness', createFreshnessTrackingRoutes(sql as never));
+  authed.route('/governance', createGovernanceDashboardRoutes(sql));
+  authed.route('/admin/cost-audit', createAdminCostAuditRoutes(sql));
+  authed.route('/workspaces', createWorkspaceCostRoutes(sql));
+  authed.route('/metrics/computed', createComputedMetricsRoutes(sql));
 
   // Webhook routes: inbound (unauthenticated) + events status (authenticated)
   app.route('/api/v1/webhooks', createWebhookRoutes(sql));
