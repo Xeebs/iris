@@ -28,9 +28,20 @@ export type PostgresConfig = z.infer<typeof configSchema>;
 
 const BATCH_SIZE = 500;
 
+/** A foreign key from one table column to a referenced table/column. */
+type FkEntry = {
+  column: string;
+  refTable: string;
+  refColumn: string;
+};
+
 export class PostgresConnector extends BaseConnector<PostgresConfig> {
   private sql: ReturnType<typeof pg> | null = null;
   private config: PostgresConfig | null = null;
+  /** FK map: table name → list of FK entries discovered at connect time */
+  private fkMap: Map<string, FkEntry[]> = new Map();
+  /** Table name → entityType (from config) for resolving FK target entity types */
+  private tableEntityTypes: Map<string, string> = new Map();
   private readonly log = logger.child({ connector: 'postgres' });
 
   /**
@@ -51,7 +62,17 @@ export class PostgresConnector extends BaseConnector<PostgresConfig> {
       this.sql = pg(parsed.data.connectionString, { ssl: false, max: 5 });
       this.config = parsed.data;
       await this.sql`SELECT 1`;
-      this.log.info('Connected to Postgres', { tables: parsed.data.tables.map((t) => t.name) });
+
+      // Build table → entityType lookup from config
+      this.tableEntityTypes = new Map(parsed.data.tables.map((t) => [t.name, t.entityType]));
+
+      // Discover FK relationships for all configured tables
+      this.fkMap = await this.discoverForeignKeys(parsed.data.tables.map((t) => t.name));
+
+      this.log.info('Connected to Postgres', {
+        tables: parsed.data.tables.map((t) => t.name),
+        fkRelationships: this.fkMap.size,
+      });
       return ok(undefined);
     } catch (e) {
       this.sql = null;
@@ -124,6 +145,41 @@ export class PostgresConnector extends BaseConnector<PostgresConfig> {
 
   // ─── Private helpers ────────────────────────────────────────────────────────
 
+  private async discoverForeignKeys(tableNames: string[]): Promise<Map<string, FkEntry[]>> {
+    if (!this.sql || tableNames.length === 0) return new Map();
+
+    type FkRow = { table_name: string; column_name: string; foreign_table_name: string; foreign_column_name: string };
+
+    const rows = await this.sql<FkRow[]>`
+      SELECT
+        kcu.table_name,
+        kcu.column_name,
+        ccu.table_name  AS foreign_table_name,
+        ccu.column_name AS foreign_column_name
+      FROM information_schema.key_column_usage kcu
+      JOIN information_schema.referential_constraints rc
+        ON kcu.constraint_name = rc.constraint_name
+        AND kcu.constraint_schema = rc.constraint_schema
+      JOIN information_schema.constraint_column_usage ccu
+        ON rc.unique_constraint_name = ccu.constraint_name
+        AND rc.unique_constraint_schema = ccu.constraint_schema
+      WHERE kcu.table_schema = 'public'
+        AND kcu.table_name = ANY(${tableNames})
+    `.catch(() => [] as FkRow[]);
+
+    const result = new Map<string, FkEntry[]>();
+    for (const row of rows) {
+      const existing = result.get(row.table_name) ?? [];
+      existing.push({
+        column: row.column_name,
+        refTable: row.foreign_table_name,
+        refColumn: row.foreign_column_name,
+      });
+      result.set(row.table_name, existing);
+    }
+    return result;
+  }
+
   private async *syncTable(
     tableConf: TableConfig,
     options: SyncOptions,
@@ -177,8 +233,21 @@ export class PostgresConnector extends BaseConnector<PostgresConfig> {
           ? new Date(updatedAtValue)
           : new Date();
 
+    const fks = this.fkMap.get(tableConf.name) ?? [];
+    const relationships: SemanticEntity['relationships'] = [];
+
     const attributes: Record<string, AttributeValue> = {};
     for (const [key, value] of Object.entries(row)) {
+      // Check if this column is a FK — if so, emit a relationship
+      const fk = fks.find((f) => f.column === key);
+      if (fk && value !== null && value !== undefined) {
+        const refEntityType = this.tableEntityTypes.get(fk.refTable) ?? fk.refTable;
+        relationships.push({
+          type: 'belongs_to',
+          targetId: `postgres:${refEntityType}:${String(value)}`,
+        });
+      }
+
       if (value === null || value === undefined) {
         attributes[key] = null;
       } else if (
@@ -199,7 +268,7 @@ export class PostgresConnector extends BaseConnector<PostgresConfig> {
       type: tableConf.entityType,
       label,
       attributes,
-      relationships: [],
+      relationships,
       lastModified,
       sourceId: `postgres:${tableConf.name}:${id}`,
     };

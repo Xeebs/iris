@@ -1,0 +1,159 @@
+{
+  "_comment": "Eval questions for Slice 2 retrieval harness. Each question has expectedFacts (substrings that must appear in the MCP response), category, and notes.",
+  "questions": [
+    {
+      "id": "Q01",
+      "question": "Who are the contacts at Acme Corp?",
+      "expectedFacts": ["Alice Johnson", "Marcus Webb", "Diana Patel"],
+      "category": "relationship",
+      "notes": "Tests contact-to-company relationship retrieval"
+    },
+    {
+      "id": "Q02",
+      "question": "What is the largest deal by amount?",
+      "expectedFacts": ["Globex Enterprise Platform", "145000"],
+      "category": "aggregate_superlative",
+      "notes": "Tests superlative retrieval — largest single deal"
+    },
+    {
+      "id": "Q03",
+      "question": "What deals does Globex have?",
+      "expectedFacts": ["Globex Enterprise Platform", "Globex Supply Chain AI", "Globex ERP Integration"],
+      "category": "relationship",
+      "notes": "Tests all deals linked to a company"
+    },
+    {
+      "id": "Q04",
+      "question": "How many contacts are in the customer stage?",
+      "expectedFacts": ["customer"],
+      "category": "aggregate_count",
+      "notes": "Tests aggregate count of contacts by stage"
+    },
+    {
+      "id": "Q05",
+      "question": "What is Alice Johnson's title and company?",
+      "expectedFacts": ["VP Engineering", "Acme Corp"],
+      "category": "entity_lookup",
+      "notes": "Tests single entity attribute retrieval with company relationship"
+    },
+    {
+      "id": "Q06",
+      "question": "Which deals are currently in the negotiation stage?",
+      "expectedFacts": ["negotiation"],
+      "category": "filter",
+      "notes": "Tests filtering deals by stage"
+    },
+    {
+      "id": "Q07",
+      "question": "Who owns the Globex Enterprise Platform deal?",
+      "expectedFacts": ["Sarah Kim"],
+      "category": "entity_lookup",
+      "notes": "Tests deal owner lookup"
+    },
+    {
+      "id": "Q08",
+      "question": "What is the total value of all closed_won deals?",
+      "expectedFacts": ["closed_won"],
+      "category": "aggregate_superlative",
+      "notes": "Tests aggregate sum of deals by stage"
+    },
+    {
+      "id": "Q09",
+      "question": "What companies are in the Manufacturing industry?",
+      "expectedFacts": ["Globex", "Forge Manufacturing"],
+      "category": "filter",
+      "notes": "Tests filtering companies by industry"
+    },
+    {
+      "id": "Q10",
+      "question": "What is Bob Chen's title and what company does he work at?",
+      "expectedFacts": ["CEO", "Initech"],
+      "category": "entity_lookup",
+      "notes": "Tests contact attribute + company relationship"
+    },
+    {
+      "id": "Q11",
+      "question": "Which deals does Sarah Kim own?",
+      "expectedFacts": ["Sarah Kim"],
+      "category": "filter",
+      "notes": "Tests deals owned by a specific sales rep"
+    },
+    {
+      "id": "Q12",
+      "question": "What is the second largest deal?",
+      "expectedFacts": ["Quantum Security Platform", "128000"],
+      "category": "aggregate_superlative",
+      "notes": "Tests second-largest deal — superlative"
+    },
+    {
+      "id": "Q13",
+      "question": "What is Quantum Systems' industry and number of employees?",
+      "expectedFacts": ["Defense", "250"],
+      "category": "entity_lookup",
+      "notes": "Tests company attribute retrieval"
+    },
+    {
+      "id": "Q14",
+      "question": "Which contacts work in New York?",
+      "expectedFacts": ["New York"],
+      "category": "filter",
+      "notes": "Tests contacts at companies in New York (indirect — via company city)"
+    },
+    {
+      "id": "Q15",
+      "question": "How many deals are in the proposal stage?",
+      "expectedFacts": ["proposal"],
+      "category": "aggregate_count",
+      "notes": "Tests count of deals by stage"
+    },
+    {
+      "id": "Q16",
+      "question": "What deals does Zenith Capital have and what are their amounts?",
+      "expectedFacts": ["Zenith Deal Flow Platform", "95000", "Zenith LP Reporting Suite", "52000"],
+      "category": "relationship",
+      "notes": "Tests all deals for a company with amounts"
+    },
+    {
+      "id": "Q17",
+      "question": "Who are the contacts at Forge Manufacturing and what are their titles?",
+      "expectedFacts": ["George Lewis", "COO", "Hannah Walker", "VP Operations"],
+      "category": "relationship",
+      "notes": "Tests multiple contacts at a company with titles"
+    },
+    {
+      "id": "Q18",
+      "question": "What is the Quantum Security Platform deal worth and what stage is it in?",
+      "expectedFacts": ["128000", "closed_won"],
+      "category": "entity_lookup",
+      "notes": "Tests deal attribute lookup by name"
+    },
+    {
+      "id": "Q19",
+      "question": "Which companies have more than 200 employees?",
+      "expectedFacts": ["Globex", "BlueSky Industries", "Forge Manufacturing"],
+      "category": "aggregate_superlative",
+      "notes": "Tests companies filtered by employee count (superlative threshold)"
+    },
+    {
+      "id": "Q20",
+      "question": "What is the BlueSky MES Upgrade deal amount and who owns it?",
+      "expectedFacts": ["112000", "Alex Brown"],
+      "category": "entity_lookup",
+      "notes": "Tests deal amount + owner lookup"
+    },
+    {
+      "id": "Q21",
+      "question": "What deals has Tom Garcia closed?",
+      "expectedFacts": ["Tom Garcia", "closed_won"],
+      "category": "filter",
+      "notes": "Tests closed deals by sales rep"
+    },
+    {
+      "id": "Q22",
+      "question": "Which companies are in the Finance or Financial Services industries?",
+      "expectedFacts": ["Summit Ventures", "Apex Financial"],
+      "category": "filter",
+      "notes": "Tests industry filter across related categories"
+    }
+  ]
+}

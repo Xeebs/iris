@@ -95,6 +95,45 @@ describe('PostgresConnector', () => {
     });
   });
 
+  describe('FK relationship extraction', () => {
+    it('extracts belongs_to relationships for FK columns', async () => {
+      const configWithFk = {
+        connectionString: 'postgres://user:pass@localhost:5432/testdb',
+        tables: [
+          { name: 'contacts', entityType: 'contact', labelColumn: 'name' },
+          { name: 'companies', entityType: 'company', labelColumn: 'name' },
+        ],
+      };
+
+      // connect: SELECT 1, then FK query returns one FK (contacts.company_id → companies.id)
+      mockSql
+        .mockResolvedValueOnce([{ '?column?': 1 }]) // SELECT 1
+        .mockResolvedValueOnce([
+          { table_name: 'contacts', column_name: 'company_id', foreign_table_name: 'companies', foreign_column_name: 'id' },
+        ]); // FK query
+
+      const conn = new PostgresConnector();
+      await conn.connect(configWithFk);
+
+      const contactRow = { id: '5', name: 'Alice', company_id: '3', updated_at: new Date() };
+      mockSql
+        .mockResolvedValueOnce([contactRow]) // first page of contacts
+        .mockResolvedValue([]);              // empty second pages
+
+      const entities = [];
+      for await (const entity of conn.sync({ entityTypes: ['contact'] })) {
+        entities.push(entity);
+      }
+
+      expect(entities).toHaveLength(1);
+      expect(entities[0]?.relationships).toHaveLength(1);
+      expect(entities[0]?.relationships?.[0]).toMatchObject({
+        type: 'belongs_to',
+        targetId: 'postgres:company:3',
+      });
+    });
+  });
+
   describe('sync()', () => {
     it('throws NOT_CONNECTED when not connected', async () => {
       await expect(async () => {

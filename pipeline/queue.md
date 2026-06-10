@@ -27,22 +27,9 @@ Completed tasks are moved to `pipeline/queue-archive.md` by `scripts/archive-que
 
 > While `docs/SLICE_2.md` reads `NOT ACHIEVED`, the pipeline selects ONLY from this layer, the CI gate, and the in-flight Layer 77 task. Goal: the owner connects a real data source, registers Iris in their own Claude Code, and gets correct answers with real embeddings — accuracy and token cost measured by an eval harness.
 
-### Task: S2-1 Real embedding provider end-to-end (Ollama, configurable dimensions)
-- **Layer**: 79 — Slice 2
-- **Status**: COMMITTED
-- **Priority**: Critical
-- **Description**: Make the existing `OllamaProvider` (`packages/semantic-core/src/providers/ollama-provider.ts`, selected via `EMBEDDING_PROVIDER=ollama` in `embedding-provider.ts`) work end to end on the Pi with `nomic-embed-text`. Ollama is already installed locally (see `packages/core` local-llm integration); pull the model with `ollama pull nomic-embed-text` and verify the provider returns real vectors. Critical issue: nomic-embed-text is 768-dim but the pgvector schema is `vector(1536)` — make the vector dimension follow the configured provider (provider exposes `dimensions`; migrations/PgvectorStore take the dimension from config), and fail hard at startup on a store/provider dimension mismatch with a clear error telling the user a re-index is required. Never pad or truncate vectors. Add unit tests for the dimension-mismatch guard and an integration test that indexes + retrieves 5 entities through Ollama for real (skip with a clear message if Ollama is unreachable). Verify locally: `EMBEDDING_PROVIDER=ollama` + `pnpm vitest run` on the affected files, then a manual index/retrieve round trip.
-- **Files**:
-  - packages/semantic-core/src/providers/ollama-provider.ts
-  - packages/semantic-core/src/embedding-provider.ts
-  - packages/semantic-core/src/pgvector-store.ts (dimension from config + mismatch guard)
-  - apps/api/migrations/ (new migration if the vector column dimension must change)
-- **Depends on**: nothing
-- **Added**: 2026-06-10
-
 ### Task: S2-2 Real data source — seeded business Postgres through the postgres connector
 - **Layer**: 79 — Slice 2
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: Critical
 - **Description**: Replace fixture JSON with a live data source. Write `scripts/seed-business-db.sql`: a realistic small-business dataset (~50 contacts, ~20 companies, ~30 deals/orders with owners, stages, amounts, dates — realistic names and relationships, no PII patterns that would trip the pii exclusion rules) loaded into a dedicated local Postgres database (`iris_demo_source`). Then verify the existing postgres connector (`packages/connectors/postgres/`) can connect to it, discover the schema, and `sync()` SemanticEntities through the real REST + BullMQ worker path established by Slice 1 (`POST /api/v1/connectors` → `POST /:id/sync` → sync-worker → indexer). Fix whatever breaks — transformer gaps, type mapping, relationship extraction from foreign keys. The seeded dataset must support aggregate questions (count/sum/largest) and relationship questions (who works where, which contacts belong to which company). Document the expected facts in `scripts/eval-questions.json` alongside S2-3. Verify locally with a full sync run and an entity-count + relationship spot check against the vector store.
 - **Files**:
