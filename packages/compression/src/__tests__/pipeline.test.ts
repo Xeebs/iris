@@ -74,6 +74,15 @@ describe('serializeEntity()', () => {
     const entity = makeEntity({ relationships: [] });
     expect(serializeEntity(entity)).not.toContain('relations:');
   });
+
+  it('does not crash when relationships arrives as a JSON string (slice-demo regression)', () => {
+    const entity = makeEntity({
+      relationships: '[{"type":"belongs_to","targetId":"hubspot:company:99"}]' as unknown as SemanticEntity['relationships'],
+    });
+    const out = serializeEntity(entity);
+    expect(out).toContain('[contact]');
+    expect(out).not.toContain('relations:');
+  });
 });
 
 describe('serialize()', () => {

@@ -18,10 +18,14 @@ export function serializeEntity(entity: SemanticEntity): string {
     .map(([k, v]) => `  ${k}: ${formatValue(v as AttributeValue)}`)
     .join('\n');
 
+  // relationships round-trips through JSONB and has arrived as a string in
+  // CI — a non-array here must degrade to "no relations", never crash the
+  // whole context response.
+  const relationships = Array.isArray(entity.relationships) ? entity.relationships : [];
   const rels =
-    entity.relationships.length > 0
+    relationships.length > 0
       ? '\n  relations: ' +
-        entity.relationships.map((r) => `${r.type}→${r.targetId}`).join(', ')
+        relationships.map((r) => `${r.type}→${r.targetId}`).join(', ')
       : '';
 
   return `[${entity.type}] ${entity.label}${attrs ? '\n' + attrs : ''}${rels}`;

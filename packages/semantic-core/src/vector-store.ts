@@ -60,6 +60,75 @@ export interface VectorStore {
 }
 
 /**
+ * Normalize a JSONB `relationships` value read from Postgres into the
+ * `SemanticEntity['relationships']` array shape.
+ *
+ * In CI the slice demo provably receives this column as a JSON *string*
+ * (pre-2dec8b7 runs crashed iterating it as characters; post-2dec8b7 runs
+ * crash on `.map is not a function` after `.length > 0` passes — both are
+ * only consistent with a string). Every writer in the current source passes
+ * a proper array, so tolerate string/malformed values at the single read
+ * choke point instead of letting one bad row poison every query.
+ *
+ * @param value - Raw column value from a jsonb read
+ * @returns A well-formed relationships array (malformed entries dropped)
+ */
+export function normalizeRelationships(value: unknown): SemanticEntity['relationships'] {
+  let parsed: unknown = value;
+  if (typeof value === 'string') {
+    try {
+      parsed = JSON.parse(value);
+    } catch {
+      log.warn('relationships column is a non-JSON string; treating as empty', {
+        sample: value.slice(0, 80),
+      });
+      return [];
+    }
+  }
+  if (!Array.isArray(parsed)) {
+    if (parsed !== null && parsed !== undefined) {
+      log.warn('relationships column is not an array; treating as empty', {
+        valueType: typeof parsed,
+      });
+    }
+    return [];
+  }
+  return parsed.filter(
+    (r): r is { type: string; targetId: string } =>
+      typeof r === 'object' &&
+      r !== null &&
+      typeof (r as { type?: unknown }).type === 'string' &&
+      typeof (r as { targetId?: unknown }).targetId === 'string',
+  );
+}
+
+/**
+ * Normalize a JSONB `attributes` value read from Postgres into the
+ * `SemanticEntity['attributes']` record shape. Same rationale as
+ * {@link normalizeRelationships}: tolerate a double-encoded string.
+ *
+ * @param value - Raw column value from a jsonb read
+ * @returns A plain attribute record (empty when malformed)
+ */
+export function normalizeAttributes(value: unknown): SemanticEntity['attributes'] {
+  let parsed: unknown = value;
+  if (typeof value === 'string') {
+    try {
+      parsed = JSON.parse(value);
+    } catch {
+      log.warn('attributes column is a non-JSON string; treating as empty', {
+        sample: value.slice(0, 80),
+      });
+      return {};
+    }
+  }
+  if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+    return {};
+  }
+  return parsed as SemanticEntity['attributes'];
+}
+
+/**
  * Postgres + pgvector implementation of VectorStore.
  * Stores entity metadata alongside the embedding vector in a single table.
  */
@@ -142,8 +211,8 @@ export class PgvectorStore implements VectorStore {
         id: string;
         type: string;
         label: string;
-        attributes: Record<string, unknown>;
-        relationships: Array<{ type: string; targetId: string }>;
+        attributes: unknown;
+        relationships: unknown;
         last_modified: Date;
         source_id: string;
         score: number;
@@ -165,8 +234,8 @@ export class PgvectorStore implements VectorStore {
         id: r.id,
         type: r.type,
         label: r.label,
-        attributes: r.attributes as SemanticEntity['attributes'],
-        relationships: r.relationships,
+        attributes: normalizeAttributes(r.attributes),
+        relationships: normalizeRelationships(r.relationships),
         lastModified: r.last_modified,
         sourceId: r.source_id,
       },
@@ -186,8 +255,8 @@ export class PgvectorStore implements VectorStore {
         id: string;
         type: string;
         label: string;
-        attributes: Record<string, unknown>;
-        relationships: Array<{ type: string; targetId: string }>;
+        attributes: unknown;
+        relationships: unknown;
         last_modified: Date;
         source_id: string;
       }>
@@ -204,8 +273,8 @@ export class PgvectorStore implements VectorStore {
       id: r.id,
       type: r.type,
       label: r.label,
-      attributes: r.attributes as SemanticEntity['attributes'],
-      relationships: r.relationships,
+      attributes: normalizeAttributes(r.attributes),
+      relationships: normalizeRelationships(r.relationships),
       lastModified: r.last_modified,
       sourceId: r.source_id,
     }));
@@ -217,8 +286,8 @@ export class PgvectorStore implements VectorStore {
         id: string;
         type: string;
         label: string;
-        attributes: Record<string, unknown>;
-        relationships: Array<{ type: string; targetId: string }>;
+        attributes: unknown;
+        relationships: unknown;
         last_modified: Date;
         source_id: string;
       }>
@@ -236,8 +305,8 @@ export class PgvectorStore implements VectorStore {
       id: r.id,
       type: r.type,
       label: r.label,
-      attributes: r.attributes as SemanticEntity['attributes'],
-      relationships: r.relationships,
+      attributes: normalizeAttributes(r.attributes),
+      relationships: normalizeRelationships(r.relationships),
       lastModified: r.last_modified,
       sourceId: r.source_id,
     };
@@ -262,8 +331,8 @@ export class PgvectorStore implements VectorStore {
       id: string;
       type: string;
       label: string;
-      attributes: Record<string, unknown>;
-      relationships: Array<{ type: string; targetId: string }>;
+      attributes: unknown;
+      relationships: unknown;
       last_modified: Date;
       source_id: string;
       score: number;
@@ -286,8 +355,8 @@ export class PgvectorStore implements VectorStore {
         id: r.id,
         type: r.type,
         label: r.label,
-        attributes: r.attributes as SemanticEntity['attributes'],
-        relationships: r.relationships,
+        attributes: normalizeAttributes(r.attributes),
+        relationships: normalizeRelationships(r.relationships),
         lastModified: r.last_modified,
         sourceId: r.source_id,
       },
