@@ -109,6 +109,14 @@ import { createGovernanceDashboardRoutes } from './routes/governance-dashboard.j
 import { createAdminCostAuditRoutes } from './routes/admin-cost-audit.js';
 import { createWorkspaceCostRoutes } from './routes/workspace-costs.js';
 import { createComputedMetricsRoutes } from './routes/computed-metrics.js';
+import { makeApiVersionAdminRouter } from './routes/api-version-admin.js';
+import { makeBusinessRulesRouter } from './routes/business-rules.js';
+import { createCacheOptimizationRoutes } from './routes/cache-optimization.js';
+import { createCachePrewarmingRoutes } from './routes/cache-prewarming.js';
+import { createConnectorPerformanceRoutes } from './routes/connector-performance.js';
+import { createDataQualityRoutes } from './routes/data-quality.js';
+import { makeQuotaRouter } from './routes/quota-management.js';
+import { createSloAdminRoutes } from './routes/slo-admin.js';
 import { openApiSpec } from './openapi.js';
 
 export { createApp };
@@ -328,6 +336,17 @@ function createApp(
   authed.route('/admin/cost-audit', createAdminCostAuditRoutes(sql));
   authed.route('/workspaces', createWorkspaceCostRoutes(sql));
   authed.route('/metrics/computed', createComputedMetricsRoutes(sql));
+
+  // Batch 5: api-version-admin, business-rules, cache-optimization, cache-prewarming,
+  // connector-performance, data-quality, quota-management, slo-admin.
+  authed.route('/admin/api-versions', makeApiVersionAdminRouter(sql));
+  authed.route('/admin/rules', makeBusinessRulesRouter(sql));
+  authed.route('/cache-optimization', createCacheOptimizationRoutes(sql));
+  authed.route('/cache-prewarming', createCachePrewarmingRoutes(sqlFn));
+  authed.route('/connectors', createConnectorPerformanceRoutes(sql as never));
+  authed.route('/data-quality', createDataQualityRoutes(sql as never));
+  authed.route('/quota', makeQuotaRouter(sqlFn));
+  authed.route('/admin/slos', createSloAdminRoutes(sql as never));
 
   // Webhook routes: inbound (unauthenticated) + events status (authenticated)
   app.route('/api/v1/webhooks', createWebhookRoutes(sql));
