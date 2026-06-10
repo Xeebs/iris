@@ -135,7 +135,19 @@ export function registerQueryContext(
 
         return { content: [{ type: 'text' as const, text }] };
       } catch (err) {
-        log.error('query-context failed', { error: err, workspaceId: params.workspaceId });
+        // Spell out Error fields — a raw Error under a non-`err` pino key
+        // serializes to only its enumerable props (e.g. `{code}` for
+        // postgres.js errors), hiding message/stack. postgres.js also attaches
+        // non-enumerable `query`/`parameters` to build-time failures.
+        const e = err as Partial<Error> & { code?: unknown; query?: unknown };
+        log.error('query-context failed', {
+          errorName: e.name,
+          errorMessage: e.message,
+          errorCode: typeof e.code === 'string' ? e.code : undefined,
+          errorStack: e.stack,
+          failedQuery: typeof e.query === 'string' ? e.query.slice(0, 500) : undefined,
+          workspaceId: params.workspaceId,
+        });
         const message = err instanceof Error ? err.message : String(err);
         return {
           content: [{ type: 'text' as const, text: `Error: ${message}` }],

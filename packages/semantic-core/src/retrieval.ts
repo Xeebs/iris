@@ -244,7 +244,18 @@ async function expandViaRelationships(
   } else {
     // Fallback path: use inline entity.relationships array and look up by ID
     for (const entity of entities) {
-      for (const rel of entity.relationships) {
+      // relationships round-trips through JSONB — tolerate malformed entries
+      // (missing/non-string targetId) instead of poisoning the whole query:
+      // postgres.js rejects undefined parameters with UNDEFINED_VALUE.
+      const rels = Array.isArray(entity.relationships) ? entity.relationships : [];
+      for (const rel of rels) {
+        if (typeof rel?.targetId !== 'string' || rel.targetId.length === 0) {
+          log.warn('Skipping malformed relationship during expansion', {
+            entityId: entity.id,
+            relationship: JSON.stringify(rel),
+          });
+          continue;
+        }
         if (seenIds.has(rel.targetId)) continue;
 
         const found = await vectorStore.getById(opts.workspaceId, rel.targetId);
