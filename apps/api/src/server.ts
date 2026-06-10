@@ -87,6 +87,13 @@ import { createNlpConfigRoutes } from './routes/nlp-config.js';
 import { createSsoConfigRoutes } from './routes/sso-config.js';
 import { createDataQualityEngineRoutes } from './routes/data-quality-engine-routes.js';
 import { createDemoBootstrapRoutes } from './routes/demo-bootstrap.js';
+import { createApiKeyManagementRoutes } from './routes/api-key-management.js';
+import { createSearchRoutes } from './routes/search.js';
+import { createUsageRoutes } from './routes/usage.js';
+import { createMcpToolsRoutes } from './routes/mcp-tools.js';
+import { createQueryAnalyticsRoutes } from './routes/query-analytics.js';
+import { createConnectorHealthRoutes } from './routes/connector-health.js';
+import { createDocumentsRoutes } from './routes/documents.js';
 import { openApiSpec } from './openapi.js';
 
 export { createApp };
@@ -270,6 +277,21 @@ function createApp(
   // The route uses a narrow tagged-template SqlFn (for mockability); the postgres
   // Sql client satisfies that contract at runtime but differs nominally from Promise.
   authed.route('/', createEntitySearchRoutes(sql as unknown as Parameters<typeof createEntitySearchRoutes>[0]));
+
+  // Batch 2: api-keys, search, usage/limits, mcp-tools, query-analytics,
+  // connector-health sub-paths, documents.
+  // Routes that declare a local SqlFn typedef need the same cast as entity-search:
+  // the postgres Sql<{}> satisfies the contract at runtime but not structurally.
+  type SqlFn = (strings: TemplateStringsArray, ...values: unknown[]) => Promise<unknown[]>;
+  const sqlFn = sql as unknown as SqlFn;
+  const masterSecret = process.env['MASTER_SECRET'] ?? '';
+  authed.route('/api-keys', createApiKeyManagementRoutes(sql, masterSecret));
+  authed.route('/search', createSearchRoutes(sql));
+  authed.route('/', createUsageRoutes(sqlFn));
+  authed.route('/mcp-tools', createMcpToolsRoutes(sqlFn));
+  authed.route('/query-analytics', createQueryAnalyticsRoutes(sql));
+  authed.route('/connectors', createConnectorHealthRoutes(sqlFn));
+  authed.route('/documents', createDocumentsRoutes(sql as never));
 
   // Webhook routes: inbound (unauthenticated) + events status (authenticated)
   app.route('/api/v1/webhooks', createWebhookRoutes(sql));

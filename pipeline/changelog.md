@@ -4,6 +4,7 @@ Completed tasks are logged here by the daemon after each successful commit.
 
 ---
 
+- 2026-06-10 | feat(api): mount batch-2 routes in server.ts — api-keys, search, usage, mcp-tools, query-analytics, connector-health, documents; fix pre-existing data-quality-engine test failures (3 missing routes + camelCase transform)
 - 2026-06-10 | milestone: VERTICAL SLICE ACHIEVED — slice-demo CI green on commit 83ad10a, full connect→sync→index→serve→query→measure chain verified twice from clean state; pipeline returns to breadth work
 - 2026-06-09 | fix(semantic-core): CI build fix — AttributeValue type in applyFieldMasking (commit 94ce402)
 - 2026-06-09 | feat(semantic-core,api,dashboard): streaming context endpoint with SSE chunking — StreamingContextServer, /streaming-queries routes, stream_metrics migration, StreamProgressMonitor component, 34 tests (commit 93d808a)

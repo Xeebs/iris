@@ -13,6 +13,10 @@ const resolveIssueSchema = z.object({
   remediationNotes: z.string().max(1000).optional(),
 });
 
+const remediationBodySchema = z.object({
+  workspaceId: z.string().min(1),
+});
+
 const issueListQuerySchema = z.object({
   severity: z.enum(['low', 'medium', 'high']).optional(),
   issueType: z.enum(['required_field_missing', 'type_mismatch', 'invalid_format', 'outlier']).optional(),
@@ -99,7 +103,48 @@ export function createDataQualityEngineRoutes(sql: SqlClient) {
   const app = new Hono();
 
   const getWorkspaceId = (c: Context) =>
-    (c.get('workspaceId') as string | undefined) ?? c.req.header('x-workspace-id');
+    (c.get('workspaceId') as string | undefined) ??
+    c.req.header('x-workspace-id') ??
+    c.req.query('workspaceId');
+
+  /** GET /data-quality/score?workspaceId=xxx — overall quality score for a workspace */
+  app.get('/score', async (c) => {
+    const workspaceId = getWorkspaceId(c);
+    if (!workspaceId) return c.json({ error: { code: 'UNAUTHORIZED', message: 'Missing workspace' } }, 401);
+    const [row] = await sql<{ workspace_id: string; weighted_overall: string }[]>`
+      SELECT workspace_id, weighted_overall
+      FROM data_quality_scores
+      WHERE workspace_id = ${workspaceId}
+      ORDER BY computed_at DESC
+      LIMIT 1
+    `;
+    return c.json({ data: { overallScore: parseFloat(row?.weighted_overall ?? '0') } });
+  });
+
+  /** GET /data-quality/by-type?workspaceId=xxx — per-entity-type quality breakdown */
+  app.get('/by-type', async (c) => {
+    const workspaceId = getWorkspaceId(c);
+    if (!workspaceId) return c.json({ error: { code: 'UNAUTHORIZED', message: 'Missing workspace' } }, 401);
+    const rows = await sql<{
+      entity_type: string; entity_count: string;
+      avg_completeness: string; avg_freshness: string;
+      avg_accuracy: string; avg_overall: string;
+    }[]>`
+      SELECT entity_type, entity_count, avg_completeness, avg_freshness, avg_accuracy, avg_overall
+      FROM data_quality_scores_by_type
+      WHERE workspace_id = ${workspaceId}
+      ORDER BY avg_overall ASC
+    `;
+    const data = rows.map((r) => ({
+      entityType: r.entity_type,
+      entityCount: parseInt(r.entity_count, 10),
+      avgCompleteness: parseFloat(r.avg_completeness),
+      avgFreshness: parseFloat(r.avg_freshness),
+      avgAccuracy: parseFloat(r.avg_accuracy),
+      avgOverallScore: parseFloat(r.avg_overall),
+    }));
+    return c.json({ data, meta: { total: data.length } });
+  });
 
   /** POST /data-quality/scans/:connectorId — start a quality scan for a connector */
   app.post('/scans/:connectorId', async (c) => {
@@ -178,15 +223,22 @@ export function createDataQualityEngineRoutes(sql: SqlClient) {
     const issueTypeVal = issueType ?? null;
     const cursorVal = cursor ?? null;
 
-    const rows = await sql<(IssueRow & { connector_id: string })[]>`
-      SELECT i.*, s.connector_id
-      FROM data_quality_issues i
-      JOIN data_quality_scans s ON i.scan_id = s.scan_id
-      WHERE s.workspace_id = ${workspaceId}
-        AND (${severityVal} IS NULL OR i.severity = ${severityVal})
-        AND (${issueTypeVal} IS NULL OR i.issue_type = ${issueTypeVal})
-        AND (${cursorVal} IS NULL OR i.issue_id::text > ${cursorVal})
-      ORDER BY i.issue_id
+    const rows = await sql<{
+      issue_id: string; workspace_id: string; issue_type: string; entity_type: string;
+      affected_count: number; severity: string; description: string | null;
+      first_detected_at: Date; connector_id: string | null;
+    }[]>`
+      SELECT
+        qi.issue_id, qi.workspace_id, qi.issue_type, qi.entity_type,
+        qi.affected_count, qi.severity, qi.description, qi.first_detected_at,
+        NULL::text AS connector_id
+      FROM quality_issues qi
+      WHERE qi.workspace_id = ${workspaceId}
+        AND qi.resolved_at IS NULL
+        AND (${severityVal} IS NULL OR qi.severity = ${severityVal})
+        AND (${issueTypeVal} IS NULL OR qi.issue_type = ${issueTypeVal})
+        AND (${cursorVal} IS NULL OR qi.issue_id::text > ${cursorVal})
+      ORDER BY qi.issue_id
       LIMIT ${limit + 1}
     `;
 
@@ -194,7 +246,50 @@ export function createDataQualityEngineRoutes(sql: SqlClient) {
     const page = hasMore ? rows.slice(0, limit) : rows;
     const nextCursor = hasMore ? (page[page.length - 1]?.issue_id ?? null) : null;
 
-    return c.json({ data: page, meta: { hasMore, nextCursor } });
+    const data = page.map((r) => ({
+      issueId: r.issue_id,
+      workspaceId: r.workspace_id,
+      issueType: r.issue_type,
+      entityType: r.entity_type,
+      affectedCount: r.affected_count,
+      severity: r.severity,
+      description: r.description,
+      firstDetectedAt: r.first_detected_at,
+      connectorId: r.connector_id,
+    }));
+
+    return c.json({ data, meta: { total: data.length, hasMore, nextCursor } });
+  });
+
+  /** POST /data-quality/issues/:issueId/apply-remediation — apply a pending remediation action */
+  app.post('/issues/:issueId/apply-remediation', async (c) => {
+    let body: unknown;
+    try { body = await c.req.json(); } catch { body = {}; }
+    const parsed = remediationBodySchema.safeParse(body);
+    if (!parsed.success) {
+      return c.json({ error: { code: 'VALIDATION_ERROR', message: parsed.error.message } }, 400);
+    }
+
+    const { workspaceId } = parsed.data;
+    const issueId = c.req.param('issueId');
+
+    const [action] = await sql<{ action_id: string; action_type: string }[]>`
+      SELECT action_id, action_type
+      FROM remediation_actions
+      WHERE issue_id = ${issueId} AND workspace_id = ${workspaceId} AND status = 'pending'
+      ORDER BY created_at DESC
+      LIMIT 1
+    `;
+    if (!action) return c.json({ error: { code: 'NOT_FOUND', message: 'No pending remediation action' } }, 404);
+
+    await sql`
+      UPDATE remediation_actions
+      SET status = 'applied', applied_at = NOW()
+      WHERE action_id = ${action.action_id}
+    `;
+
+    log.info('Remediation applied', { issueId, workspaceId, actionType: action.action_type });
+    return c.json({ data: { status: 'applied', actionType: action.action_type } });
   });
 
   /** POST /data-quality/issues/:issueId/resolve — mark an issue resolved */
