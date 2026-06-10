@@ -2,12 +2,15 @@
 """Iris build pipeline daemon.
 
 Runs the Claude build pipeline in a continuous loop. Only pauses when:
-  - Token budget >= 95% of configured limit   →  sleeps until window resets
   - Active model's usage limit is exhausted   →  falls back to the next model in
                                                  CLAUDE_MODEL_CHAIN (sonnet → opus → fable);
                                                  sleeps only when every model is exhausted
   - The task queue is exhausted               →  sleeps 1 hour then researches new tasks
   - Unexpected Claude exit                    →  retries after 2 minutes
+
+There is NO token-budget throttling: the daemon never estimates usage or
+pre-emptively sleeps. It runs tasks whenever there is work, and only backs
+off when the API itself rejects a request with a usage-limit error.
 """
 
 import fcntl
@@ -26,8 +29,6 @@ from zoneinfo import ZoneInfo
 IRIS        = Path(__file__).resolve().parent.parent
 STATE_FILE  = IRIS / "pipeline" / "state.json"
 DAEMON_FILE = IRIS / "pipeline" / "daemon.json"
-USAGE_FILE  = IRIS / "pipeline" / "usage.json"
-SESSION_FILE = IRIS / "pipeline" / "session-tokens.json"   # live in-flight session counters
 WORKER_LOCK  = IRIS / "pipeline" / "worker.lock"           # shared with heartbeat.sh
 QUEUE_MD    = IRIS / "pipeline" / "queue.md"
 LOG_DIR     = IRIS / "logs"
@@ -53,13 +54,6 @@ MODEL_CHAIN: list[str] = []   # populated in main() after env is loaded
 # carries no reset timestamp (CLAUDE_MODEL_EXHAUSTED_HOLD overrides, seconds):
 MODEL_EXHAUSTED_HOLD = 3600.0
 
-# ── token budget ─────────────────────────────────────────────────────────────
-# Set CLAUDE_TOKEN_BUDGET in .env.local to match your plan's per-window limit.
-# Set CLAUDE_BUDGET_WINDOW_HOURS to match the rate-limit reset window (default: 5h).
-BUDGET_LIMIT        = int(float(os.environ.get("CLAUDE_TOKEN_BUDGET", "2000000")))
-BUDGET_WINDOW_HOURS = float(os.environ.get("CLAUDE_BUDGET_WINDOW_HOURS", "5"))
-BUDGET_THRESHOLD    = 0.95   # stop at 95%
-
 BASE_PROMPT = """\
 Run the Iris build pipeline as defined in CLAUDE.md. This is a wake-up trigger \
 — resume any in-flight work or start fresh if idle.
@@ -74,12 +68,9 @@ the daemon respawns a fresh session in seconds; short sessions keep context lean
 you the result at the top of this prompt
 - Spawn the task-researcher subagent whenever fewer than 3 UNWORKED items remain in pipeline/queue.md
 - If you find the queue has no UNWORKED High or Medium tasks, write current_phase=IDLE and exit.
-- Only stop if: (a) the Claude API returns a rate-limit error, (b) no UNWORKED tasks remain, \
-or (c) the token budget is at or above 95% of the session limit (see TOKEN BUDGET below)
+- Only stop if: (a) the Claude API returns a rate-limit error, or (b) no UNWORKED tasks remain
 - On rate-limit: write rate_limit_hit=true and current phase/task to pipeline/state.json, then exit
 - On queue exhausted: write current_phase=IDLE to pipeline/state.json, then exit
-- On budget threshold reached: write current phase/task to pipeline/state.json, then exit cleanly \
-(do NOT start a new task if you estimate it cannot complete within the remaining budget)
 - Write pipeline/state.json after every phase transition so a crash is recoverable
 
 Do not treat this as a one-task-per-invocation boundary. Drive all work forward until genuinely blocked.\
@@ -89,17 +80,6 @@ _running     = True
 _wake_early  = False
 _current_proc: subprocess.Popen | None = None
 _started_at  = datetime.now(timezone.utc).isoformat()
-
-# shared token counter updated by the stdout-reader thread
-_session_tokens_lock   = threading.Lock()
-_session_input_tokens  = 0
-_session_output_tokens = 0
-_session_cache_read     = 0
-_session_cache_creation = 0
-_session_msg_count      = 0
-_budget_kill_triggered = False
-_last_session_write    = 0.0
-SESSION_WRITE_INTERVAL = 5.0   # seconds between live session-token file updates
 
 # model fallback state (reader thread sets the flags; main loop consumes them)
 _model_exhausted_until: dict[str, float] = {}   # model id → epoch when usable again
@@ -182,79 +162,6 @@ def _scan_for_limit(text: str) -> None:
             pass  # unparseable timezone/format — fall back to the default hold
 
 
-# ── usage file ────────────────────────────────────────────────────────────────
-
-def read_usage() -> dict:
-    try:
-        return json.loads(USAGE_FILE.read_text())
-    except Exception:
-        return {"sessions": []}
-
-
-def write_usage(usage: dict) -> None:
-    tmp = USAGE_FILE.with_suffix(".tmp")
-    tmp.write_text(json.dumps(usage, indent=2))
-    tmp.replace(USAGE_FILE)
-
-
-def get_window_tokens(usage: dict) -> int:
-    """Sum tokens from sessions that fall inside the current budget window."""
-    cutoff = time.time() - (BUDGET_WINDOW_HOURS * 3600)
-    return sum(
-        s.get("input_tokens", 0) + s.get("output_tokens", 0)
-        for s in usage.get("sessions", [])
-        if s.get("timestamp", 0) > cutoff
-    )
-
-
-def record_session(
-    input_tokens: int,
-    output_tokens: int,
-    cache_read: int = 0,
-    cache_creation: int = 0,
-    model: str | None = None,
-) -> None:
-    usage    = read_usage()
-    sessions = usage.get("sessions", [])
-    sessions.append({
-        "timestamp":      time.time(),
-        "input_tokens":   input_tokens,
-        "output_tokens":  output_tokens,
-        "cache_read":     cache_read,
-        "cache_creation": cache_creation,
-        "model":          model,
-    })
-    # Prune entries older than 2× the window
-    cutoff   = time.time() - (BUDGET_WINDOW_HOURS * 3600 * 2)
-    sessions = [s for s in sessions if s.get("timestamp", 0) > cutoff]
-    usage["sessions"] = sessions
-    write_usage(usage)
-
-
-def budget_status() -> tuple[int, int, float]:
-    """Return (used_tokens, limit, pct_used) for the current window."""
-    used = get_window_tokens(read_usage())
-    pct  = used / BUDGET_LIMIT if BUDGET_LIMIT > 0 else 0.0
-    return used, BUDGET_LIMIT, pct
-
-
-def is_near_budget() -> bool:
-    _, _, pct = budget_status()
-    return pct >= BUDGET_THRESHOLD
-
-
-def seconds_until_window_resets() -> float:
-    """Seconds until the oldest in-window session falls out of scope."""
-    usage     = read_usage()
-    cutoff    = time.time() - (BUDGET_WINDOW_HOURS * 3600)
-    in_window = [s for s in usage.get("sessions", []) if s.get("timestamp", 0) > cutoff]
-    if not in_window:
-        return 60  # window already clear
-    oldest    = min(s["timestamp"] for s in in_window)
-    resets_at = oldest + (BUDGET_WINDOW_HOURS * 3600)
-    return max(60.0, resets_at - time.time())
-
-
 # ── helpers ──────────────────────────────────────────────────────────────────
 
 def _now_iso() -> str:
@@ -262,7 +169,6 @@ def _now_iso() -> str:
 
 
 def write_daemon(status: str, message: str, sleep_until: str | None = None) -> None:
-    used, limit, pct = budget_status()
     payload = {
         "pid":         os.getpid(),
         "status":      status,
@@ -271,12 +177,6 @@ def write_daemon(status: str, message: str, sleep_until: str | None = None) -> N
         "updated_at":  _now_iso(),
         "sleep_until": sleep_until,
         "model":       _active_model,
-        "token_budget": {
-            "used":         used,
-            "limit":        limit,
-            "pct":          round(pct * 100, 1),
-            "window_hours": BUDGET_WINDOW_HOURS,
-        },
     }
     tmp = DAEMON_FILE.with_suffix(".tmp")
     tmp.write_text(json.dumps(payload, indent=2))
@@ -344,13 +244,9 @@ def github_ci_status() -> tuple[str, str]:
 
 
 def build_prompt(ci_state: str = "unknown", ci_detail: str = "") -> str:
-    # Volatile lines go LAST and use coarse buckets so the prompt prefix stays
-    # byte-identical across rapid respawns — that keeps the Anthropic prompt
-    # cache warm (5-min TTL) instead of re-ingesting the full context each spawn.
-    used, limit, pct = budget_status()
-    pct_bucket       = int(pct * 100 // 5 * 5)
-    remaining_bucket = max(0, int((limit - used) // 100_000 * 100_000))
-
+    # Volatile lines go LAST so the prompt prefix stays byte-identical across
+    # rapid respawns — that keeps the Anthropic prompt cache warm (5-min TTL)
+    # instead of re-ingesting the full context each spawn.
     if ci_state == "red":
         ci_line = (
             f"\n\nCI STATUS (verified by the daemon just now): RED — {ci_detail}. "
@@ -364,13 +260,7 @@ def build_prompt(ci_state: str = "unknown", ci_detail: str = "") -> str:
     else:
         ci_line = ""
 
-    budget_line = (
-        f"\n\nTOKEN BUDGET: roughly {pct_bucket}% of the {limit:,}-token "
-        f"{BUDGET_WINDOW_HOURS:.0f}h window is used; at least {remaining_bucket:,} tokens remain. "
-        f"Hard stop at {BUDGET_THRESHOLD * 100:.0f}%. "
-        f"Do not start a new task if you estimate it cannot complete within the remaining budget."
-    )
-    return BASE_PROMPT + ci_line + budget_line
+    return BASE_PROMPT + ci_line
 
 
 def acquire_worker_lock(model: str):
@@ -398,29 +288,6 @@ def release_worker_lock(fd) -> None:
         pass
 
 
-def write_session_tokens(force: bool = False) -> None:
-    """Publish live in-flight session counters so the monitor can show real usage
-    mid-run (usage.json is only written when a session ends)."""
-    global _last_session_write
-    now = time.time()
-    if not force and now - _last_session_write < SESSION_WRITE_INTERVAL:
-        return
-    _last_session_write = now
-    with _session_tokens_lock:
-        payload = {
-            "model":                       _active_model,
-            "input_tokens":                _session_input_tokens,   # running max = current context size
-            "output_tokens":               _session_output_tokens,
-            "cache_read_input_tokens":     _session_cache_read,
-            "cache_creation_input_tokens": _session_cache_creation,
-            "messages":                    _session_msg_count,
-            "updated_at":                  _now_iso(),
-        }
-    tmp = SESSION_FILE.with_suffix(".tmp")
-    tmp.write_text(json.dumps(payload, indent=2))
-    tmp.replace(SESSION_FILE)
-
-
 # ── stream-json stdout reader ─────────────────────────────────────────────────
 
 def _extract_text(content: list) -> str:
@@ -436,12 +303,8 @@ def _stdout_reader(proc: subprocess.Popen, log_file_path: Path) -> None:
     """
     Read stream-json stdout line by line.
     - Writes human-readable output to the log file alongside raw JSON-L.
-    - Updates shared session token counters.
-    - Triggers a SIGTERM if the combined (historical + session) budget is hit.
+    - Scans CLI/error output for usage-limit errors (drives the model fallback).
     """
-    global _session_input_tokens, _session_output_tokens, _budget_kill_triggered
-    global _session_cache_read, _session_cache_creation, _session_msg_count
-
     with open(log_file_path, "a", buffering=1) as lf:
         for raw_line in proc.stdout:  # type: ignore[union-attr]
             lf.write(raw_line)
@@ -461,66 +324,16 @@ def _stdout_reader(proc: subprocess.Popen, log_file_path: Path) -> None:
             etype = event.get("type", "")
 
             if etype == "assistant":
-                msg     = event.get("message", {})
-                content = msg.get("content", [])
-                usage   = msg.get("usage", {})
-
+                content = event.get("message", {}).get("content", [])
                 text = " ".join(_extract_text(content).split())  # single line — keeps the log greppable
                 if text:
                     lf.write(f"[claude] {text[:500]}\n")
 
-                with _session_tokens_lock:
-                    _session_output_tokens += usage.get("output_tokens", 0)
-                    # input_tokens grows with context — keep the running max
-                    _session_input_tokens = max(
-                        _session_input_tokens,
-                        usage.get("input_tokens", 0)
-                        + usage.get("cache_read_input_tokens", 0)
-                        + usage.get("cache_creation_input_tokens", 0),
-                    )
-                    _session_cache_read     += usage.get("cache_read_input_tokens", 0)
-                    _session_cache_creation += usage.get("cache_creation_input_tokens", 0)
-                    _session_msg_count      += 1
-                write_session_tokens()
-
             elif etype == "result":
                 if event.get("is_error") or str(event.get("subtype", "")).startswith("error"):
                     _scan_for_limit(json.dumps(event))
-                usage = event.get("usage", {})
-                dur   = event.get("duration_ms", 0)
-                with _session_tokens_lock:
-                    # Authoritative totals override running estimates
-                    _session_input_tokens = max(
-                        _session_input_tokens,
-                        usage.get("input_tokens", 0)
-                        + usage.get("cache_read_input_tokens", 0)
-                        + usage.get("cache_creation_input_tokens", 0),
-                    )
-                    _session_output_tokens = max(_session_output_tokens, usage.get("output_tokens", 0))
-                    sess_in  = _session_input_tokens
-                    sess_out = _session_output_tokens
-                write_session_tokens(force=True)
-                lf.write(
-                    f"[budget] Session total — in: {sess_in:,}  out: {sess_out:,}  "
-                    f"dur: {dur / 1000:.1f}s\n"
-                )
-
-            # Mid-session budget check after every event
-            with _session_tokens_lock:
-                session_total = _session_input_tokens + _session_output_tokens
-
-            historical = get_window_tokens(read_usage())
-            combined   = historical + session_total
-            pct        = combined / BUDGET_LIMIT if BUDGET_LIMIT > 0 else 0.0
-
-            if pct >= BUDGET_THRESHOLD and not _budget_kill_triggered:
-                _budget_kill_triggered = True
-                lf.write(
-                    f"\n[budget] ⚠  {pct * 100:.1f}% of {BUDGET_LIMIT:,}-token window used "
-                    f"({combined:,} tokens). Sending SIGTERM to Claude.\n"
-                )
-                if proc.poll() is None:
-                    proc.terminate()
+                dur = event.get("duration_ms", 0)
+                lf.write(f"[session] Run ended — dur: {dur / 1000:.1f}s\n")
 
 
 # ── signal handling ───────────────────────────────────────────────────────────
@@ -547,35 +360,19 @@ signal.signal(signal.SIGUSR1, _on_sigusr1)
 # ── main loop ─────────────────────────────────────────────────────────────────
 
 def main() -> None:
-    global _current_proc, _session_input_tokens, _session_output_tokens, _budget_kill_triggered
-    global _session_cache_read, _session_cache_creation, _session_msg_count
-    global BUDGET_LIMIT, BUDGET_WINDOW_HOURS
+    global _current_proc
     global MODEL_CHAIN, MODEL_EXHAUSTED_HOLD, _active_model, _limit_hit_detected, _limit_reset_epoch
 
     LOG_DIR.mkdir(parents=True, exist_ok=True)
     load_env()
 
-    # Re-read budget + model config now that env is loaded
-    BUDGET_LIMIT        = int(float(os.environ.get("CLAUDE_TOKEN_BUDGET",        str(BUDGET_LIMIT))))
-    BUDGET_WINDOW_HOURS = float(os.environ.get("CLAUDE_BUDGET_WINDOW_HOURS", str(BUDGET_WINDOW_HOURS)))
+    # Re-read model config now that env is loaded
     MODEL_CHAIN          = parse_model_chain()
     MODEL_EXHAUSTED_HOLD = float(os.environ.get("CLAUDE_MODEL_EXHAUSTED_HOLD", str(MODEL_EXHAUSTED_HOLD)))
 
     write_daemon("starting", "Daemon initializing")
 
     while _running:
-        # ── pre-flight budget check ───────────────────────────────────────────
-        if is_near_budget():
-            wait_sec       = seconds_until_window_resets()
-            used, limit, pct = budget_status()
-            msg = (
-                f"Token budget at {pct * 100:.1f}% ({used:,}/{limit:,}) — "
-                f"sleeping {wait_sec / 3600:.1f}h until window resets"
-            )
-            write_daemon("sleeping", msg, wake_iso(wait_sec))
-            interruptible_sleep(wait_sec)
-            continue
-
         # ── CI gate (daemon-side, zero tokens) ────────────────────────────────
         ci_state, ci_detail = github_ci_status()
         if ci_state == "pending":
@@ -621,16 +418,8 @@ def main() -> None:
             lf.write(f"\n[{datetime.now().isoformat()}] === Pipeline run starting (model: {model}) ===\n")
 
         # Reset per-session state
-        with _session_tokens_lock:
-            _session_input_tokens   = 0
-            _session_output_tokens  = 0
-            _session_cache_read     = 0
-            _session_cache_creation = 0
-            _session_msg_count      = 0
-        _budget_kill_triggered = False
-        _limit_hit_detected    = False
-        _limit_reset_epoch     = 0.0
-        write_session_tokens(force=True)
+        _limit_hit_detected = False
+        _limit_reset_epoch  = 0.0
 
         _current_proc = subprocess.Popen(
             [
@@ -663,15 +452,6 @@ def main() -> None:
         with open(log_file, "a") as lf:
             lf.write(f"[{datetime.now().isoformat()}] === Pipeline run ended (exit {returncode}) ===\n")
 
-        # Persist this session's token usage
-        with _session_tokens_lock:
-            sess_in    = _session_input_tokens
-            sess_out   = _session_output_tokens
-            sess_cr    = _session_cache_read
-            sess_cc    = _session_cache_creation
-        if sess_in + sess_out > 0:
-            record_session(sess_in, sess_out, sess_cr, sess_cc, model)
-
         if not _running:
             break
 
@@ -679,18 +459,8 @@ def main() -> None:
         state        = read_state()
         rate_limited = state.get("rate_limit_hit", False) or _limit_hit_detected
         phase        = state.get("current_phase", "")
-        budget_hit   = _budget_kill_triggered or is_near_budget()
 
-        if budget_hit:
-            wait_sec         = seconds_until_window_resets()
-            used, limit, pct = budget_status()
-            write_daemon(
-                "sleeping",
-                f"Token budget at {pct * 100:.1f}% — sleeping {wait_sec / 3600:.1f}h until window resets",
-                wake_iso(wait_sec),
-            )
-            interruptible_sleep(wait_sec)
-        elif rate_limited:
+        if rate_limited:
             mark_model_exhausted(model, _limit_reset_epoch)
             if state.get("rate_limit_hit"):
                 # Clear the flag so the next run isn't misread as still limited

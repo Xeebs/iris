@@ -25,8 +25,6 @@ from rich.text import Text
 IRIS        = Path(__file__).resolve().parent.parent
 DAEMON_JSON  = IRIS / "pipeline" / "daemon.json"
 STATE_JSON   = IRIS / "pipeline" / "state.json"
-USAGE_JSON   = IRIS / "pipeline" / "usage.json"
-SESSION_JSON = IRIS / "pipeline" / "session-tokens.json"
 QUEUE_MD    = IRIS / "pipeline" / "queue.md"
 ARCHIVE_MD  = IRIS / "pipeline" / "queue-archive.md"
 CHANGE_MD   = IRIS / "pipeline" / "changelog.md"
@@ -144,26 +142,6 @@ def _fmt_tokens(n: int) -> str:
     return str(n)
 
 
-def _today_tokens(usage: dict) -> int:
-    """Sum recorded session tokens since local midnight."""
-    midnight = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0).timestamp()
-    return sum(
-        s.get("input_tokens", 0) + s.get("output_tokens", 0)
-        for s in usage.get("sessions", [])
-        if s.get("timestamp", 0) > midnight
-    )
-
-
-def _window_tokens(usage: dict, window_hours: float) -> int:
-    """Sum recorded session tokens inside the rolling budget window."""
-    cutoff = time.time() - window_hours * 3600
-    return sum(
-        s.get("input_tokens", 0) + s.get("output_tokens", 0)
-        for s in usage.get("sessions", [])
-        if s.get("timestamp", 0) > cutoff
-    )
-
-
 # Daemon logs are stream-json (one JSON event per line, often huge). The recent-log
 # panel summarizes each event to a single short action line instead of raw output.
 
@@ -188,8 +166,8 @@ def _summarize_line(line: str) -> list[tuple[str, str]]:
         return []
     if "=== Pipeline run" in line:
         return [("marker", line[:110])]
-    if line.startswith("[budget]"):
-        return [("budget", line[:110])]
+    if line.startswith("[session]"):
+        return [("marker", line[:110])]
     if line.startswith("[claude]"):
         return []  # raw text echo — the assistant event below carries the same text
     if not line.startswith("{"):
@@ -403,71 +381,10 @@ def _queue_table(tasks: list[dict]) -> Table:
     return tbl
 
 
-def _budget_panel(daemon: dict, usage: dict, session: dict) -> Panel:
-    tb    = daemon.get("token_budget", {})
-    limit = tb.get("limit", 0)
-    hours = tb.get("window_hours", 5)
-
-    # Compute usage live instead of trusting daemon.json (which is only written
-    # on daemon state transitions, so it goes stale during long runs).
-    window_used = _window_tokens(usage, hours)
-    sess_in     = session.get("input_tokens", 0)
-    sess_out    = session.get("output_tokens", 0)
-    sess_cache  = session.get("cache_read_input_tokens", 0)
-    sess_msgs   = session.get("messages", 0)
-    live        = (sess_in + sess_out) if daemon.get("status") == "running" else 0
-    used        = window_used + live
-    pct         = (used / limit * 100) if limit > 0 else 0.0
-
-    t = Text()
-
-    if limit == 0:
-        t.append("No budget configured.\n", style="dim")
-        t.append("Set CLAUDE_TOKEN_BUDGET in .env.local\n", style="dim italic")
-        return Panel(t, title="[bold]TOKEN BUDGET[/bold]", border_style="dim")
-
-    # colour thresholds: green < 70%, yellow < 90%, red >= 90%
-    if pct >= 90:
-        bar_style = "bold red"
-        pct_style = "bold red"
-    elif pct >= 70:
-        bar_style = "bold yellow"
-        pct_style = "bold yellow"
-    else:
-        bar_style = "bold green"
-        pct_style = "bold green"
-
-    filled = int(round(pct / 100 * 20))
-    bar    = "█" * filled + "░" * (20 - filled)
-
-    t.append(f"[{bar}]", style=bar_style)
-    t.append(f"  {pct:.1f}%\n", style=pct_style)
-    t.append("\n")
-    t.append("Used      ", style="dim"); t.append(f"{used:,} tokens\n",       style="white")
-    t.append("Limit     ", style="dim"); t.append(f"{limit:,} tokens\n",      style="white")
-    t.append("Remaining ", style="dim"); t.append(f"{limit - used:,} tokens\n", style=pct_style)
-    t.append("Window    ", style="dim"); t.append(f"{hours:.0f}h rolling\n",  style="white")
-    t.append("Today     ", style="dim"); t.append(f"{_today_tokens(usage) + live:,} tokens\n", style="white")
-
-    if live > 0 or (daemon.get("status") == "running" and sess_msgs > 0):
-        t.append("\nLive session\n", style="bold")
-        t.append("  ctx in  ", style="dim"); t.append(f"{sess_in:,}\n",  style="cyan")
-        t.append("  output  ", style="dim"); t.append(f"{sess_out:,}\n", style="cyan")
-        t.append("  cached  ", style="dim"); t.append(f"{sess_cache:,}\n", style="dim cyan")
-        t.append("  msgs    ", style="dim"); t.append(f"{sess_msgs:,}\n",  style="white")
-
-    if pct >= 95:
-        t.append("\n⚠  Budget paused — waiting for window reset\n", style="bold red")
-
-    border = "red" if pct >= 90 else ("yellow" if pct >= 70 else "green")
-    return Panel(t, title="[bold]TOKEN BUDGET[/bold]", border_style=border)
-
-
 _LOG_STYLE = {
     "marker": "bold cyan",
     "claude": "italic white",
     "tool":   "cyan",
-    "budget": "magenta",
     "error":  "red",
     "dim":    "dim",
 }
@@ -498,7 +415,6 @@ def _make_layout() -> Layout:
     layout["left"].split_column(
         Layout(name="daemon",     ratio=2),
         Layout(name="pipeline",   ratio=3),
-        Layout(name="budget",     ratio=2),
         Layout(name="changelog",  ratio=2),
     )
     return layout
@@ -507,8 +423,6 @@ def _make_layout() -> Layout:
 def _update(layout: Layout) -> None:
     daemon    = _read_json(DAEMON_JSON)
     state     = _read_json(STATE_JSON)
-    usage     = _read_json(USAGE_JSON)
-    session   = _read_json(SESSION_JSON)
     tasks     = _parse_queue(QUEUE_MD)
     archived  = _parse_queue(ARCHIVE_MD)   # completed tasks live here, not in the queue
     changelog = _parse_changelog(CHANGE_MD)
@@ -530,7 +444,6 @@ def _update(layout: Layout) -> None:
 
     layout["daemon"].update(_daemon_panel(daemon))
     layout["pipeline"].update(_pipeline_panel(state, tasks + archived))
-    layout["budget"].update(_budget_panel(daemon, usage, session))
     layout["changelog"].update(_changelog_panel(changelog))
 
     layout["right"].update(Panel(
