@@ -9,6 +9,8 @@ import { maskEntities } from '@iris/semantic-core';
 import { logger } from '@iris/core/logger';
 import { assertWorkspace } from '../workspace-guard.js';
 
+import { registerTool } from '../register-tool.js';
+
 const log = logger.child({ tool: 'list-entities' });
 
 const MAX_PAGE_SIZE = 100;
@@ -51,7 +53,8 @@ export function registerListEntities(
   contextPermissions: ContextPermissions | null = null,
   piiConfig: WorkspacePiiConfig | null = null,
 ): void {
-  server.registerTool(
+  registerTool(
+    server,
     'list-entities',
     {
       title: 'List Entities',
@@ -60,7 +63,8 @@ export function registerListEntities(
         'Supports pagination via the `cursor` field — pass `nextCursor` from a previous response to get the next page.',
       inputSchema,
     },
-    async (params) => {
+    async (rawParams) => {
+      const params = rawParams as z.infer<z.ZodObject<typeof inputSchema>>;
       try {
         const authError = assertWorkspace(params.workspaceId, authenticatedWorkspaceId);
         if (authError) return { content: [{ type: 'text' as const, text: authError }] };

@@ -2,6 +2,8 @@ import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { logger } from '@iris/core/logger';
 import { ReliabilityPredictor } from '@iris/semantic-core/reliability-predictor';
+
+import { registerTool } from '../register-tool.js';
 import type postgres from 'postgres';
 
 const log = logger.child({ tool: 'connector-health-forecast' });
@@ -14,6 +16,8 @@ const inputSchema = {
   includeMitigations: z.boolean().optional().default(false).describe('Include mitigation suggestions'),
 };
 
+type ToolInput = z.infer<z.ZodObject<typeof inputSchema>>;
+
 /**
  * Registers the connector-health-forecast MCP tool.
  * Allows Claude agents to predict reliability issues for a connector.
@@ -24,11 +28,15 @@ export function registerConnectorHealthForecastTool(
   server: McpServer,
   sql: ReturnType<typeof postgres>,
 ): void {
-  server.tool(
+  registerTool(
+    server,
     'connector-health-forecast',
-    'Predict reliability issues and failure likelihood for a connector. Returns current health score, degradation patterns, and failure probabilities over 1h/24h/7d windows.',
-    inputSchema,
-    async ({ connectorId, workspaceId, includeScore, includeForecast, includeMitigations }) => {
+    {
+      description: 'Predict reliability issues and failure likelihood for a connector. Returns current health score, degradation patterns, and failure probabilities over 1h/24h/7d windows.',
+      inputSchema,
+    },
+    async (rawInput) => {
+      const { connectorId, workspaceId, includeScore, includeForecast, includeMitigations } = rawInput as ToolInput;
       const predictor = new ReliabilityPredictor(sql);
       const parts: string[] = [];
 

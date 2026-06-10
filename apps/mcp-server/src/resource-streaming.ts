@@ -227,13 +227,12 @@ export class ResourceStreamManager {
    */
   async cleanup(): Promise<Result<number, Error>> {
     try {
-      const rows = await this.sql<{ count: string }[]>`
+      const rows = await this.sql<{ session_id: string }[]>`
         DELETE FROM mcp_resource_sessions WHERE expires_at < NOW()
         RETURNING session_id
       `;
       const count = rows.length;
-      for (const r of rows) {
-        const row = r as { session_id: string };
+      for (const row of rows) {
         this.sessionCache.delete(row.session_id);
       }
       log.info('Session cleanup complete', { evicted: count });

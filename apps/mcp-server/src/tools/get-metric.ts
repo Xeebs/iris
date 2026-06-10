@@ -5,6 +5,8 @@ import { withResponseCache } from '@iris/cache/response-cache';
 import type { ResponseCache } from '@iris/cache/response-cache';
 import { assertWorkspace } from '../workspace-guard.js';
 
+import { registerTool } from '../register-tool.js';
+
 const inputSchema = {
   metricId: z.string().min(1).describe('Metric identifier (e.g., monthly_revenue, churn_rate)'),
   workspaceId: z.string().min(1).describe('Workspace ID for tenant isolation'),
@@ -23,7 +25,8 @@ export function registerGetMetric(
   authenticatedWorkspaceId: string | null = null,
   responseCache: ResponseCache | null = null,
 ): void {
-  server.registerTool(
+  registerTool(
+    server,
     'get-metric',
     {
       title: 'Get Metric',
@@ -32,7 +35,8 @@ export function registerGetMetric(
         'Returns the metric name, formula, and description.',
       inputSchema,
     },
-    async (params) => {
+    async (rawParams) => {
+      const params = rawParams as z.infer<z.ZodObject<typeof inputSchema>>;
       const authError = assertWorkspace(params.workspaceId, authenticatedWorkspaceId);
       if (authError) {
         return { content: [{ type: 'text' as const, text: authError }] };

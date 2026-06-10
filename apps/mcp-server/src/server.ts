@@ -9,6 +9,7 @@ import { Redis } from 'ioredis';
 import postgres from 'postgres';
 
 import { registerGracefulShutdown } from './shutdown.js';
+import { registerTool } from './register-tool.js';
 import { initTelemetry, shutdownTelemetry } from './telemetry.js';
 import { startHttpSidecar } from './http-server.js';
 import { registerQueryContext } from './tools/query-context.js';
@@ -78,10 +79,10 @@ export function createMcpServer(
 
   if (sql) {
     const sqlFn = sql;
-    server.tool(
+    registerTool(
+      server,
       aggregateEntitiesToolDefinition.name,
-      aggregateEntitiesToolDefinition.description,
-      aggregateEntitiesZodSchema.shape,
+      { description: aggregateEntitiesToolDefinition.description, inputSchema: aggregateEntitiesZodSchema.shape },
       async (input) => {
         const result = await aggregateEntitiesTool(
           { ...input, workspaceId: authenticatedWorkspaceId ?? (input as { workspaceId: string }).workspaceId } as Parameters<typeof aggregateEntitiesTool>[0],
@@ -91,10 +92,10 @@ export function createMcpServer(
       }
     );
 
-    server.tool(
+    registerTool(
+      server,
       compareEntitiesToolDefinition.name,
-      compareEntitiesToolDefinition.description,
-      compareEntitiesZodSchema.shape,
+      { description: compareEntitiesToolDefinition.description, inputSchema: compareEntitiesZodSchema.shape },
       async (input) => {
         const result = await compareEntitiesTool(
           { ...input, workspaceId: authenticatedWorkspaceId ?? (input as { workspaceId: string }).workspaceId } as Parameters<typeof compareEntitiesTool>[0],
@@ -104,10 +105,10 @@ export function createMcpServer(
       }
     );
 
-    server.tool(
+    registerTool(
+      server,
       detectAnomaliesToolDefinition.name,
-      detectAnomaliesToolDefinition.description,
-      detectAnomaliesZodSchema.shape,
+      { description: detectAnomaliesToolDefinition.description, inputSchema: detectAnomaliesZodSchema.shape },
       async (input) => {
         const result = await detectAnomalyTool(input as Parameters<typeof detectAnomalyTool>[0], sqlFn);
         return result.isOk() ? result.value : { content: [{ type: 'text' as const, text: 'Detection error' }] };
@@ -115,51 +116,51 @@ export function createMcpServer(
     );
 
     // Register previously unwired tools
-    registerConnectorHealthForecastTool(server, sqlFn as ReturnType<typeof import('postgres').default>);
+    registerConnectorHealthForecastTool(server, sqlFn as unknown as ReturnType<typeof postgres>);
     registerQueryContextAtDateTool(server, { sql: sqlFn });
-    registerQueryContextRefined(server, sqlFn as ReturnType<typeof import('postgres').default>, authenticatedWorkspaceId);
+    registerQueryContextRefined(server, sqlFn as unknown as ReturnType<typeof postgres>, authenticatedWorkspaceId);
     registerQueryFederatedContextTool(server, { sql: sqlFn });
 
-    server.tool(
+    registerTool(
+      server,
       bulkEntityUpdateTool.name,
-      bulkEntityUpdateTool.description,
-      bulkEntityUpdateSchema.shape,
+      { description: bulkEntityUpdateTool.description, inputSchema: bulkEntityUpdateSchema.shape },
       async (input) =>
         bulkEntityUpdateTool.execute(
           input as Parameters<typeof bulkEntityUpdateTool.execute>[0],
-          { sql: sqlFn as ReturnType<typeof import('postgres').default> }
+          { sql: sqlFn as unknown as ReturnType<typeof postgres> }
         )
     );
 
-    server.tool(
+    registerTool(
+      server,
       entityTrendAnalysisTool.name,
-      entityTrendAnalysisTool.description,
-      entityTrendAnalysisSchema.shape,
+      { description: entityTrendAnalysisTool.description, inputSchema: entityTrendAnalysisSchema.shape },
       async (input) =>
         entityTrendAnalysisTool.execute(
           input as Parameters<typeof entityTrendAnalysisTool.execute>[0],
-          { sql: sqlFn as ReturnType<typeof import('postgres').default> }
+          { sql: sqlFn as unknown as ReturnType<typeof postgres> }
         )
     );
 
     const multiConnectorTool = createMultiConnectorQueryOptimizeTool(
-      sqlFn as ReturnType<typeof import('postgres').default>
+      sqlFn as unknown as ReturnType<typeof postgres>
     );
-    server.tool(
+    registerTool(
+      server,
       multiConnectorTool.name,
-      multiConnectorTool.description,
-      multiConnectorTool.inputSchema.shape,
+      { description: multiConnectorTool.description, inputSchema: multiConnectorTool.inputSchema.shape },
       async (input) =>
         multiConnectorTool.handler(input as Parameters<typeof multiConnectorTool.handler>[0])
     );
 
     const nlQueryTool = createGenerateQueryFromQuestionTool(
-      sqlFn as ReturnType<typeof import('postgres').default>
+      sqlFn as unknown as ReturnType<typeof postgres>
     );
-    server.tool(
+    registerTool(
+      server,
       nlQueryTool.name,
-      nlQueryTool.description,
-      nlQueryTool.inputSchema.shape,
+      { description: nlQueryTool.description, inputSchema: nlQueryTool.inputSchema.shape },
       async (input) =>
         nlQueryTool.handler(input as Parameters<typeof nlQueryTool.handler>[0])
     );

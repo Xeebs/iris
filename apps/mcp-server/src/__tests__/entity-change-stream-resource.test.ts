@@ -23,7 +23,9 @@ function makeMockServer() {
     tool: vi.fn((name: string, _desc: unknown, _schema: unknown, handler: ToolHandler) => {
       tools.set(name, handler);
     }),
-    registerTool: vi.fn(),
+    registerTool: vi.fn((name: string, _config: unknown, handler: ToolHandler) => {
+      tools.set(name, handler);
+    }),
   } as unknown as McpServer;
 
   return {

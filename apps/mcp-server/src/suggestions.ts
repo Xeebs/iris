@@ -4,6 +4,8 @@ import { generateSuggestions } from '@iris/semantic-core/proactive-suggester';
 import { logger } from '@iris/core/logger';
 import { assertWorkspace } from './workspace-guard.js';
 
+import { registerTool } from './register-tool.js';
+
 const log = logger.child({ tool: 'suggest-context' });
 
 const inputSchema = {
@@ -34,8 +36,8 @@ export function registerSuggestContext(
   server: McpServer,
   authenticatedWorkspaceId: string | null = null,
 ): void {
-  // @ts-ignore TS2589 — MCP SDK registerTool generics exceed TypeScript's depth limit
-  server.registerTool(
+  registerTool(
+    server,
     'suggest-context',
     {
       title: 'Suggest Context',
@@ -44,7 +46,8 @@ export function registerSuggestContext(
         'Returns top-N entity types and labels that are likely relevant to the current session.',
       inputSchema,
     },
-    async (params) => {
+    async (rawParams) => {
+      const params = rawParams as z.infer<z.ZodObject<typeof inputSchema>>;
       try {
         const authError = assertWorkspace(params.workspaceId, authenticatedWorkspaceId);
         if (authError) return { content: [{ type: 'text' as const, text: authError }] };

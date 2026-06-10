@@ -2,6 +2,8 @@ import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { logger } from '@iris/core/logger';
 
+import { registerTool } from '../register-tool.js';
+
 const log = logger.child({ tool: 'query-context-at-date' });
 
 const inputSchema = {
@@ -10,6 +12,8 @@ const inputSchema = {
   targetDate: z.string().datetime().describe('ISO 8601 date — query context as it existed at this point in time'),
   contextBudget: z.number().int().positive().default(2000).describe('Maximum tokens to return'),
 };
+
+type ToolInput = z.infer<z.ZodObject<typeof inputSchema>>;
 
 /**
  * Register the query-context-at-date MCP tool.
@@ -20,11 +24,15 @@ export function registerQueryContextAtDateTool(
   server: McpServer,
   deps: { sql: (strings: TemplateStringsArray, ...values: unknown[]) => Promise<unknown[]> },
 ): void {
-  server.tool(
+  registerTool(
+    server,
     'query-context-at-date',
-    'Query business context as it existed at a specific historical point in time using time-travel snapshots',
-    inputSchema,
-    async ({ query, workspaceId, targetDate, contextBudget }) => {
+    {
+      description: 'Query business context as it existed at a specific historical point in time using time-travel snapshots',
+      inputSchema,
+    },
+    async (rawInput) => {
+      const { query, workspaceId, targetDate, contextBudget } = rawInput as ToolInput;
       try {
         const { queryAsOfDate } = await import('@iris/semantic-core/context-versioner');
 

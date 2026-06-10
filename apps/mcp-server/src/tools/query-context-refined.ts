@@ -4,6 +4,8 @@ import type postgres from 'postgres';
 import { QueryExpansionEngine } from '@iris/semantic-core/query-expansion-engine';
 import { logger } from '@iris/core/logger';
 
+import { registerTool } from '../register-tool.js';
+
 const log = logger.child({ tool: 'query-context-refined' });
 
 const FEEDBACK_MARKS = ['stale', 'incomplete', 'irrelevant', 'useful'] as const;
@@ -34,14 +36,16 @@ export function registerQueryContextRefined(
 ): void {
   const engine = new QueryExpansionEngine(sql);
 
-  server.registerTool(
+  registerTool(
+    server,
     'query-context-refined',
     {
       title: 'Query Context (Refined)',
       description: 'Iteratively expand and refine search results using user feedback marks. Supports multi-stage retrieval where each round re-ranks results based on stale/incomplete/irrelevant/useful signals.',
       inputSchema,
     },
-    async (params) => {
+    async (rawParams) => {
+      const params = rawParams as z.infer<z.ZodObject<typeof inputSchema>>;
       const budget = params.contextBudget ?? 2000;
       const stage = params.stage ?? 1;
       const feedback = params.feedback ?? null;

@@ -7,6 +7,8 @@ import type { SemanticEntity } from '@iris/connector-sdk';
 import { logger } from '@iris/core/logger';
 import { assertWorkspace } from '../workspace-guard.js';
 
+import { registerTool } from '../register-tool.js';
+
 const log = logger.child({ tool: 'streaming-context' });
 
 // ---------------------------------------------------------------------------
@@ -200,8 +202,8 @@ export function registerStreamingContext(
   authenticatedWorkspaceId: string | null = null,
 ): void {
   // Tool 1: streaming-context — returns initial summary and an expansionKey
-  // @ts-ignore TS2589 — MCP SDK registerTool generics exceed TypeScript's depth limit
-  server.registerTool(
+  registerTool(
+    server,
     'streaming-context',
     {
       title: 'Streaming Context',
@@ -210,7 +212,8 @@ export function registerStreamingContext(
         'Call get-context-expansion with that key to fetch a more detailed view if needed.',
       inputSchema: streamingInputSchema,
     },
-    async (params) => {
+    async (rawParams) => {
+      const params = rawParams as z.infer<z.ZodObject<typeof streamingInputSchema>>;
       pruneExpansions();
       const start = Date.now();
 
@@ -270,8 +273,8 @@ export function registerStreamingContext(
   );
 
   // Tool 2: get-context-expansion — fetches a deeper level using the stored expansionKey
-  // @ts-ignore TS2589
-  server.registerTool(
+  registerTool(
+    server,
     'get-context-expansion',
     {
       title: 'Get Context Expansion',
@@ -280,7 +283,8 @@ export function registerStreamingContext(
         'Requires the expansionKey returned by streaming-context.',
       inputSchema: expansionInputSchema,
     },
-    async (params) => {
+    async (rawParams) => {
+      const params = rawParams as z.infer<z.ZodObject<typeof expansionInputSchema>>;
       try {
         const authError = assertWorkspace(params.workspaceId, authenticatedWorkspaceId);
         if (authError) return { content: [{ type: 'text' as const, text: authError }] };

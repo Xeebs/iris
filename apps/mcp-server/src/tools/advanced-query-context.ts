@@ -13,6 +13,8 @@ import { compress } from '@iris/compression';
 import { logger } from '@iris/core/logger';
 import { assertWorkspace } from '../workspace-guard.js';
 
+import { registerTool } from '../register-tool.js';
+
 const log = logger.child({ tool: 'advanced-query-context' });
 
 const filterConditionSchema = z.object({
@@ -71,8 +73,8 @@ export function registerAdvancedQueryContext(
   openAiKey: string,
   authenticatedWorkspaceId: string | null = null,
 ): void {
-  // @ts-ignore TS2589 — MCP SDK generics depth limit for multi-field schema
-  server.registerTool(
+  registerTool(
+    server,
     'advanced-query-context',
     {
       title: 'Advanced Query Context',
@@ -82,7 +84,8 @@ export function registerAdvancedQueryContext(
         'aggregations like "sum revenue by region", and chained multi-step queries.',
       inputSchema,
     },
-    async (params) => {
+    async (rawParams) => {
+      const params = rawParams as z.infer<z.ZodObject<typeof inputSchema>>;
       const start = Date.now();
       try {
         const authError = assertWorkspace(params.workspaceId, authenticatedWorkspaceId);
@@ -144,7 +147,11 @@ export function registerAdvancedQueryContext(
           : retrieval.entities;
 
         if (params.aggregate) {
-          const aggResult = executeAggregation(filtered, params.aggregate);
+          const aggResult = executeAggregation(filtered, {
+            op: params.aggregate.op,
+            ...(params.aggregate.field !== undefined ? { field: params.aggregate.field } : {}),
+            ...(params.aggregate.groupBy !== undefined ? { groupBy: params.aggregate.groupBy } : {}),
+          });
           const text = formatAggregationResult(aggResult, params.query);
 
           log.info('Advanced aggregation query complete', {

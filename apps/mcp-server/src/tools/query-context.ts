@@ -11,6 +11,8 @@ import { maskEntities } from '@iris/semantic-core';
 import { logger } from '@iris/core/logger';
 import { assertWorkspace } from '../workspace-guard.js';
 
+import { registerTool } from '../register-tool.js';
+
 const log = logger.child({ tool: 'query-context' });
 
 const inputSchema = {
@@ -67,8 +69,8 @@ export function registerQueryContext(
   contextPermissions: ContextPermissions | null = null,
   piiConfig: WorkspacePiiConfig | null = null,
 ): void {
-  // @ts-ignore TS2589 — MCP SDK registerTool generics exceed TypeScript's depth limit for this 5-field schema
-  server.registerTool(
+  registerTool(
+    server,
     'query-context',
     {
       title: 'Query Context',
@@ -77,7 +79,8 @@ export function registerQueryContext(
         'Returns compressed entity information within the token budget.',
       inputSchema,
     },
-    async (params) => {
+    async (rawParams) => {
+      const params = rawParams as z.infer<z.ZodObject<typeof inputSchema>>;
       const start = Date.now();
       try {
         const authError = assertWorkspace(params.workspaceId, authenticatedWorkspaceId);

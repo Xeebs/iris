@@ -50,14 +50,14 @@ function makeSql(overrides: Record<string, unknown[]> = {}) {
 
 describe('MCP tool registration', () => {
   describe('connector-health-forecast', () => {
-    it('registers the tool with server.tool()', async () => {
-      const { server, toolCalls } = makeMockServer();
+    it('registers the tool via registerTool()', async () => {
+      const { server } = makeMockServer();
+      const registerToolSpy = (server as unknown as { registerTool: ReturnType<typeof vi.fn> }).registerTool;
       const sql = makeSql();
       const { registerConnectorHealthForecastTool } = await import('../tools/connector-health-forecast.js');
       registerConnectorHealthForecastTool(server, sql);
-      expect(toolCalls).toHaveBeenCalledWith(
+      expect(registerToolSpy).toHaveBeenCalledWith(
         'connector-health-forecast',
-        expect.any(String),
         expect.any(Object),
         expect.any(Function)
       );
@@ -65,12 +65,13 @@ describe('MCP tool registration', () => {
   });
 
   describe('query-context-at-date', () => {
-    it('registers the tool with server.tool()', async () => {
-      const { server, toolCalls } = makeMockServer();
+    it('registers the tool via registerTool()', async () => {
+      const { server } = makeMockServer();
+      const registerToolSpy = (server as unknown as { registerTool: ReturnType<typeof vi.fn> }).registerTool;
       const sql = makeSql();
       const { registerQueryContextAtDateTool } = await import('../tools/query-context-at-date.js');
       registerQueryContextAtDateTool(server, { sql: sql as unknown as Parameters<typeof registerQueryContextAtDateTool>[1]['sql'] });
-      expect(toolCalls).toHaveBeenCalledWith('query-context-at-date', expect.any(String), expect.any(Object), expect.any(Function));
+      expect(registerToolSpy).toHaveBeenCalledWith('query-context-at-date', expect.any(Object), expect.any(Function));
     });
   });
 
@@ -86,12 +87,13 @@ describe('MCP tool registration', () => {
   });
 
   describe('query-federated-context', () => {
-    it('registers the tool with server.tool()', async () => {
-      const { server, toolCalls } = makeMockServer();
+    it('registers the tool via registerTool()', async () => {
+      const { server } = makeMockServer();
+      const registerToolSpy = (server as unknown as { registerTool: ReturnType<typeof vi.fn> }).registerTool;
       const sql = makeSql();
       const { registerQueryFederatedContextTool } = await import('../tools/query-federated-context.js');
       registerQueryFederatedContextTool(server, { sql: sql as unknown as Parameters<typeof registerQueryFederatedContextTool>[1]['sql'] });
-      expect(toolCalls).toHaveBeenCalledWith('query-federated-context', expect.any(String), expect.any(Object), expect.any(Function));
+      expect(registerToolSpy).toHaveBeenCalledWith('query-federated-context', expect.any(Object), expect.any(Function));
     });
   });
 

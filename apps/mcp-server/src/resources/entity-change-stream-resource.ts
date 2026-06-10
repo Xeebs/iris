@@ -1,5 +1,8 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { z } from 'zod';
 import type { Sql } from 'postgres';
+
+import { registerTool } from '../register-tool.js';
 import { EntityChangeStreamManager } from '@iris/semantic-core/entity-change-stream';
 import type { ChangeType, EntityChange } from '@iris/semantic-core/entity-change-stream';
 import { logger } from '@iris/core/logger';
@@ -65,9 +68,9 @@ export function registerChangeStreamResource(
 
       const workspaceId = authenticatedWorkspaceId ?? 'unknown';
       const events = await fetchEntityChanges(sql, entityId, workspaceId, {
-        sinceDate,
-        changeTypes: filterTypes,
-        fields: filterFields,
+        ...(sinceDate !== undefined ? { sinceDate } : {}),
+        ...(filterTypes !== undefined ? { changeTypes: filterTypes } : {}),
+        ...(filterFields !== undefined ? { fields: filterFields } : {}),
         limit: MAX_EVENTS_IN_RESPONSE,
       });
 
@@ -97,14 +100,17 @@ export function registerChangeStreamResource(
   );
 
   // Register subscription tool alongside resource
-  server.tool(
+  registerTool(
+    server,
     'subscribe-entity-changes',
-    'Subscribe to real-time change events for an entity. Returns a subscriptionId for tracking.',
     {
-      entityId: { type: 'string', description: 'Entity ID to monitor (or "*" for all entities in workspace)' } as unknown as import('zod').ZodString,
-      workspaceId: { type: 'string' } as unknown as import('zod').ZodString,
-      entityTypes: { type: 'array', items: { type: 'string' } } as unknown as import('zod').ZodArray<import('zod').ZodString>,
-      changeTypes: { type: 'array', items: { type: 'string' } } as unknown as import('zod').ZodArray<import('zod').ZodString>,
+      description: 'Subscribe to real-time change events for an entity. Returns a subscriptionId for tracking.',
+      inputSchema: {
+        entityId: z.string().describe('Entity ID to monitor (or "*" for all entities in workspace)'),
+        workspaceId: z.string().optional(),
+        entityTypes: z.array(z.string()).optional(),
+        changeTypes: z.array(z.string()).optional(),
+      },
     },
     async (input) => {
       const { entityId, workspaceId, entityTypes, changeTypes } = input as {
@@ -124,8 +130,8 @@ export function registerChangeStreamResource(
           wsId,
           entityId === '*' ? null : entityId,
           {
-            entityTypes: entityTypes as string[] | undefined,
-            changeTypes: changeTypes as ChangeType[] | undefined,
+            ...(entityTypes !== undefined ? { entityTypes } : {}),
+            ...(changeTypes !== undefined ? { changeTypes: changeTypes as ChangeType[] } : {}),
           }
         );
 

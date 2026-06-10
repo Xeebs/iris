@@ -2,6 +2,8 @@ import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { logger } from '@iris/core/logger';
 
+import { registerTool } from '../register-tool.js';
+
 const log = logger.child({ tool: 'query-federated-context' });
 
 const inputSchema = {
@@ -10,6 +12,8 @@ const inputSchema = {
   federatedWorkspaceIds: z.array(z.string().min(1)).min(1).max(10).describe('Target workspace IDs to query'),
   maxTokenBudget: z.number().int().positive().default(2000).describe('Maximum tokens for merged result'),
 };
+
+type ToolInput = z.infer<z.ZodObject<typeof inputSchema>>;
 
 /**
  * Register the query-federated-context MCP tool.
@@ -20,11 +24,15 @@ export function registerQueryFederatedContextTool(
   server: McpServer,
   deps: { sql: (strings: TemplateStringsArray, ...values: unknown[]) => Promise<unknown[]> },
 ): void {
-  server.tool(
+  registerTool(
+    server,
     'query-federated-context',
-    'Query entities and context from federated (cross-tenant) workspaces with permission enforcement',
-    inputSchema,
-    async ({ query, workspaceId, federatedWorkspaceIds, maxTokenBudget }) => {
+    {
+      description: 'Query entities and context from federated (cross-tenant) workspaces with permission enforcement',
+      inputSchema,
+    },
+    async (rawInput) => {
+      const { query, workspaceId, federatedWorkspaceIds, maxTokenBudget } = rawInput as ToolInput;
       try {
         // Dynamic import to avoid circular deps at registration time
         const { queryFederatedContext, mergeFederatedResults } = await import('@iris/semantic-core/federation-manager');
