@@ -24,6 +24,18 @@ const FREQUENCY_OPTIONS: { value: SyncFrequency; label: string; description: str
   { value: 'real-time', label: 'Real-time (webhooks)', description: 'Sync as events arrive via webhooks' },
 ];
 
+const DEFAULT_POSTGRES_CONFIG = JSON.stringify(
+  {
+    connectionString: 'postgres://user:password@host:5432/dbname',
+    tables: [
+      { name: 'contacts', entityType: 'contact', labelColumns: ['first_name', 'last_name'], updatedAtColumn: 'updated_at' },
+      { name: 'companies', entityType: 'company', labelColumn: 'name', updatedAtColumn: 'created_at' },
+    ],
+  },
+  null,
+  2,
+);
+
 type ConnectorSetupWizardProps = {
   connectorTypes: ConnectorManifest[];
   apiBase: string;
@@ -72,11 +84,16 @@ export function ConnectorSetupWizard({
 }: ConnectorSetupWizardProps): React.JSX.Element {
   const [state, setState] = useState<WizardState>(INITIAL_WIZARD_STATE);
   const [apiKeyInput, setApiKeyInput] = useState<Record<string, string>>({});
+  const [postgresConfigText, setPostgresConfigText] = useState(DEFAULT_POSTGRES_CONFIG);
+  const [postgresConfigError, setPostgresConfigError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
+  const [instanceId, setInstanceId] = useState<string | null>(null);
+  const [syncState, setSyncState] = useState<'idle' | 'triggering' | 'triggered'>('idle');
 
   const selectedManifest = connectorTypes.find((c) => c.id === state.selectedConnectorId);
+  const isPostgres = state.selectedConnectorId === 'postgres';
 
   const advance = useCallback(() => {
     setState((s) => ({ ...s, currentStep: nextStep(s.currentStep) ?? s.currentStep }));
@@ -98,9 +115,20 @@ export function ConnectorSetupWizard({
       window.location.href = buildOAuthUrl(selectedManifest.id, apiBase);
       return;
     }
-    setState((s) => ({ ...s, authData: apiKeyInput }));
+    if (isPostgres) {
+      try {
+        const parsed = JSON.parse(postgresConfigText) as Record<string, unknown>;
+        setState((s) => ({ ...s, rawConfig: parsed }));
+        setPostgresConfigError(null);
+      } catch {
+        setPostgresConfigError('Invalid JSON — please fix the config before continuing.');
+        return;
+      }
+    } else {
+      setState((s) => ({ ...s, authData: apiKeyInput }));
+    }
     advance();
-  }, [selectedManifest, apiKeyInput, apiBase, advance]);
+  }, [selectedManifest, apiKeyInput, apiBase, isPostgres, postgresConfigText, advance]);
 
   const handleSchemaDiscovered = useCallback(() => {
     const mockFields = [
@@ -131,13 +159,14 @@ export function ConnectorSetupWizard({
     setCreating(true);
     setError(null);
     try {
+      const config = state.rawConfig ?? state.authData;
       const res = await fetch(`${apiBase}/connectors`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           workspaceId: 'default',
           connectorId: state.selectedConnectorId,
-          config: state.authData,
+          config,
         }),
       });
       if (!res.ok) {
@@ -145,10 +174,11 @@ export function ConnectorSetupWizard({
         throw new Error(body.error?.message ?? 'Failed to create connector');
       }
       const created = (await res.json()) as { data: { id: string } };
-      const instanceId = created.data.id;
+      const id = created.data.id;
+      setInstanceId(id);
 
       if (state.syncFrequency !== 'manual') {
-        await fetch(`${apiBase}/connectors/${instanceId}/schedule?workspaceId=default`, {
+        await fetch(`${apiBase}/connectors/${id}/schedule?workspaceId=default`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ frequency: state.syncFrequency }),
@@ -163,19 +193,96 @@ export function ConnectorSetupWizard({
     }
   }, [state, apiBase]);
 
-  if (done) {
+  const handleTriggerSync = useCallback(async () => {
+    if (!instanceId) return;
+    setSyncState('triggering');
+    try {
+      await fetch(`${apiBase}/connectors/${instanceId}/sync?workspaceId=default`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      setSyncState('triggered');
+    } catch {
+      setSyncState('idle');
+    }
+  }, [instanceId, apiBase]);
+
+  if (done && instanceId) {
+    const mcpSnippet = JSON.stringify(
+      {
+        mcpServers: {
+          iris: {
+            command: 'node',
+            args: ['<path-to-iris>/apps/mcp-server/dist/server.js'],
+            env: {
+              IRIS_API_KEY: '<your-api-key>',
+              DATABASE_URL: '<your-iris-database-url>',
+              EMBEDDING_PROVIDER: 'ollama',
+            },
+          },
+        },
+      },
+      null,
+      2,
+    );
+
     return (
-      <div className="rounded-lg border border-green-200 bg-green-50 p-8 text-center">
-        <p className="text-lg font-semibold text-green-800">Connector connected!</p>
-        <p className="mt-2 text-sm text-green-700">
-          Iris will begin indexing your data. Check the overview page for sync status.
-        </p>
-        <a
-          href="/connectors"
-          className="mt-4 inline-block rounded-md bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700"
-        >
-          Back to Connectors
-        </a>
+      <div data-testid="setup-done">
+        <div className="mb-6 rounded-lg border border-green-200 bg-green-50 p-6">
+          <p className="font-semibold text-green-800">Connector created!</p>
+          <p className="mt-1 text-sm text-green-700">
+            Connector ID: <code className="font-mono text-xs">{instanceId}</code>
+          </p>
+        </div>
+
+        <div className="mb-8">
+          <h2 className="mb-2 text-lg font-semibold">Step 1 — Sync your data</h2>
+          <p className="mb-3 text-sm text-gray-600">
+            Trigger an initial sync so Iris indexes your data and makes it available to your AI clients.
+          </p>
+          {syncState === 'idle' && (
+            <button
+              onClick={handleTriggerSync}
+              data-testid="trigger-sync-btn"
+              className="rounded-md bg-gray-900 px-5 py-2 text-sm font-medium text-white hover:bg-gray-700"
+              type="button"
+            >
+              Trigger Initial Sync
+            </button>
+          )}
+          {syncState === 'triggering' && (
+            <p className="text-sm text-gray-500">Starting sync…</p>
+          )}
+          {syncState === 'triggered' && (
+            <p className="text-sm text-green-700" data-testid="sync-triggered-msg">
+              Sync started. Check the connectors page for progress.
+            </p>
+          )}
+        </div>
+
+        <div>
+          <h2 className="mb-2 text-lg font-semibold">Step 2 — Connect your AI client</h2>
+          <p className="mb-3 text-sm text-gray-600">
+            Add this block to your Claude Code <code className="font-mono text-xs">.mcp.json</code> or
+            run <code className="font-mono text-xs">claude mcp add iris</code>. Replace the placeholders
+            with your Iris API key (find it in Settings → API Keys).
+          </p>
+          <pre
+            data-testid="mcp-snippet"
+            className="overflow-x-auto rounded-lg border border-gray-200 bg-gray-50 p-4 text-xs font-mono text-gray-800"
+          >
+            {mcpSnippet}
+          </pre>
+        </div>
+
+        <div className="mt-6">
+          <a
+            href="/connectors"
+            className="text-sm text-gray-500 hover:text-gray-700 underline"
+          >
+            ← Back to Connectors
+          </a>
+        </div>
       </div>
     );
   }
@@ -226,6 +333,7 @@ export function ConnectorSetupWizard({
             <button
               onClick={advance}
               disabled={!state.selectedConnectorId}
+              data-testid="select-continue-btn"
               className="rounded-md bg-gray-900 px-5 py-2 text-sm font-medium text-white hover:bg-gray-700 disabled:opacity-40"
               type="button"
             >
@@ -237,7 +345,7 @@ export function ConnectorSetupWizard({
 
       {state.currentStep === 'auth' && selectedManifest && (
         <section>
-          <h2 className="mb-1 text-lg font-semibold">Authenticate with {selectedManifest.name}</h2>
+          <h2 className="mb-1 text-lg font-semibold">Configure {selectedManifest.name}</h2>
           {requiresOAuth(selectedManifest) ? (
             <div>
               <p className="mb-4 text-sm text-gray-600">
@@ -253,6 +361,39 @@ export function ConnectorSetupWizard({
                   type="button"
                 >
                   Authorise with {selectedManifest.name}
+                </button>
+              </div>
+            </div>
+          ) : isPostgres ? (
+            <div>
+              <p className="mb-3 text-sm text-gray-600">
+                Configure the connection string and tables to index. Edit the JSON below.
+              </p>
+              <textarea
+                value={postgresConfigText}
+                onChange={(e) => {
+                  setPostgresConfigText(e.target.value);
+                  setPostgresConfigError(null);
+                }}
+                data-testid="postgres-config-input"
+                rows={18}
+                spellCheck={false}
+                className="block w-full rounded-md border border-gray-300 px-3 py-2 font-mono text-xs shadow-sm focus:border-gray-500 focus:outline-none"
+              />
+              {postgresConfigError && (
+                <p className="mt-1 text-xs text-red-600">{postgresConfigError}</p>
+              )}
+              <div className="mt-4 flex gap-3">
+                <button onClick={retreat} type="button" className="text-sm text-gray-500 hover:text-gray-700">
+                  ← Back
+                </button>
+                <button
+                  onClick={handleAuthNext}
+                  data-testid="postgres-config-continue-btn"
+                  className="rounded-md bg-gray-900 px-5 py-2 text-sm font-medium text-white hover:bg-gray-700"
+                  type="button"
+                >
+                  Continue
                 </button>
               </div>
             </div>
@@ -291,7 +432,9 @@ export function ConnectorSetupWizard({
         <section>
           <h2 className="mb-1 text-lg font-semibold">Schema Discovery</h2>
           <p className="mb-4 text-sm text-gray-600">
-            Iris will inspect the connector schema to understand which fields to index.
+            {isPostgres
+              ? 'Your tables are already configured — continue to field mapping.'
+              : 'Iris will inspect the connector schema to understand which fields to index.'}
           </p>
           <div className="flex gap-3">
             <button onClick={retreat} type="button" className="text-sm text-gray-500 hover:text-gray-700">
@@ -302,7 +445,7 @@ export function ConnectorSetupWizard({
               className="rounded-md bg-gray-900 px-5 py-2 text-sm font-medium text-white hover:bg-gray-700"
               type="button"
             >
-              Discover Schema
+              {isPostgres ? 'Continue' : 'Discover Schema'}
             </button>
           </div>
         </section>
@@ -314,7 +457,9 @@ export function ConnectorSetupWizard({
           <p className="mb-4 text-sm text-gray-600">
             Choose which fields to include in the semantic index.
           </p>
-          <SchemaMapper fields={state.schemaFields} onToggle={handleFieldToggle} />
+          {!isPostgres && (
+            <SchemaMapper fields={state.schemaFields} onToggle={handleFieldToggle} />
+          )}
 
           <div className="mt-8">
             <h3 className="mb-1 text-base font-semibold">Sync Frequency</h3>
@@ -370,12 +515,28 @@ export function ConnectorSetupWizard({
                 <dt className="text-gray-500">Connector</dt>
                 <dd className="font-medium">{selectedManifest.name}</dd>
               </div>
-              <div className="flex justify-between">
-                <dt className="text-gray-500">Fields indexed</dt>
-                <dd className="font-medium">
-                  {state.schemaFields.filter((f) => f.included).length} of {state.schemaFields.length}
-                </dd>
-              </div>
+              {isPostgres ? (
+                <div className="flex justify-between">
+                  <dt className="text-gray-500">Tables</dt>
+                  <dd className="font-medium">
+                    {(() => {
+                      try {
+                        const cfg = JSON.parse(postgresConfigText) as { tables?: Array<{ name: string }> };
+                        return cfg.tables?.map((t) => t.name).join(', ') ?? '—';
+                      } catch {
+                        return '—';
+                      }
+                    })()}
+                  </dd>
+                </div>
+              ) : (
+                <div className="flex justify-between">
+                  <dt className="text-gray-500">Fields indexed</dt>
+                  <dd className="font-medium">
+                    {state.schemaFields.filter((f) => f.included).length} of {state.schemaFields.length}
+                  </dd>
+                </div>
+              )}
               <div className="flex justify-between">
                 <dt className="text-gray-500">Sync frequency</dt>
                 <dd className="font-medium capitalize">{state.syncFrequency.replace('-', ' ')}</dd>
@@ -389,6 +550,7 @@ export function ConnectorSetupWizard({
             <button
               onClick={handleCreate}
               disabled={creating}
+              data-testid="connect-btn"
               className="rounded-md bg-gray-900 px-5 py-2 text-sm font-medium text-white hover:bg-gray-700 disabled:opacity-40"
               type="button"
             >

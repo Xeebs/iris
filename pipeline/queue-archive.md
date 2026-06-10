@@ -5008,3 +5008,20 @@ the live queue small. Layer headings are repeated per archival batch.
   - .github/workflows/ (add slice2-demo job)
 - **Depends on**: S2-1, S2-2, S2-3
 - **Added**: 2026-06-10
+
+---
+
+<!-- archived 2026-06-10 -->
+
+## Layer 79: SLICE 2 — Iris in Real Use (see docs/SLICE_2.md)
+### Task: S2-5 Dashboard onboarding golden path + Playwright test
+- **Layer**: 79 — Slice 2
+- **Status**: COMMITTED
+- **Priority**: High
+- **Description**: Make the PRD's "connector setup ≤30 min" path real through the UI, fixing only what blocks it. Golden path: `pnpm dev` → dashboard loads → user creates a postgres connector instance pointed at `iris_demo_source` (form from the connector's `configSchema`) → triggers sync → sees sync progress/status update → reaches a "Connect your AI client" screen showing a copyable `.mcp.json` snippet with their workspace API key. Audit what already exists in `apps/dashboard/app/connectors/` before writing anything new — wire and repair existing pages first; build only the missing minimum (likely the MCP-snippet screen). Then cover it with `tests/e2e/onboarding-golden-path.spec.ts` (Playwright, real API + dashboard, mock nothing on the happy path) and add it to CI. Out of scope: every other dashboard page, visual polish, auth flows beyond what the path needs.
+- **Files**:
+  - apps/dashboard/app/connectors/ (repair/wire as discovered)
+  - tests/e2e/onboarding-golden-path.spec.ts
+  - .github/workflows/ (e2e job wiring if not present)
+- **Depends on**: S2-2
+- **Added**: 2026-06-10

@@ -4,6 +4,7 @@ Completed tasks are logged here by the daemon after each successful commit.
 
 ---
 
+- 2026-06-10 | feat(dashboard,tests): S2-5 onboarding golden path — postgres config form, MCP snippet screen, Playwright API tests, CI job
 - 2026-06-10 | feat(scripts,api,connector-postgres): S2-4 slice2-demo.sh + CI job — real-data demo driver, Ollama CI job, postgres connector labelColumns, eval path fix, connector registration
 - 2026-06-10 | feat(api): mount batch-3 routes in server.ts — sync-metrics, context-search, enrichments, entity-validation, bulk-ops, analytics-pipeline, insights
 - 2026-06-10 | feat(api): mount batch-2 routes in server.ts — api-keys, search, usage, mcp-tools, query-analytics, connector-health, documents; fix pre-existing data-quality-engine test failures (3 missing routes + camelCase transform)

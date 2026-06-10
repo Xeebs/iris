@@ -1,0 +1,111 @@
+name: Onboarding Golden Path
+
+# S2-5: verifies that the full onboarding path (bootstrap workspace, create postgres
+# connector, trigger sync) works end-to-end against a real API server + Postgres.
+# Complements the slice2-demo job (which uses Ollama + real embeddings); this job
+# focuses on the UI-facing API contract without the heavy embedding step.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  NODE_VERSION: '24'
+  NODE_OPTIONS: '--max-old-space-size=4096'
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
+jobs:
+  onboarding-api-tests:
+    name: Onboarding API Tests (real API, no mocks)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: iris
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    env:
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/iris
+      REDIS_URL: redis://localhost:6379
+      DEMO_SOURCE_DATABASE_URL: postgres://postgres:postgres@localhost:5432/iris_demo_source
+      # Use hash-deterministic provider for speed — this job tests API contracts, not embedding quality
+      EMBEDDING_PROVIDER: hash-deterministic
+      PORT: '3901'
+      API_URL: http://localhost:3901
+      DEMO_MODE: 'true'
+      SYNC_WORKER_STANDALONE: 'false'
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+
+      - name: Build API + MCP server
+        run: pnpm exec turbo run build --filter=@iris/api --filter=@iris/mcp-server
+
+      - name: Seed iris_demo_source
+        run: |
+          PGPASSWORD=postgres psql -h localhost -U postgres -c "CREATE DATABASE iris_demo_source" postgres
+          PGPASSWORD=postgres psql -h localhost -U postgres iris_demo_source < scripts/seed-business-db.sql
+
+      - name: Run migrations + start API server
+        run: |
+          node --import tsx apps/api/src/db/migrate.ts
+          node apps/api/dist/server.js &
+          echo "API_PID=$!" >> "$GITHUB_ENV"
+          # Wait for API to be healthy (up to 30 s)
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:3901/health >/dev/null 2>&1; then
+              echo "API healthy after ${i}s"; break
+            fi
+            sleep 1
+          done
+          curl -sf http://localhost:3901/health || (echo "API did not start" && exit 1)
+
+      - name: Install Playwright browsers
+        run: npx playwright install chromium --with-deps
+
+      - name: Run onboarding golden path tests
+        working-directory: tests
+        run: |
+          npx playwright test onboarding-golden-path \
+            --project=api \
+            --reporter=list
+        env:
+          API_URL: http://localhost:3901
+          DEMO_SOURCE_DATABASE_URL: postgres://postgres:postgres@localhost:5432/iris_demo_source
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: onboarding-playwright-report
+          path: tests/playwright-report/
+          if-no-files-found: ignore

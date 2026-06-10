@@ -26,7 +26,7 @@ export default defineConfig({
     },
     {
       name: 'dashboard',
-      testMatch: /connector-setup\.spec\.ts/,
+      testMatch: /(connector-setup|onboarding-golden-path)\.spec\.ts/,
       use: {
         ...devices['Desktop Chrome'],
         baseURL: DASHBOARD_URL,

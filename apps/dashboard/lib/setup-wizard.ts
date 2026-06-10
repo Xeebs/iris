@@ -18,6 +18,8 @@ export type WizardState = {
   currentStep: WizardStep;
   selectedConnectorId: string | null;
   authData: Record<string, string>;
+  /** Structured config for connectors that use more than a single API key. Overrides authData in createConnector. */
+  rawConfig: Record<string, unknown> | null;
   schemaFields: SchemaField[];
   syncFrequency: SyncFrequency;
   instanceId: string | null;
@@ -34,6 +36,7 @@ export const INITIAL_WIZARD_STATE: WizardState = {
   currentStep: 'select',
   selectedConnectorId: null,
   authData: {},
+  rawConfig: null,
   schemaFields: [],
   syncFrequency: 'manual',
   instanceId: null,
