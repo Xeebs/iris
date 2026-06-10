@@ -117,6 +117,14 @@ import { createConnectorPerformanceRoutes } from './routes/connector-performance
 import { createDataQualityRoutes } from './routes/data-quality.js';
 import { makeQuotaRouter } from './routes/quota-management.js';
 import { createSloAdminRoutes } from './routes/slo-admin.js';
+import { makeBackupRecoveryRouter } from './routes/backup-recovery.js';
+import { createBudgetManagementRoutes } from './routes/budget-management.js';
+import { createCircuitBreakerAdminRoutes } from './routes/circuit-breaker-admin.js';
+import { createComplianceAuditRoutes } from './routes/compliance-audit.js';
+import { createConnectorBenchmarksRoutes } from './routes/connector-benchmarks.js';
+import { makeCostAttributionRouter } from './routes/cost-attribution.js';
+import { createDataLineageRoutes } from './routes/data-lineage.js';
+import { makeEntityReconciliationRouter } from './routes/entity-reconciliation.js';
 import { openApiSpec } from './openapi.js';
 
 export { createApp };
@@ -347,6 +355,17 @@ function createApp(
   authed.route('/data-quality', createDataQualityRoutes(sql as never));
   authed.route('/quota', makeQuotaRouter(sqlFn));
   authed.route('/admin/slos', createSloAdminRoutes(sql as never));
+
+  // Batch 6: backup-recovery, budget-management, circuit-breaker-admin, compliance-audit,
+  // connector-benchmarks, cost-attribution, data-lineage, entity-reconciliation.
+  authed.route('/admin/backup-recovery', makeBackupRecoveryRouter(sql));
+  authed.route('/workspace', createBudgetManagementRoutes(sql));
+  authed.route('/admin/connectors', createCircuitBreakerAdminRoutes(sql as never));
+  authed.route('/compliance', createComplianceAuditRoutes(sql as never));
+  authed.route('/connector-benchmarks', createConnectorBenchmarksRoutes(sql));
+  authed.route('/cost-attribution', makeCostAttributionRouter(sql));
+  authed.route('/', createDataLineageRoutes(sql));
+  authed.route('/', makeEntityReconciliationRouter(sql));
 
   // Webhook routes: inbound (unauthenticated) + events status (authenticated)
   app.route('/api/v1/webhooks', createWebhookRoutes(sql));
