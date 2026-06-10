@@ -31,5 +31,8 @@
       "Bash(curl * | bash)",
       "Bash(sudo rm *)"
     ]
+  },
+  "enabledPlugins": {
+    "last30days@last30days-skill": true
   }
 }

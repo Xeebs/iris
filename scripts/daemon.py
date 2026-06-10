@@ -38,6 +38,8 @@ SLEEP_QUEUE_EMPTY   = 3600   # 1 hour
 SLEEP_UNEXPECTED    = 120    # 2 min
 SLEEP_MODEL_SWITCH  = 30     # brief pause before relaunching on a fallback model
 SLEEP_LOCK_BUSY     = 300    # another worker (heartbeat) holds the tree — retry in 5 min
+SLEEP_CI_PENDING    = 60     # CI run in progress — poll again shortly (costs zero tokens)
+SLEEP_NEXT_SESSION  = 15     # session finished its task batch — respawn fresh
 
 # ── model fallback chain ─────────────────────────────────────────────────────
 # When the active model's usage limit is exhausted (CLI usage-limit error or the
@@ -65,7 +67,11 @@ Run the Iris build pipeline as defined in CLAUDE.md. This is a wake-up trigger \
 Rules:
 - Read pipeline/state.json first and resume from the recorded phase and active task
 - Run all phases in direct sequence for each task: Plan → Implement → Test → Commit → next task
-- After committing a task, immediately pick the next UNWORKED High task and continue — do NOT stop
+- After committing a task, immediately pick the next UNWORKED High task and continue
+- After committing your THIRD task this session, exit cleanly instead (write state and stop) — \
+the daemon respawns a fresh session in seconds; short sessions keep context lean and cheap
+- Never poll CI with gh in-session — the daemon verifies CI between sessions for free and tells \
+you the result at the top of this prompt
 - Spawn the task-researcher subagent whenever fewer than 3 UNWORKED items remain in pipeline/queue.md
 - If you find the queue has no UNWORKED High or Medium tasks, write current_phase=IDLE and exit.
 - Only stop if: (a) the Claude API returns a rate-limit error, (b) no UNWORKED tasks remain, \
@@ -310,16 +316,61 @@ def interruptible_sleep(seconds: float) -> None:
         time.sleep(1)
 
 
-def build_prompt() -> str:
+def github_ci_status() -> tuple[str, str]:
+    """Check the latest GitHub Actions run from the daemon (zero tokens).
+
+    Returns (state, detail) where state is green | red | pending | unknown.
+    This replaces in-session `gh` polling, which burned a tool call + turn
+    per poll for minutes at a time.
+    """
+    try:
+        out = subprocess.run(
+            ["gh", "run", "list", "--limit", "1",
+             "--json", "status,conclusion,databaseId,workflowName"],
+            cwd=str(IRIS), capture_output=True, text=True, timeout=30,
+        )
+        runs = json.loads(out.stdout) if out.returncode == 0 and out.stdout.strip() else []
+    except Exception:
+        return "unknown", "gh unavailable"
+    if not runs:
+        return "green", "no runs found"
+    run = runs[0]
+    rid = run.get("databaseId", "?")
+    if run.get("status") != "completed":
+        return "pending", f"run {rid} is {run.get('status')}"
+    if run.get("conclusion") == "success":
+        return "green", f"run {rid} succeeded"
+    return "red", f"run {rid} concluded: {run.get('conclusion')}"
+
+
+def build_prompt(ci_state: str = "unknown", ci_detail: str = "") -> str:
+    # Volatile lines go LAST and use coarse buckets so the prompt prefix stays
+    # byte-identical across rapid respawns — that keeps the Anthropic prompt
+    # cache warm (5-min TTL) instead of re-ingesting the full context each spawn.
     used, limit, pct = budget_status()
-    remaining = limit - used
+    pct_bucket       = int(pct * 100 // 5 * 5)
+    remaining_bucket = max(0, int((limit - used) // 100_000 * 100_000))
+
+    if ci_state == "red":
+        ci_line = (
+            f"\n\nCI STATUS (verified by the daemon just now): RED — {ci_detail}. "
+            f"Fixing CI is your first and only priority until it is green."
+        )
+    elif ci_state == "green":
+        ci_line = (
+            "\n\nCI STATUS (verified by the daemon just now): GREEN. "
+            "Skip the Phase 0 gh check and proceed directly to task selection."
+        )
+    else:
+        ci_line = ""
+
     budget_line = (
-        f"\n\nTOKEN BUDGET: {used:,} / {limit:,} tokens used in the last "
-        f"{BUDGET_WINDOW_HOURS:.0f}h ({pct * 100:.1f}%). "
-        f"Hard stop before {BUDGET_THRESHOLD * 100:.0f}% — approximately {remaining:,} tokens remain. "
+        f"\n\nTOKEN BUDGET: roughly {pct_bucket}% of the {limit:,}-token "
+        f"{BUDGET_WINDOW_HOURS:.0f}h window is used; at least {remaining_bucket:,} tokens remain. "
+        f"Hard stop at {BUDGET_THRESHOLD * 100:.0f}%. "
         f"Do not start a new task if you estimate it cannot complete within the remaining budget."
     )
-    return BASE_PROMPT + budget_line
+    return BASE_PROMPT + ci_line + budget_line
 
 
 def acquire_worker_lock(model: str):
@@ -525,6 +576,13 @@ def main() -> None:
             interruptible_sleep(wait_sec)
             continue
 
+        # ── CI gate (daemon-side, zero tokens) ────────────────────────────────
+        ci_state, ci_detail = github_ci_status()
+        if ci_state == "pending":
+            write_daemon("sleeping", f"Waiting for CI ({ci_detail})", wake_iso(SLEEP_CI_PENDING))
+            interruptible_sleep(SLEEP_CI_PENDING)
+            continue
+
         # ── model selection ───────────────────────────────────────────────────
         model = pick_model()
         if model is None:
@@ -581,7 +639,7 @@ def main() -> None:
                 "--output-format", "stream-json",
                 "--verbose",  # required by the CLI for stream-json in --print mode
                 "--model", model,
-                "-p", build_prompt(),
+                "-p", build_prompt(ci_state, ci_detail),
             ],
             cwd=str(IRIS),
             stdout=subprocess.PIPE,
@@ -657,6 +715,10 @@ def main() -> None:
         elif phase == "IDLE":
             write_daemon("sleeping", "Queue exhausted — resuming in 1 hour for task research", wake_iso(SLEEP_QUEUE_EMPTY))
             interruptible_sleep(SLEEP_QUEUE_EMPTY)
+        elif returncode == 0 and phase == "COMMITTED":
+            # Clean exit after a completed task batch — respawn a fresh session
+            write_daemon("sleeping", "Task batch committed — respawning fresh session", wake_iso(SLEEP_NEXT_SESSION))
+            interruptible_sleep(SLEEP_NEXT_SESSION)
         else:
             write_daemon("sleeping", f"Unexpected exit (code {returncode}) — retrying in 2 minutes", wake_iso(SLEEP_UNEXPECTED))
             interruptible_sleep(SLEEP_UNEXPECTED)

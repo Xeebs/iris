@@ -88,16 +88,13 @@ Rationale: 344 cycles produced enormous surface area but the core value proposit
 
 ### CI Green Gate — MANDATORY, Highest Priority
 
-**Before selecting any new feature task, the pipeline MUST verify that GitHub CI is passing.**
+**No feature work happens on red CI.** The check itself is done by the **daemon, not by you**: before spawning each session it queries GitHub Actions and injects a `CI STATUS` line into your prompt (it also waits out in-progress runs so you are never spawned mid-run).
 
-Run `gh run list --limit 5` and check the most recent run status:
-- If **any run is failing**: immediately treat fixing it as a `Critical` priority task that supersedes all other queue items. Do not implement new features while CI is red.
-- Diagnose the failure with `gh run view <run-id>` and `gh run view <run-id> --log-failed`.
-- Fix the root cause, commit, push, then wait for the next run to confirm green before proceeding.
-- Repeat this check-fix-verify loop until CI is confirmed passing.
-- Only after CI is green may the pipeline select the next feature task from the queue.
+- Prompt says **GREEN** → skip all `gh` checks and go straight to task selection.
+- Prompt says **RED** → fixing that run is your first and only priority. Diagnose with `gh run view <run-id> --log-failed`, fix the root cause, commit, push, then **exit cleanly** — the daemon waits for the new run and respawns you with the fresh CI status.
+- No CI line in the prompt (daemon couldn't check) → run `gh run list --limit 3` once yourself and act on the result.
 
-**After every commit & push** (Phase 5), pause and re-run the CI green gate check before starting the next task. A pushed commit that breaks CI must be fixed in the same pipeline cycle.
+**Never poll CI in a loop in-session** (no `sleep`/`gh run watch` cycles — each poll costs a tool call and a turn; the daemon does the same wait for free). After pushing, do not wait for the run: continue or exit per the session batch rule, and trust the daemon to route the next session to a fix if the push broke CI.
 
 This rule overrides all other priority ordering. A product with failing CI is not a working product.
 
@@ -107,7 +104,7 @@ Read `pipeline/state.json`. Identify `current_phase` and `active_task`. If a tas
 
 ### Phase 0 — CI Green Gate Check
 
-Run `gh run list --limit 5`. If the most recent run is not `success`, enter the CI fix loop (see CI Green Gate above) before proceeding to Phase 1.
+Read the `CI STATUS` line the daemon put in your prompt and act per the CI Green Gate section above. Only run `gh run list` yourself if the prompt carries no CI status.
 
 ### Phase 1 — Task Research (conditional)
 
@@ -141,16 +138,27 @@ If tests pass:
 4. Mark task `COMMITTED` in `pipeline/queue.md`, then run `python3 scripts/archive-queue.py` to move it to `pipeline/queue-archive.md`
 5. Append a one-line entry to `pipeline/changelog.md`
 6. Write `pipeline/state.json` with `current_phase: COMMITTED, active_task: null`
-7. **Run the CI Green Gate check** — wait for the pushed run to complete and confirm it passes before proceeding
-8. Immediately proceed to Phase 2 for the next task — do **not** stop
+7. Do **not** poll CI for the pushed run — the daemon verifies it between sessions (see CI Green Gate)
+8. If this was your **third committed task this session**, exit cleanly now (the daemon respawns a fresh session in seconds). Otherwise proceed to Phase 2 for the next task
+
+### Token-Efficient Tool Use — applies to every session and subagent
+
+Tool output lands in your context and is paid for on every subsequent turn. Keep it small:
+
+- **Tests**: `pnpm test --filter=<pkg> 2>&1 | tail -40` — never dump a full vitest run. If you need more of a failure, re-run only the failing file: `pnpm vitest run <file> 2>&1 | tail -60`.
+- **Typecheck/build**: pipe through `| tail -25`. Success needs one line; failures are at the end anyway.
+- **Reading files**: never read a file >400 lines in full — read the relevant range, or `grep -n` first and read around the hits.
+- **Searching**: prefer `grep -l` / `grep -c` / `grep -m 5` over unbounded matches; `head`/`tail` every listing.
+- **Logs/JSON**: never `cat` logs or large JSON; use `tail`, `python3 -c` extraction, or `--jq` filters on `gh`.
 
 ### When to Stop
 
-**Only stop** under one of these two conditions:
+**Stop** under any of these conditions:
+0. **Task batch complete** — you have committed 3 tasks this session. Exit cleanly; the daemon respawns a fresh session in seconds (short sessions keep context lean — a long session pays for its entire history on every turn).
 1. **Rate limited** — write `rate_limit_hit: true` and current phase/task to state, then exit.
 2. **Queue exhausted after research** — task-researcher ran and produced 0 new tasks. Write `current_phase: IDLE` to state, then exit. **In slice mode, before declaring exhaustion: run `scripts/slice-demo.sh` (if it exists). If it fails, each failure is a new slice task — add it and continue. If it passes all acceptance criteria in `docs/VERTICAL_SLICE.md`, flip its status line to `ACHIEVED`, commit, and exit IDLE so the owner can verify by hand.**
 
-Never stop after a single task. Never stop because `last_research` is today — always attempt research when the queue is low. Drive all work forward until genuinely blocked.
+Never stop mid-task or after a single quick task unless rate-limited. Never stop because `last_research` is today — always attempt research when the queue is low. Within a session's 3-task batch, drive all work forward until genuinely blocked.
 
 ---
 
