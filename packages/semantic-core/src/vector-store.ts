@@ -178,8 +178,12 @@ export class PgvectorStore implements VectorStore {
       workspace_id: workspaceId ?? extractWorkspaceId(e.id),
       type: e.type,
       label: e.label,
-      attributes: JSON.stringify(e.attributes),
-      relationships: JSON.stringify(e.relationships),
+      // sql.json(), not JSON.stringify() — pre-stringifying double-encodes:
+      // the string itself gets stored as a jsonb *string scalar* ("[...]"),
+      // so reads return a string instead of an array/object. This is what
+      // broke the slice demo; reproduced against live Postgres 17 locally.
+      attributes: this.sql.json(e.attributes as Parameters<typeof this.sql.json>[0]),
+      relationships: this.sql.json(e.relationships as unknown as Parameters<typeof this.sql.json>[0]),
       last_modified: e.lastModified,
       source_id: e.sourceId,
       embedding: formatVector(vectors[i] ?? []),
