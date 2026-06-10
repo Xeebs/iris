@@ -24,6 +24,7 @@ jobs:
   slice-demo:
     name: Vertical Slice Demo
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     services:
       postgres:
         image: pgvector/pgvector:pg16
@@ -78,11 +79,17 @@ jobs:
       # host's gh token cannot download Actions logs, so the artifact is the
       # only way to diagnose a red run.
       - name: Run slice demo (run 1 of 2)
+        timeout-minutes: 8
+        env:
+          SLICE_SKIP_BUILD: '1'
         run: |
           bash scripts/slice-demo.sh 2>&1 | tee slice-demo-run1.log
           exit "${PIPESTATUS[0]}"
 
       - name: Run slice demo (run 2 of 2 — determinism)
+        timeout-minutes: 8
+        env:
+          SLICE_SKIP_BUILD: '1'
         run: |
           bash scripts/slice-demo.sh 2>&1 | tee slice-demo-run2.log
           exit "${PIPESTATUS[0]}"

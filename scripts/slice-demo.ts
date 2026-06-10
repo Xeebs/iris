@@ -63,11 +63,26 @@ function startProcess(name: string, args: string[], cwd: string): ChildProcess {
   return child;
 }
 
+async function withTimeout<T>(ms: number, promise: Promise<T>): Promise<T> {
+  let timer: ReturnType<typeof setTimeout>;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error(`timed out after ${ms}ms`)), ms);
+  });
+  try {
+    return await Promise.race([promise, timeout]);
+  } finally {
+    clearTimeout(timer!);
+  }
+}
+
 async function waitFor(description: string, timeoutMs: number, probe: () => Promise<boolean>): Promise<void> {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     try {
-      if (await probe()) return;
+      const timeLeft = deadline - Date.now();
+      if (timeLeft <= 0) break;
+      // Cap each probe at 8 s so a hanging fetch/query never blocks the whole waitFor
+      if (await withTimeout(Math.min(8_000, timeLeft), probe())) return;
     } catch {
       // keep polling until the deadline
     }
@@ -98,13 +113,13 @@ async function main(): Promise<void> {
   console.log('Database reset.');
 
   step('2/8 Run migrations');
-  await new Promise<void>((resolve) => {
+  await withTimeout(60_000, new Promise<void>((resolve) => {
     const migrate = spawn('npx', ['tsx', 'src/db/migrate.ts'], { cwd: API_DIR, env: CHILD_ENV, stdio: 'inherit' });
     migrate.on('exit', (code) => {
       if (code !== 0) fail(`Migrations exited with code ${code}`);
       resolve();
     });
-  });
+  })).catch((e: unknown) => fail(`Migration timed out or crashed: ${e instanceof Error ? e.message : String(e)}`));
 
   step('3/8 Start API server + sync worker (DEMO_MODE, hash-deterministic embeddings)');
   startProcess('api', ['tsx', 'src/server.ts'], API_DIR);
@@ -178,7 +193,7 @@ async function main(): Promise<void> {
   await adminSql.end();
 
   step('8/8 MCP query phase — canonical questions over stdio');
-  await new Promise<void>((resolve) => {
+  await withTimeout(180_000, new Promise<void>((resolve) => {
     const queryClient = spawn('npx', ['tsx', 'src/slice-query-client.ts'], {
       cwd: join(ROOT, 'apps', 'mcp-server'),
       env: { ...CHILD_ENV, IRIS_API_KEY: apiKey, SLICE_WORKSPACE_ID: workspaceId },
@@ -188,7 +203,7 @@ async function main(): Promise<void> {
       if (code !== 0) fail(`MCP query phase exited with code ${code}`);
       resolve();
     });
-  });
+  })).catch((e: unknown) => fail(`MCP query phase timed out or crashed: ${e instanceof Error ? e.message : String(e)}`));
 
   console.log('\nSLICE DEMO (connect → sync → index → serve → query → answer): PASS');
   for (const child of children) child.kill('SIGTERM');

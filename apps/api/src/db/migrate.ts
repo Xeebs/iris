@@ -61,7 +61,9 @@ async function runMigrations(): Promise<void> {
   }
 }
 
-runMigrations().catch((err: unknown) => {
+runMigrations().then(() => {
+  process.exit(0);
+}).catch((err: unknown) => {
   const message = err instanceof Error ? err.message : String(err);
   process.stderr.write(`MIGRATION_ERROR file=${currentFile} error=${message}\n`);
   process.exit(1);
