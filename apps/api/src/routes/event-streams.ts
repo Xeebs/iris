@@ -14,13 +14,6 @@ import { logger } from '@iris/core/logger';
 const log = logger.child({ route: 'event-streams' });
 
 type Sql = Parameters<typeof getEventStreamConfig>[0];
-type SqlBindings = { sql: Sql };
-
-const app = new Hono<{ Bindings: SqlBindings }>();
-
-function getSql(c: { env: unknown }) {
-  return (c.env as SqlBindings | undefined)?.sql;
-}
 
 const EventConfigSchema = z.object({
   enabled: z.boolean(),
@@ -37,129 +30,133 @@ const EnqueueEventSchema = z.object({
   schemaVersion: z.string().optional(),
 });
 
-/** GET /connectors/:connectorId/event-config — get stream settings */
-app.get('/connectors/:connectorId/event-config', async (c) => {
-  const workspaceId = c.req.header('x-workspace-id') ?? 'default';
-  const connectorId = c.req.param('connectorId');
+/**
+ * @param sql - Postgres client
+ * @returns Hono router for event stream management endpoints
+ */
+export function createEventStreamsRoutes(sql: Sql): Hono {
+  const app = new Hono();
 
-  const sql = getSql(c);
-  const result = await getEventStreamConfig(sql!, workspaceId, connectorId);
+  /** GET /connectors/:connectorId/event-config — get stream settings */
+  app.get('/connectors/:connectorId/event-config', async (c) => {
+    const workspaceId = c.req.header('x-workspace-id') ?? 'default';
+    const connectorId = c.req.param('connectorId');
 
-  if (result.isErr()) {
-    log.error('Failed to get event stream config', { error: result.error.message });
-    return c.json({ error: { code: 'DB_ERROR', message: 'Failed to load config' } }, 500);
-  }
+    const result = await getEventStreamConfig(sql, workspaceId, connectorId);
 
-  return c.json({ data: result.value ?? { connectorId, workspaceId, enabled: false, eventTypes: [], configJson: {} } });
-});
+    if (result.isErr()) {
+      log.error('Failed to get event stream config', { error: result.error.message });
+      return c.json({ error: { code: 'DB_ERROR', message: 'Failed to load config' } }, 500);
+    }
 
-/** PUT /connectors/:connectorId/event-config — enable/configure stream */
-app.put('/connectors/:connectorId/event-config', async (c) => {
-  const workspaceId = c.req.header('x-workspace-id') ?? 'default';
-  const connectorId = c.req.param('connectorId');
-
-  const body = await c.req.json().catch(() => ({}));
-  const parsed = EventConfigSchema.safeParse(body);
-  if (!parsed.success) {
-    return c.json({ error: { code: 'VALIDATION_ERROR', message: 'Invalid config', details: parsed.error.format() } }, 400);
-  }
-
-  const sql = getSql(c);
-  const result = await upsertEventStreamConfig(sql!, {
-    connectorId,
-    workspaceId,
-    enabled: parsed.data.enabled,
-    eventTypes: parsed.data.eventTypes as ChangeType[],
-    configJson: parsed.data.configJson ?? {},
+    return c.json({ data: result.value ?? { connectorId, workspaceId, enabled: false, eventTypes: [], configJson: {} } });
   });
 
-  if (result.isErr()) {
-    return c.json({ error: { code: 'DB_ERROR', message: 'Failed to update config' } }, 500);
-  }
+  /** PUT /connectors/:connectorId/event-config — enable/configure stream */
+  app.put('/connectors/:connectorId/event-config', async (c) => {
+    const workspaceId = c.req.header('x-workspace-id') ?? 'default';
+    const connectorId = c.req.param('connectorId');
 
-  return c.json({ data: { connectorId, enabled: parsed.data.enabled } });
-});
+    const body = await c.req.json().catch(() => ({}));
+    const parsed = EventConfigSchema.safeParse(body);
+    if (!parsed.success) {
+      return c.json({ error: { code: 'VALIDATION_ERROR', message: 'Invalid config', details: parsed.error.format() } }, 400);
+    }
 
-/** POST /connectors/:connectorId/events — enqueue a change event */
-app.post('/connectors/:connectorId/events', async (c) => {
-  const workspaceId = c.req.header('x-workspace-id') ?? 'default';
-  const connectorId = c.req.param('connectorId');
+    const result = await upsertEventStreamConfig(sql, {
+      connectorId,
+      workspaceId,
+      enabled: parsed.data.enabled,
+      eventTypes: parsed.data.eventTypes as ChangeType[],
+      configJson: parsed.data.configJson ?? {},
+    });
 
-  const body = await c.req.json().catch(() => ({}));
-  const parsed = EnqueueEventSchema.safeParse(body);
-  if (!parsed.success) {
-    return c.json({ error: { code: 'VALIDATION_ERROR', message: 'Invalid event payload', details: parsed.error.format() } }, 400);
-  }
+    if (result.isErr()) {
+      return c.json({ error: { code: 'DB_ERROR', message: 'Failed to update config' } }, 500);
+    }
 
-  const sql = getSql(c);
-  const result = await enqueueChangeEvent(sql!, {
-    eventId: parsed.data.eventId,
-    connectorId,
-    workspaceId,
-    entityId: parsed.data.entityId,
-    entityType: parsed.data.entityType,
-    changeType: parsed.data.changeType as ChangeType,
-    payload: parsed.data.payload ?? {},
-    occurredAt: new Date(),
-    schemaVersion: parsed.data.schemaVersion ?? '1',
+    return c.json({ data: { connectorId, enabled: parsed.data.enabled } });
   });
 
-  if (result.isErr()) {
-    return c.json({ error: { code: 'DB_ERROR', message: 'Failed to enqueue event' } }, 500);
-  }
+  /** POST /connectors/:connectorId/events — enqueue a change event */
+  app.post('/connectors/:connectorId/events', async (c) => {
+    const workspaceId = c.req.header('x-workspace-id') ?? 'default';
+    const connectorId = c.req.param('connectorId');
 
-  return c.json({ data: { eventId: parsed.data.eventId, status: 'pending' } }, 201);
-});
+    const body = await c.req.json().catch(() => ({}));
+    const parsed = EnqueueEventSchema.safeParse(body);
+    if (!parsed.success) {
+      return c.json({ error: { code: 'VALIDATION_ERROR', message: 'Invalid event payload', details: parsed.error.format() } }, 400);
+    }
 
-/** GET /events/audit — cursor-paginated event audit history */
-app.get('/events/audit', async (c) => {
-  const workspaceId = c.req.header('x-workspace-id') ?? 'default';
-  const limit = Math.min(parseInt(c.req.query('limit') ?? '50', 10), 200);
-  const cursor = c.req.query('cursor');
+    const result = await enqueueChangeEvent(sql, {
+      eventId: parsed.data.eventId,
+      connectorId,
+      workspaceId,
+      entityId: parsed.data.entityId,
+      entityType: parsed.data.entityType,
+      changeType: parsed.data.changeType as ChangeType,
+      payload: parsed.data.payload ?? {},
+      occurredAt: new Date(),
+      schemaVersion: parsed.data.schemaVersion ?? '1',
+    });
 
-  const sql = getSql(c);
-  const result = await getEventAuditLog(sql!, workspaceId, limit, cursor);
+    if (result.isErr()) {
+      return c.json({ error: { code: 'DB_ERROR', message: 'Failed to enqueue event' } }, 500);
+    }
 
-  if (result.isErr()) {
-    return c.json({ error: { code: 'DB_ERROR', message: 'Failed to load audit log' } }, 500);
-  }
-
-  return c.json({
-    data: result.value.entries,
-    meta: { hasMore: result.value.nextCursor !== null, nextCursor: result.value.nextCursor },
+    return c.json({ data: { eventId: parsed.data.eventId, status: 'pending' } }, 201);
   });
-});
 
-/** POST /events/:eventId/retry — manually retry a failed event */
-app.post('/events/:eventId/retry', async (c) => {
-  const workspaceId = c.req.header('x-workspace-id') ?? 'default';
-  const eventId = c.req.param('eventId');
+  /** GET /events/audit — cursor-paginated event audit history */
+  app.get('/events/audit', async (c) => {
+    const workspaceId = c.req.header('x-workspace-id') ?? 'default';
+    const limit = Math.min(parseInt(c.req.query('limit') ?? '50', 10), 200);
+    const cursor = c.req.query('cursor');
 
-  const sql = getSql(c);
+    const result = await getEventAuditLog(sql, workspaceId, limit, cursor);
 
-  // Reset retry status so it gets picked up by the worker
-  const result = await markEventFailed(sql!, workspaceId, eventId, 999);
+    if (result.isErr()) {
+      return c.json({ error: { code: 'DB_ERROR', message: 'Failed to load audit log' } }, 500);
+    }
 
-  if (result.isErr()) {
-    return c.json({ error: { code: 'DB_ERROR', message: 'Failed to schedule retry' } }, 500);
-  }
+    return c.json({
+      data: result.value.entries,
+      meta: { hasMore: result.value.nextCursor !== null, nextCursor: result.value.nextCursor },
+    });
+  });
 
-  return c.json({ data: { eventId, scheduled: true } });
-});
+  /** POST /events/:eventId/retry — manually retry a failed event */
+  app.post('/events/:eventId/retry', async (c) => {
+    const workspaceId = c.req.header('x-workspace-id') ?? 'default';
+    const eventId = c.req.param('eventId');
 
-/** GET /events/pending-retry — list events awaiting retry */
-app.get('/events/pending-retry', async (c) => {
-  const workspaceId = c.req.header('x-workspace-id') ?? 'default';
-  const limit = Math.min(parseInt(c.req.query('limit') ?? '50', 10), 200);
+    // Reset retry status so it gets picked up by the worker
+    const result = await markEventFailed(sql, workspaceId, eventId, 999);
 
-  const sql = getSql(c);
-  const result = await getPendingRetryEvents(sql!, workspaceId, limit);
+    if (result.isErr()) {
+      return c.json({ error: { code: 'DB_ERROR', message: 'Failed to schedule retry' } }, 500);
+    }
 
-  if (result.isErr()) {
-    return c.json({ error: { code: 'DB_ERROR', message: 'Failed to load retry queue' } }, 500);
-  }
+    return c.json({ data: { eventId, scheduled: true } });
+  });
 
-  return c.json({ data: result.value, meta: { count: result.value.length } });
-});
+  /** GET /events/pending-retry — list events awaiting retry */
+  app.get('/events/pending-retry', async (c) => {
+    const workspaceId = c.req.header('x-workspace-id') ?? 'default';
+    const limit = Math.min(parseInt(c.req.query('limit') ?? '50', 10), 200);
 
-export default app;
+    const result = await getPendingRetryEvents(sql, workspaceId, limit);
+
+    if (result.isErr()) {
+      return c.json({ error: { code: 'DB_ERROR', message: 'Failed to load retry queue' } }, 500);
+    }
+
+    return c.json({ data: result.value, meta: { count: result.value.length } });
+  });
+
+  return app;
+}
+
+// Backward-compat default export for tests (tests mock all underlying functions)
+export default createEventStreamsRoutes(undefined as unknown as Sql);

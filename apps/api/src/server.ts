@@ -131,6 +131,12 @@ import { createDsrRoutes } from './routes/dsr.js';
 import { createEntityChangeSubscriptionsRoutes } from './routes/entity-change-subscriptions.js';
 import { makeEntityLifecycleRouter, makeLifecycleAdminRouter } from './routes/entity-lifecycle.js';
 import { createSyncOptimizerRoutes } from './routes/sync-optimizer.js';
+import { createAgentFeedbackRoutes } from './routes/agent-feedback.js';
+import { createContextDeltasRoutes } from './routes/context-deltas.js';
+import { createContextSummarizationRoutes } from './routes/context-summarization.js';
+import { createContextVersioningRoutes } from './routes/context-versioning.js';
+import { createFieldMappingsRoutes } from './routes/field-mappings.js';
+import { createEventStreamsRoutes } from './routes/event-streams.js';
 import { openApiSpec } from './openapi.js';
 
 export { createApp };
@@ -382,6 +388,16 @@ function createApp(
   authed.route('/entities', makeEntityLifecycleRouter(sql));
   authed.route('/admin/lifecycle', makeLifecycleAdminRouter(sql));
   authed.route('/sync-optimizer', createSyncOptimizerRoutes(sql));
+
+  // Batch 8: agent-feedback, context-deltas, context-summarization, context-versioning,
+  // field-mappings, event-streams. Routes previously used CF-Worker SqlBindings pattern;
+  // refactored to factory functions that close over sql.
+  authed.route('/agents', createAgentFeedbackRoutes(sql as never));
+  authed.route('/mcp-clients', createContextDeltasRoutes(sql as never));
+  authed.route('/context-summarization', createContextSummarizationRoutes(sql as never));
+  authed.route('/context', createContextVersioningRoutes(sql as never));
+  authed.route('/connectors', createFieldMappingsRoutes(sql as never));
+  authed.route('/', createEventStreamsRoutes(sql as never));
 
   // Webhook routes: inbound (unauthenticated) + events status (authenticated)
   app.route('/api/v1/webhooks', createWebhookRoutes(sql));
