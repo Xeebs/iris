@@ -3,6 +3,10 @@ name: Load Testing
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - 'pipeline/**'
+      - 'docs/**'
+      - '**.md'
   pull_request:
     branches: [main]
   workflow_dispatch:

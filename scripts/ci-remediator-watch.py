@@ -95,6 +95,19 @@ def fetch_runs(etag: str | None) -> tuple[list[dict] | None, str | None]:
         return None, etag
 
 
+def branch_head() -> str | None:
+    """Current SHA of main, or None if the lookup fails (fail open)."""
+    req = urllib.request.Request(
+        f"https://api.github.com/repos/{REPO}/branches/main",
+        headers={"Accept": "application/vnd.github+json", "User-Agent": "iris-ci-remediator"},
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=30) as res:
+            return json.loads(res.read())["commit"]["sha"]
+    except (urllib.error.URLError, TimeoutError, ValueError, KeyError):
+        return None
+
+
 def attempts_in_window(state: dict, workflow: str) -> int:
     cutoff = now() - ATTEMPT_WINDOW_SECONDS
     times = [t for t in state["attempts"].get(workflow, []) if t > cutoff]
@@ -168,6 +181,19 @@ def main() -> None:
                     continue
                 if run.get("conclusion") != "failure":
                     state["handled"][rid] = now()
+                    continue
+
+                # Stale-SHA guard: only remediate failures on the current main
+                # HEAD. A failure on an older SHA is either already addressed
+                # by a newer commit or will reproduce in that commit's own runs
+                # — remediating it just produces churn (and, historically,
+                # report-commit loops).
+                head = branch_head()
+                if head is not None and run.get("head_sha") != head:
+                    log(f"run {rid} ({run['name']}) is on stale SHA "
+                        f"{str(run.get('head_sha'))[:9]} (main is {head[:9]}); skipping")
+                    state["handled"][rid] = now()
+                    save_state(state)
                     continue
 
                 workflow = run["name"]

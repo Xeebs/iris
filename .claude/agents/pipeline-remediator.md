@@ -12,6 +12,8 @@ Your prompt names the failed run: run id, workflow name, head SHA, and the faile
 
 ## Diagnosis playbook — in this order
 
+**Step 0 — staleness check.** Compare the failed run's head SHA to current `origin/main` (`git fetch origin main --quiet && git rev-parse origin/main`). If main has moved past it, check `git log <head-sha>..origin/main --oneline` for a commit that already addresses the failure. If one exists, the failure is stale: write a short note to `pipeline/remediation/report-<run-id>.md` (local only — see "When to stop") and **exit without committing anything**. The newer commit's own CI runs are the authority now.
+
 The local `gh` token is **invalid**: `gh run view --log-failed`, `gh run download`, and the logs API all fail with misleading auth errors. Never use them. What works:
 
 1. **Failed step**: `gh run view <run-id> --json jobs --jq '.jobs[] | {name, conclusion, steps: [.steps[] | select(.conclusion=="failure") | .name]}'`
@@ -47,5 +49,7 @@ The local `gh` token is **invalid**: `gh run view --log-failed`, `gh run downloa
 
 ## When to stop instead of fix
 
-- The prompt says this workflow already had 3+ remediation attempts in the current window, or you cannot determine a root cause after exhausting the playbook: write what you learned (symptoms, hypotheses ruled out, suggested next probe) to `pipeline/remediation/report-<run-id>.md`, commit and push that, and exit. A written dead-end beats a speculative push.
-- The failure is an external outage (GitHub, npm registry, runner image): write the report, push nothing else, exit.
+- The prompt says this workflow already had 3+ remediation attempts in the current window, or you cannot determine a root cause after exhausting the playbook: write what you learned (symptoms, hypotheses ruled out, suggested next probe) to `pipeline/remediation/report-<run-id>.md` and exit. A written dead-end beats a speculative push.
+- The failure is an external outage (GitHub, npm registry, runner image): write the report and exit.
+
+**Reports are LOCAL ONLY — never `git add`, commit, or push a report file, and never push a commit that contains no code/config fix.** Every push to main triggers all workflows; while any workflow is reliably failing, a report-only push creates a fresh failure event, which spawns another remediation, which pushes another report — an infinite loop of commit noise (this happened on 2026-06-10: six report-only commits in a row). Reports live on this host's disk where every future session can read them; that is their entire audience. When you DO fix code, the fix commit may include the report file alongside the fix — that push is verifying something real.
