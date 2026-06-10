@@ -4940,3 +4940,71 @@ the live queue small. Layer headings are repeated per archival batch.
 - **Added**: 2026-06-09
 
 ---
+
+---
+
+<!-- archived 2026-06-10 -->
+
+## Layer 79: SLICE 2 — Iris in Real Use (see docs/SLICE_2.md)
+### Task: S2-1 Real embedding provider end-to-end (Ollama, configurable dimensions)
+- **Layer**: 79 — Slice 2
+- **Status**: COMMITTED
+- **Priority**: Critical
+- **Description**: Make the existing `OllamaProvider` (`packages/semantic-core/src/providers/ollama-provider.ts`, selected via `EMBEDDING_PROVIDER=ollama` in `embedding-provider.ts`) work end to end on the Pi with `nomic-embed-text`. Ollama is already installed locally (see `packages/core` local-llm integration); pull the model with `ollama pull nomic-embed-text` and verify the provider returns real vectors. Critical issue: nomic-embed-text is 768-dim but the pgvector schema is `vector(1536)` — make the vector dimension follow the configured provider (provider exposes `dimensions`; migrations/PgvectorStore take the dimension from config), and fail hard at startup on a store/provider dimension mismatch with a clear error telling the user a re-index is required. Never pad or truncate vectors. Add unit tests for the dimension-mismatch guard and an integration test that indexes + retrieves 5 entities through Ollama for real (skip with a clear message if Ollama is unreachable). Verify locally: `EMBEDDING_PROVIDER=ollama` + `pnpm vitest run` on the affected files, then a manual index/retrieve round trip.
+- **Files**:
+  - packages/semantic-core/src/providers/ollama-provider.ts
+  - packages/semantic-core/src/embedding-provider.ts
+  - packages/semantic-core/src/pgvector-store.ts (dimension from config + mismatch guard)
+  - apps/api/migrations/ (new migration if the vector column dimension must change)
+- **Depends on**: nothing
+- **Added**: 2026-06-10
+
+---
+
+<!-- archived 2026-06-10 -->
+
+## Layer 79: SLICE 2 — Iris in Real Use (see docs/SLICE_2.md)
+### Task: S2-2 Real data source — seeded business Postgres through the postgres connector
+- **Layer**: 79 — Slice 2
+- **Status**: COMMITTED
+- **Priority**: Critical
+- **Description**: Replace fixture JSON with a live data source. Write `scripts/seed-business-db.sql`: a realistic small-business dataset (~50 contacts, ~20 companies, ~30 deals/orders with owners, stages, amounts, dates — realistic names and relationships, no PII patterns that would trip the pii exclusion rules) loaded into a dedicated local Postgres database (`iris_demo_source`). Then verify the existing postgres connector (`packages/connectors/postgres/`) can connect to it, discover the schema, and `sync()` SemanticEntities through the real REST + BullMQ worker path established by Slice 1 (`POST /api/v1/connectors` → `POST /:id/sync` → sync-worker → indexer). Fix whatever breaks — transformer gaps, type mapping, relationship extraction from foreign keys. The seeded dataset must support aggregate questions (count/sum/largest) and relationship questions (who works where, which contacts belong to which company). Document the expected facts in `scripts/eval-questions.json` alongside S2-3. Verify locally with a full sync run and an entity-count + relationship spot check against the vector store.
+- **Files**:
+  - scripts/seed-business-db.sql
+  - packages/connectors/postgres/src/postgres-connector.ts (fixes as discovered)
+  - packages/connectors/postgres/src/transformers.ts (fixes as discovered)
+- **Depends on**: nothing
+- **Added**: 2026-06-10
+
+---
+
+<!-- archived 2026-06-10 -->
+
+## Layer 79: SLICE 2 — Iris in Real Use (see docs/SLICE_2.md)
+### Task: S2-3 Retrieval eval harness — 20+ questions scored for accuracy and tokens
+- **Layer**: 79 — Slice 2
+- **Status**: COMMITTED
+- **Priority**: High
+- **Description**: Build `scripts/eval-retrieval.ts`: loads `scripts/eval-questions.json` (≥20 questions, each with `question`, `expectedFacts: string[]`, `category`), calls `query-context` through the real MCP server for each, and scores: (1) fact accuracy — every expectedFact substring/regex present in the response, (2) token cost vs. a raw-data-paste baseline computed from the seeded source tables, (3) contextBudget compliance, (4) query latency p50/p95. Output a markdown report to `pipeline/slice2-eval-report.md` (same shape as `pipeline/slice-report.md`) plus a machine-readable JSON summary with pass/fail per the thresholds in docs/SLICE_2.md (≥90% accuracy, ≥70% total token savings). The question set must include ≥4 aggregate/superlative questions ("largest", "how many", "total value") — Slice 1's Q4 (33% savings) showed these stress retrieval; if they fail, improving retrieval for them IS slice work. Reuse the shared length/4 token estimator from Slice 1 for comparability.
+- **Files**:
+  - scripts/eval-retrieval.ts
+  - scripts/eval-questions.json
+- **Depends on**: S2-1, S2-2
+- **Added**: 2026-06-10
+
+---
+
+<!-- archived 2026-06-10 -->
+
+## Layer 79: SLICE 2 — Iris in Real Use (see docs/SLICE_2.md)
+### Task: S2-4 scripts/slice2-demo.sh + slice2-demo CI job
+- **Layer**: 79 — Slice 2
+- **Status**: COMMITTED
+- **Priority**: High
+- **Description**: The single-command proof, modeled on `scripts/slice-demo.sh` / `slice-demo.ts`: fresh DB (drop/recreate, migrate), seed `iris_demo_source` (S2-2), bootstrap workspace + API key, create postgres connector instance, sync through the worker, index with `EMBEDDING_PROVIDER=ollama` (the script must REFUSE to run with `hash-deterministic` — exit 1 with a message), start the MCP server, run the eval harness (S2-3), assert its pass criteria, print the token + latency report. Must pass twice in a row from clean state (run it twice in the script or in CI, as slice-demo does). Add a `slice2-demo` job to the GitHub Actions workflow: install Ollama in the runner, `ollama pull nomic-embed-text` (cache `~/.ollama` with actions/cache keyed on the model name to keep runs fast), then run the script. Tee logs to an artifact per the existing CI log pattern. Keep the existing `slice-demo` job untouched — it remains the regression guard for the Slice 1 plumbing.
+- **Files**:
+  - scripts/slice2-demo.sh
+  - scripts/slice2-demo.ts
+  - .github/workflows/ (add slice2-demo job)
+- **Depends on**: S2-1, S2-2, S2-3
+- **Added**: 2026-06-10

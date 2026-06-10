@@ -1,5 +1,6 @@
 import { registry } from '@iris/connector-sdk';
 import { HubSpotConnector, manifest as hubspotManifest } from '@iris/connector-hubspot';
+import { PostgresConnector, manifest as postgresManifest } from '@iris/connector-postgres';
 import { logger } from '@iris/core/logger';
 
 const log = logger.child({ service: 'connector-registration' });
@@ -15,6 +16,12 @@ export function registerConnectors(): void {
     registry.register({
       manifest: hubspotManifest,
       factory: () => new HubSpotConnector(),
+    });
+  }
+  if (!registry.has(postgresManifest.id)) {
+    registry.register({
+      manifest: postgresManifest,
+      factory: () => new PostgresConnector(),
     });
   }
   log.info('Connectors registered', { count: registry.size });

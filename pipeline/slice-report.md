@@ -1,7 +1,7 @@
 # Vertical Slice — Token Savings Report
 
-Generated: 2026-06-10T21:28:47.230Z
-Workspace: cad05b21-ade8-4352-80a3-39b3c39581e6
+Generated: 2026-06-10T22:33:01.187Z
+Workspace: 9e484221-eb93-4674-b324-af8859f78731
 
 Baseline = estimated tokens of the raw HubSpot fixture JSON a user would
 paste to answer each question. Iris = `query-context` response tokens

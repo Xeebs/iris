@@ -32,7 +32,7 @@ const CONTEXT_BUDGET = 2000;
 const REQUIRED_ACCURACY = 0.9;
 const REQUIRED_SAVINGS = 0.7;
 
-const ROOT = join(fileURLToPath(new URL('.', import.meta.url)), '..', '..', '..', '..');
+const ROOT = join(fileURLToPath(new URL('.', import.meta.url)), '..', '..', '..');
 
 type EvalQuestion = {
   id: string;

@@ -16,6 +16,8 @@ const tableConfigSchema = z.object({
   entityType: z.string().min(1).default('row'),
   updatedAtColumn: z.string().optional(),
   labelColumn: z.string().optional(),
+  // When set, concatenates these columns with a space to form the label (overrides labelColumn).
+  labelColumns: z.array(z.string()).optional(),
 });
 
 const configSchema = z.object({
@@ -221,9 +223,11 @@ export class PostgresConnector extends BaseConnector<PostgresConfig> {
 
   private rowToEntity(row: Record<string, unknown>, tableConf: TableConfig): SemanticEntity {
     const id = String(row['id'] ?? row['ID'] ?? Object.values(row)[0] ?? 'unknown');
-    const label = tableConf.labelColumn && row[tableConf.labelColumn]
-      ? String(row[tableConf.labelColumn])
-      : `${tableConf.name}:${id}`;
+    const label = tableConf.labelColumns?.length
+      ? tableConf.labelColumns.map((c) => row[c]).filter(Boolean).join(' ') || `${tableConf.name}:${id}`
+      : tableConf.labelColumn && row[tableConf.labelColumn]
+        ? String(row[tableConf.labelColumn])
+        : `${tableConf.name}:${id}`;
 
     const updatedAtValue = tableConf.updatedAtColumn ? row[tableConf.updatedAtColumn] : null;
     const lastModified =

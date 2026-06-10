@@ -1,0 +1,271 @@
+{
+  "generatedAt": "2026-06-10T22:36:22.142Z",
+  "workspaceId": "02b0f4a1-f1a9-4ea0-85ea-bad7cef42476",
+  "embeddingProvider": "ollama",
+  "totalQuestions": 22,
+  "passedQuestions": 18,
+  "accuracy": 0.8181818181818182,
+  "accuracyMet": false,
+  "totalIrisTokens": 30897,
+  "totalBaselineTokens": 182160,
+  "overallSavings": 0.8303853754940711,
+  "savingsMet": true,
+  "latencyP50Ms": 85,
+  "latencyP95Ms": 25598,
+  "categoryBreakdown": {
+    "relationship": {
+      "total": 4,
+      "passed": 2
+    },
+    "aggregate_superlative": {
+      "total": 4,
+      "passed": 2
+    },
+    "aggregate_count": {
+      "total": 2,
+      "passed": 2
+    },
+    "filter": {
+      "total": 6,
+      "passed": 6
+    },
+    "entity_lookup": {
+      "total": 6,
+      "passed": 6
+    }
+  },
+  "questions": [
+    {
+      "id": "Q01",
+      "question": "Who are the contacts at Acme Corp?",
+      "category": "relationship",
+      "passed": false,
+      "missingFacts": [
+        "Alice Johnson",
+        "Marcus Webb",
+        "Diana Patel"
+      ],
+      "irisTokens": 1146,
+      "savings": 0.8615942028985507,
+      "latencyMs": 26273
+    },
+    {
+      "id": "Q02",
+      "question": "What is the largest deal by amount?",
+      "category": "aggregate_superlative",
+      "passed": true,
+      "missingFacts": [],
+      "irisTokens": 1993,
+      "savings": 0.7592995169082126,
+      "latencyMs": 25598
+    },
+    {
+      "id": "Q03",
+      "question": "What deals does Globex have?",
+      "category": "relationship",
+      "passed": true,
+      "missingFacts": [],
+      "irisTokens": 1819,
+      "savings": 0.7803140096618357,
+      "latencyMs": 103
+    },
+    {
+      "id": "Q04",
+      "question": "How many contacts are in the customer stage?",
+      "category": "aggregate_count",
+      "passed": true,
+      "missingFacts": [],
+      "irisTokens": 1196,
+      "savings": 0.8555555555555556,
+      "latencyMs": 116
+    },
+    {
+      "id": "Q05",
+      "question": "What is Alice Johnson's title and company?",
+      "category": "entity_lookup",
+      "passed": true,
+      "missingFacts": [],
+      "irisTokens": 627,
+      "savings": 0.9242753623188406,
+      "latencyMs": 79
+    },
+    {
+      "id": "Q06",
+      "question": "Which deals are currently in the negotiation stage?",
+      "category": "filter",
+      "passed": true,
+      "missingFacts": [],
+      "irisTokens": 1981,
+      "savings": 0.7607487922705314,
+      "latencyMs": 111
+    },
+    {
+      "id": "Q07",
+      "question": "Who owns the Globex Enterprise Platform deal?",
+      "category": "entity_lookup",
+      "passed": true,
+      "missingFacts": [],
+      "irisTokens": 1964,
+      "savings": 0.7628019323671498,
+      "latencyMs": 95
+    },
+    {
+      "id": "Q08",
+      "question": "What is the total value of all closed_won deals?",
+      "category": "aggregate_superlative",
+      "passed": true,
+      "missingFacts": [],
+      "irisTokens": 1983,
+      "savings": 0.7605072463768117,
+      "latencyMs": 83
+    },
+    {
+      "id": "Q09",
+      "question": "What companies are in the Manufacturing industry?",
+      "category": "filter",
+      "passed": true,
+      "missingFacts": [],
+      "irisTokens": 492,
+      "savings": 0.9405797101449276,
+      "latencyMs": 85
+    },
+    {
+      "id": "Q10",
+      "question": "What is Bob Chen's title and what company does he work at?",
+      "category": "entity_lookup",
+      "passed": true,
+      "missingFacts": [],
+      "irisTokens": 540,
+      "savings": 0.9347826086956522,
+      "latencyMs": 86
+    },
+    {
+      "id": "Q11",
+      "question": "Which deals does Sarah Kim own?",
+      "category": "filter",
+      "passed": true,
+      "missingFacts": [],
+      "irisTokens": 1942,
+      "savings": 0.7654589371980676,
+      "latencyMs": 78
+    },
+    {
+      "id": "Q12",
+      "question": "What is the second largest deal?",
+      "category": "aggregate_superlative",
+      "passed": false,
+      "missingFacts": [
+        "Quantum Security Platform",
+        "128000"
+      ],
+      "irisTokens": 1965,
+      "savings": 0.7626811594202898,
+      "latencyMs": 82
+    },
+    {
+      "id": "Q13",
+      "question": "What is Quantum Systems' industry and number of employees?",
+      "category": "entity_lookup",
+      "passed": true,
+      "missingFacts": [],
+      "irisTokens": 592,
+      "savings": 0.9285024154589372,
+      "latencyMs": 71
+    },
+    {
+      "id": "Q14",
+      "question": "Which contacts work in New York?",
+      "category": "filter",
+      "passed": true,
+      "missingFacts": [],
+      "irisTokens": 903,
+      "savings": 0.8909420289855072,
+      "latencyMs": 102
+    },
+    {
+      "id": "Q15",
+      "question": "How many deals are in the proposal stage?",
+      "category": "aggregate_count",
+      "passed": true,
+      "missingFacts": [],
+      "irisTokens": 1941,
+      "savings": 0.7655797101449275,
+      "latencyMs": 76
+    },
+    {
+      "id": "Q16",
+      "question": "What deals does Zenith Capital have and what are their amounts?",
+      "category": "relationship",
+      "passed": true,
+      "missingFacts": [],
+      "irisTokens": 1829,
+      "savings": 0.7791062801932367,
+      "latencyMs": 83
+    },
+    {
+      "id": "Q17",
+      "question": "Who are the contacts at Forge Manufacturing and what are their titles?",
+      "category": "relationship",
+      "passed": false,
+      "missingFacts": [
+        "George Lewis",
+        "Hannah Walker"
+      ],
+      "irisTokens": 1198,
+      "savings": 0.8553140096618357,
+      "latencyMs": 78
+    },
+    {
+      "id": "Q18",
+      "question": "What is the Quantum Security Platform deal worth and what stage is it in?",
+      "category": "entity_lookup",
+      "passed": true,
+      "missingFacts": [],
+      "irisTokens": 1958,
+      "savings": 0.7635265700483091,
+      "latencyMs": 96
+    },
+    {
+      "id": "Q19",
+      "question": "Which companies have more than 200 employees?",
+      "category": "aggregate_superlative",
+      "passed": false,
+      "missingFacts": [
+        "Forge Manufacturing"
+      ],
+      "irisTokens": 485,
+      "savings": 0.9414251207729468,
+      "latencyMs": 77
+    },
+    {
+      "id": "Q20",
+      "question": "What is the BlueSky MES Upgrade deal amount and who owns it?",
+      "category": "entity_lookup",
+      "passed": true,
+      "missingFacts": [],
+      "irisTokens": 1870,
+      "savings": 0.7741545893719807,
+      "latencyMs": 85
+    },
+    {
+      "id": "Q21",
+      "question": "What deals has Tom Garcia closed?",
+      "category": "filter",
+      "passed": true,
+      "missingFacts": [],
+      "irisTokens": 1981,
+      "savings": 0.7607487922705314,
+      "latencyMs": 83
+    },
+    {
+      "id": "Q22",
+      "question": "Which companies are in the Finance or Financial Services industries?",
+      "category": "filter",
+      "passed": true,
+      "missingFacts": [],
+      "irisTokens": 492,
+      "savings": 0.9405797101449276,
+      "latencyMs": 87
+    }
+  ]
+}

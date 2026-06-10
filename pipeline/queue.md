@@ -27,29 +27,6 @@ Completed tasks are moved to `pipeline/queue-archive.md` by `scripts/archive-que
 
 > While `docs/SLICE_2.md` reads `NOT ACHIEVED`, the pipeline selects ONLY from this layer, the CI gate, and the in-flight Layer 77 task. Goal: the owner connects a real data source, registers Iris in their own Claude Code, and gets correct answers with real embeddings — accuracy and token cost measured by an eval harness.
 
-### Task: S2-3 Retrieval eval harness — 20+ questions scored for accuracy and tokens
-- **Layer**: 79 — Slice 2
-- **Status**: COMMITTED
-- **Priority**: High
-- **Description**: Build `scripts/eval-retrieval.ts`: loads `scripts/eval-questions.json` (≥20 questions, each with `question`, `expectedFacts: string[]`, `category`), calls `query-context` through the real MCP server for each, and scores: (1) fact accuracy — every expectedFact substring/regex present in the response, (2) token cost vs. a raw-data-paste baseline computed from the seeded source tables, (3) contextBudget compliance, (4) query latency p50/p95. Output a markdown report to `pipeline/slice2-eval-report.md` (same shape as `pipeline/slice-report.md`) plus a machine-readable JSON summary with pass/fail per the thresholds in docs/SLICE_2.md (≥90% accuracy, ≥70% total token savings). The question set must include ≥4 aggregate/superlative questions ("largest", "how many", "total value") — Slice 1's Q4 (33% savings) showed these stress retrieval; if they fail, improving retrieval for them IS slice work. Reuse the shared length/4 token estimator from Slice 1 for comparability.
-- **Files**:
-  - scripts/eval-retrieval.ts
-  - scripts/eval-questions.json
-- **Depends on**: S2-1, S2-2
-- **Added**: 2026-06-10
-
-### Task: S2-4 scripts/slice2-demo.sh + slice2-demo CI job
-- **Layer**: 79 — Slice 2
-- **Status**: UNWORKED
-- **Priority**: High
-- **Description**: The single-command proof, modeled on `scripts/slice-demo.sh` / `slice-demo.ts`: fresh DB (drop/recreate, migrate), seed `iris_demo_source` (S2-2), bootstrap workspace + API key, create postgres connector instance, sync through the worker, index with `EMBEDDING_PROVIDER=ollama` (the script must REFUSE to run with `hash-deterministic` — exit 1 with a message), start the MCP server, run the eval harness (S2-3), assert its pass criteria, print the token + latency report. Must pass twice in a row from clean state (run it twice in the script or in CI, as slice-demo does). Add a `slice2-demo` job to the GitHub Actions workflow: install Ollama in the runner, `ollama pull nomic-embed-text` (cache `~/.ollama` with actions/cache keyed on the model name to keep runs fast), then run the script. Tee logs to an artifact per the existing CI log pattern. Keep the existing `slice-demo` job untouched — it remains the regression guard for the Slice 1 plumbing.
-- **Files**:
-  - scripts/slice2-demo.sh
-  - scripts/slice2-demo.ts
-  - .github/workflows/ (add slice2-demo job)
-- **Depends on**: S2-1, S2-2, S2-3
-- **Added**: 2026-06-10
-
 ### Task: S2-5 Dashboard onboarding golden path + Playwright test
 - **Layer**: 79 — Slice 2
 - **Status**: UNWORKED

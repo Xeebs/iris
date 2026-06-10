@@ -4,6 +4,7 @@ Completed tasks are logged here by the daemon after each successful commit.
 
 ---
 
+- 2026-06-10 | feat(scripts,api,connector-postgres): S2-4 slice2-demo.sh + CI job — real-data demo driver, Ollama CI job, postgres connector labelColumns, eval path fix, connector registration
 - 2026-06-10 | feat(api): mount batch-3 routes in server.ts — sync-metrics, context-search, enrichments, entity-validation, bulk-ops, analytics-pipeline, insights
 - 2026-06-10 | feat(api): mount batch-2 routes in server.ts — api-keys, search, usage, mcp-tools, query-analytics, connector-health, documents; fix pre-existing data-quality-engine test failures (3 missing routes + camelCase transform)
 - 2026-06-10 | milestone: VERTICAL SLICE ACHIEVED — slice-demo CI green on commit 83ad10a, full connect→sync→index→serve→query→measure chain verified twice from clean state; pipeline returns to breadth work
@@ -181,3 +182,6 @@ VS-1 (slice path audit): documented connect→sync→index→serve→query chain
 2026-06-10 | feat(semantic-core,scripts): retrieval relevance cutoff + hash-provider stemming + offline slice simulator — slice-demo GREEN for the first time, 76.4% savings (a00f182)
 2026-06-10 | docs: correct VERTICAL_SLICE.md status to cite the actually-green run (a00f182, not 83ad10a)
 2026-06-10 | fix(semantic-core,api,mcp-server): 51 integration-test failures repaired — 6 new migrations (176-181), 28 jsonb double-encoding sites → sql.json, alias/aggregate SQL fixes; integration suite green for the first time (8f9d407)
+- 2026-06-10 S2-1: PgvectorStore configurable dimensions + Ollama 768-dim support; dimension mismatch guard; migration 182
+- 2026-06-10 S2-2: seed-business-db.sql (20 companies, 48 contacts, 30 deals); postgres connector FK relationships; eval-questions.json (22 questions)
+- 2026-06-10 S2-3: eval-retrieval.ts harness (22 questions, ≥90% accuracy + ≥70% savings thresholds, latency p50/p95, markdown + JSON reports)

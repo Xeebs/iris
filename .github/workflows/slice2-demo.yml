@@ -1,0 +1,130 @@
+name: Slice 2 Demo
+
+# Slice 2 gate (docs/SLICE_2.md): proves the full chain with a real data source
+# (live Postgres seeded with seed-business-db.sql), real semantic embeddings
+# (Ollama nomic-embed-text), and the eval harness scoring ≥90% accuracy and
+# ≥70% token savings.
+#
+# The existing slice-demo job (slice-demo.yml) remains the Slice 1 regression
+# guard (hash-deterministic embeddings) and is kept entirely separate.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  NODE_VERSION: '24'
+  NODE_OPTIONS: '--max-old-space-size=6144'
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
+jobs:
+  slice2-demo:
+    name: Slice 2 Demo (real data + Ollama embeddings)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: iris
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    env:
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/iris
+      REDIS_URL: redis://localhost:6379
+      DEMO_SOURCE_DATABASE_URL: postgres://postgres:postgres@localhost:5432/iris_demo_source
+      EMBEDDING_PROVIDER: ollama
+      OLLAMA_ENDPOINT: http://localhost:11434
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+
+      # Cache the Ollama model to keep runs fast (only re-downloaded when the
+      # model name changes). Cache key includes the model name so a bump to a
+      # newer model automatically invalidates and re-pulls.
+      - name: Cache Ollama models
+        uses: actions/cache@v4
+        with:
+          path: ~/.ollama/models
+          key: ollama-nomic-embed-text-v1
+
+      # Install Ollama, start the server in the background, pull the model if
+      # not already cached, then verify the server is accepting requests.
+      - name: Install and start Ollama + pull nomic-embed-text
+        run: |
+          curl -fsSL https://ollama.com/install.sh | sh
+          ollama serve &
+          # Wait until the server is ready (up to 30 s)
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:11434/api/tags >/dev/null 2>&1; then break; fi
+            sleep 1
+          done
+          ollama pull nomic-embed-text
+          echo "Ollama ready — nomic-embed-text pulled."
+
+      - name: Build slice packages (api, mcp-server + transitive deps)
+        run: pnpm exec turbo run build --filter=@iris/api --filter=@iris/mcp-server
+
+      # Acceptance criterion: passes twice in a row from clean state.
+      # The demo drops + recreates both the Iris schema and iris_demo_source at
+      # the start of each run, so two sequential passes prove there is no hidden
+      # state dependency.
+      # Output is written to log files and uploaded even on failure so the
+      # artifact is available for diagnosis without the gh token.
+      - name: Run slice 2 demo (run 1 of 2)
+        timeout-minutes: 20
+        env:
+          SLICE_SKIP_BUILD: '1'
+        run: |
+          EC=0
+          bash scripts/slice2-demo.sh > slice2-demo-run1.log 2>&1 || EC=$?
+          cat slice2-demo-run1.log
+          exit "$EC"
+
+      - name: Run slice 2 demo (run 2 of 2 — determinism)
+        timeout-minutes: 20
+        env:
+          SLICE_SKIP_BUILD: '1'
+        run: |
+          EC=0
+          bash scripts/slice2-demo.sh > slice2-demo-run2.log 2>&1 || EC=$?
+          cat slice2-demo-run2.log
+          exit "$EC"
+
+      - name: Upload eval reports + demo logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: slice2-report
+          path: |
+            pipeline/slice2-eval-report.md
+            pipeline/slice2-eval-summary.json
+            slice2-demo-run*.log
+          if-no-files-found: ignore

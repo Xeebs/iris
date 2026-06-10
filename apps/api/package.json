@@ -21,6 +21,7 @@
     "@iris/compression": "workspace:*",
     "@iris/connector-sdk": "workspace:*",
     "@iris/connector-hubspot": "workspace:*",
+    "@iris/connector-postgres": "workspace:*",
     "@iris/core": "workspace:*",
     "@iris/queue": "workspace:*",
     "@iris/semantic-core": "workspace:*",
