@@ -75,24 +75,32 @@ jobs:
       # Acceptance criterion: passes twice in a row from clean state. The demo
       # drops + recreates the schema and re-migrates at the start of every run,
       # so two sequential runs prove there is no hidden state/ordering luck.
-      # Output is teed to log files and uploaded even on failure — the build
-      # host's gh token cannot download Actions logs, so the artifact is the
-      # only way to diagnose a red run.
+      # Output is written to log files and uploaded even on failure — the
+      # build host's gh token cannot download Actions logs, so the artifact is
+      # the only way to diagnose a red run. Redirect to a file instead of
+      # piping through tee: any leaked child of the demo would inherit the tee
+      # pipe and hold the step open until timeout-minutes kills it. With a
+      # file redirect an orphan can at worst hold a file descriptor, never the
+      # step, and the artifact still captures everything written so far.
       - name: Run slice demo (run 1 of 2)
         timeout-minutes: 8
         env:
           SLICE_SKIP_BUILD: '1'
         run: |
-          bash scripts/slice-demo.sh 2>&1 | tee slice-demo-run1.log
-          exit "${PIPESTATUS[0]}"
+          EC=0
+          bash scripts/slice-demo.sh > slice-demo-run1.log 2>&1 || EC=$?
+          cat slice-demo-run1.log
+          exit "$EC"
 
       - name: Run slice demo (run 2 of 2 — determinism)
         timeout-minutes: 8
         env:
           SLICE_SKIP_BUILD: '1'
         run: |
-          bash scripts/slice-demo.sh 2>&1 | tee slice-demo-run2.log
-          exit "${PIPESTATUS[0]}"
+          EC=0
+          bash scripts/slice-demo.sh > slice-demo-run2.log 2>&1 || EC=$?
+          cat slice-demo-run2.log
+          exit "$EC"
 
       - name: Upload token-savings report + demo logs
         if: always()

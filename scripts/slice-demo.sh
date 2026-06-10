@@ -18,4 +18,6 @@ if [ "${SLICE_SKIP_BUILD:-0}" != "1" ]; then
   pnpm exec turbo run build --filter=@iris/api --filter=@iris/mcp-server
 fi
 
-exec npx tsx scripts/slice-demo.ts
+# node --import tsx, not npx tsx — keeps the demo a single process so signals
+# sent by the CI runner (step timeout / cancellation) reach it directly.
+exec node --import tsx scripts/slice-demo.ts

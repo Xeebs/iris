@@ -90,9 +90,14 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
+  // `node --import tsx` (single process), NOT `npx tsx`: npx does not forward
+  // SIGTERM to grandchildren, so client.close() would kill only the npx
+  // wrapper and orphan the actual server. The orphan inherits this process's
+  // stderr (the CI step's tee pipe) and holds the step open until its
+  // timeout-minutes kills it — even after the demo printed its result.
   const transport = new StdioClientTransport({
-    command: 'npx',
-    args: ['tsx', 'src/server.ts'],
+    command: 'node',
+    args: ['--import', 'tsx', 'src/server.ts'],
     env: Object.fromEntries(
       Object.entries(process.env).filter((kv): kv is [string, string] => kv[1] !== undefined),
     ),

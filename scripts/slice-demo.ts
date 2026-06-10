@@ -52,8 +52,17 @@ function fail(message: string): never {
   process.exit(1);
 }
 
-function startProcess(name: string, args: string[], cwd: string): ChildProcess {
-  const child = spawn('npx', args, { cwd, env: CHILD_ENV, stdio: ['ignore', 'pipe', 'pipe'] });
+function startProcess(name: string, scriptPath: string, cwd: string): ChildProcess {
+  // Spawn `node --import tsx` directly (single process) instead of `npx tsx`:
+  // npx does NOT forward SIGTERM to its grandchildren, so kill() on the npx
+  // wrapper orphans the actual server. In CI the orphan holds the step's
+  // inherited output pipe open, hanging the step until timeout-minutes kills
+  // it — even when the demo itself already printed PASS/FAIL and exited.
+  const child = spawn('node', ['--import', 'tsx', scriptPath], {
+    cwd,
+    env: CHILD_ENV,
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
   child.stdout?.on('data', (d: Buffer) => process.stdout.write(`[${name}] ${d.toString()}`));
   child.stderr?.on('data', (d: Buffer) => process.stderr.write(`[${name}] ${d.toString()}`));
   child.on('exit', (code) => {
@@ -114,7 +123,7 @@ async function main(): Promise<void> {
 
   step('2/8 Run migrations');
   await withTimeout(60_000, new Promise<void>((resolve) => {
-    const migrate = spawn('npx', ['tsx', 'src/db/migrate.ts'], { cwd: API_DIR, env: CHILD_ENV, stdio: 'inherit' });
+    const migrate = spawn('node', ['--import', 'tsx', 'src/db/migrate.ts'], { cwd: API_DIR, env: CHILD_ENV, stdio: 'inherit' });
     migrate.on('exit', (code) => {
       if (code !== 0) fail(`Migrations exited with code ${code}`);
       resolve();
@@ -122,8 +131,8 @@ async function main(): Promise<void> {
   })).catch((e: unknown) => fail(`Migration timed out or crashed: ${e instanceof Error ? e.message : String(e)}`));
 
   step('3/8 Start API server + sync worker (DEMO_MODE, hash-deterministic embeddings)');
-  startProcess('api', ['tsx', 'src/server.ts'], API_DIR);
-  startProcess('worker', ['tsx', 'src/workers/sync-worker.ts'], API_DIR);
+  startProcess('api', 'src/server.ts', API_DIR);
+  startProcess('worker', 'src/workers/sync-worker.ts', API_DIR);
   await waitFor('API /health to return ok', 90_000, async () => {
     const res = await fetch(`${BASE}/health`);
     return res.ok;
@@ -194,7 +203,7 @@ async function main(): Promise<void> {
 
   step('8/8 MCP query phase — canonical questions over stdio');
   await withTimeout(180_000, new Promise<void>((resolve) => {
-    const queryClient = spawn('npx', ['tsx', 'src/slice-query-client.ts'], {
+    const queryClient = spawn('node', ['--import', 'tsx', 'src/slice-query-client.ts'], {
       cwd: join(ROOT, 'apps', 'mcp-server'),
       env: { ...CHILD_ENV, IRIS_API_KEY: apiKey, SLICE_WORKSPACE_ID: workspaceId },
       stdio: 'inherit',
