@@ -73,6 +73,20 @@ describe('DeterministicHashProvider', () => {
     });
   });
 
+  describe('plural stemming', () => {
+    it('embeds singular and plural forms to the same vector', async () => {
+      const provider = new DeterministicHashProvider();
+      expect(await provider.getEmbedding('deals')).toEqual(await provider.getEmbedding('deal'));
+      expect(await provider.getEmbedding('contacts')).toEqual(await provider.getEmbedding('contact'));
+    });
+
+    it('does not stem short tokens or -ss words', async () => {
+      const provider = new DeterministicHashProvider();
+      expect(await provider.getEmbedding('is')).not.toEqual(await provider.getEmbedding('i'));
+      expect(await provider.getEmbedding('address')).not.toEqual(await provider.getEmbedding('addres'));
+    });
+  });
+
   describe('factory integration', () => {
     it('createEmbeddingProvider returns the hash provider for hash-deterministic', () => {
       const provider = createEmbeddingProvider({ provider: 'hash-deterministic' });

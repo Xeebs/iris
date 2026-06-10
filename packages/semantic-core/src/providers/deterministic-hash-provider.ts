@@ -64,7 +64,20 @@ function tokenize(text: string): string[] {
   return text
     .toLowerCase()
     .split(/[^a-z0-9]+/)
-    .filter((t) => t.length > 0);
+    .filter((t) => t.length > 0)
+    .map(stemPlural);
+}
+
+/**
+ * Naive plural stemming so "deals" and "deal" hash to the same bucket.
+ * Applied identically at index and query time, so it only ever increases
+ * lexical recall. Skips short tokens ("is") and -ss words ("address").
+ */
+function stemPlural(token: string): string {
+  if (token.length >= 4 && token.endsWith('s') && !token.endsWith('ss')) {
+    return token.slice(0, -1);
+  }
+  return token;
 }
 
 function l2Normalize(vector: number[]): number[] {

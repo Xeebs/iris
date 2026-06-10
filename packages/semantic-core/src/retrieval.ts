@@ -50,6 +50,15 @@ export interface RetrievalOptions {
   /** RRF rank constant k. Higher k reduces the impact of rank differences. Default: 60 */
   rrfK?: number;
   /**
+   * Relative relevance floor: drop search results scoring below this fraction
+   * of their list's top score, instead of always padding to topK. Applied to
+   * the vector and BM25 lists separately, before RRF (RRF scores are
+   * rank-based, so a relative cutoff is only meaningful per source list).
+   * Reduces response tokens by excluding weakly-related entities.
+   * 0 disables. Default: RETRIEVAL_RELEVANCE_CUTOFF env var, else 0.
+   */
+  relevanceCutoff?: number;
+  /**
    * When true, calls expandQuery() to predict and prepend domain vocabulary to the query
    * before embedding. Requires openAiApiKey to be set. Default: false.
    */
@@ -133,6 +142,8 @@ export async function retrieveContext(
   };
 
   const useHybrid = (opts.hybridSearch ?? true) && typeof vectorStore.bm25Search === 'function';
+  const relevanceCutoff =
+    opts.relevanceCutoff ?? Number(process.env['RETRIEVAL_RELEVANCE_CUTOFF'] ?? 0);
 
   let searchResults;
   if (useHybrid) {
@@ -140,14 +151,21 @@ export async function retrieveContext(
       vectorStore.search(queryVector, opts.topK * 2, vectorFilter),
       vectorStore.bm25Search!(opts.workspaceId, query, opts.topK * 2, resolvedEntityTypes),
     ]);
-    searchResults = reciprocalRankFusion(vectorResults, bm25Results, opts.rrfK ?? 60).slice(0, opts.topK);
+    searchResults = reciprocalRankFusion(
+      applyRelevanceCutoff(vectorResults, relevanceCutoff),
+      applyRelevanceCutoff(bm25Results, relevanceCutoff),
+      opts.rrfK ?? 60,
+    ).slice(0, opts.topK);
     log.debug('Hybrid search: RRF merge complete', {
       vectorHits: vectorResults.length,
       bm25Hits: bm25Results.length,
       mergedHits: searchResults.length,
     });
   } else {
-    searchResults = await vectorStore.search(queryVector, opts.topK, vectorFilter);
+    searchResults = applyRelevanceCutoff(
+      await vectorStore.search(queryVector, opts.topK, vectorFilter),
+      relevanceCutoff,
+    );
   }
   const vectorSearchMs = Date.now() - searchStart;
 
@@ -209,6 +227,25 @@ async function embedQuery(query: string): Promise<number[]> {
     );
   }
   return response.data[0]?.embedding ?? [];
+}
+
+/**
+ * Drop results scoring below `cutoff × top score` of their own list.
+ * Expects results sorted by descending score (as returned by the store).
+ * A topK search always returns topK rows even when most are barely related;
+ * weakly-related entities waste response tokens without answering the query.
+ *
+ * @param results - Ranked results from a single search source
+ * @param cutoff  - Fraction of the top score to require (0 disables)
+ * @returns Results above the relative floor (always keeps the top result)
+ */
+export function applyRelevanceCutoff(
+  results: import('./vector-store.js').VectorSearchResult[],
+  cutoff: number,
+): import('./vector-store.js').VectorSearchResult[] {
+  const top = results[0]?.score;
+  if (cutoff <= 0 || top === undefined || top <= 0) return results;
+  return results.filter((r, i) => i === 0 || r.score > top * cutoff);
 }
 
 async function expandViaRelationships(

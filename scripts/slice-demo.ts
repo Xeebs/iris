@@ -34,6 +34,11 @@ const CHILD_ENV = {
   ...process.env,
   DEMO_MODE: 'true',
   EMBEDDING_PROVIDER: 'hash-deterministic',
+  // The hash provider is bag-of-words, so its noise floor is high relative to
+  // real semantic embeddings — an aggressive relative relevance cutoff keeps
+  // query-context responses to the entities that actually share query terms.
+  // Verified offline against both acceptance gates via scripts/slice-sim.ts.
+  RETRIEVAL_RELEVANCE_CUTOFF: '0.7',
   DATABASE_URL,
   REDIS_URL,
   PORT: String(PORT),

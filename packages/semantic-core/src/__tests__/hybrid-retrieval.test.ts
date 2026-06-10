@@ -9,7 +9,7 @@ vi.mock('openai', () => ({
   })),
 }));
 
-import { reciprocalRankFusion } from '../retrieval.js';
+import { reciprocalRankFusion, applyRelevanceCutoff } from '../retrieval.js';
 import { retrieveContext } from '../retrieval.js';
 import type { VectorStore, VectorSearchResult } from '../vector-store.js';
 import type { SemanticEntity } from '@iris/connector-sdk';
@@ -200,5 +200,45 @@ describe('retrieveContext hybrid search', () => {
     });
 
     expect(result.entities.length).toBeGreaterThan(0);
+  });
+});
+
+describe('applyRelevanceCutoff', () => {
+  const result = (id: string, score: number): VectorSearchResult => ({
+    entity: {
+      id,
+      type: 'deal',
+      label: id,
+      attributes: {},
+      relationships: [],
+      lastModified: new Date(0),
+      sourceId: id,
+    },
+    score,
+  });
+
+  it('drops results below the relative floor', () => {
+    const results = [result('a', 0.9), result('b', 0.5), result('c', 0.4)];
+    const kept = applyRelevanceCutoff(results, 0.5);
+    expect(kept.map((r) => r.entity.id)).toEqual(['a', 'b']);
+  });
+
+  it('always keeps the top result', () => {
+    const results = [result('a', 0.9)];
+    expect(applyRelevanceCutoff(results, 0.99)).toHaveLength(1);
+  });
+
+  it('returns results unchanged when cutoff is 0', () => {
+    const results = [result('a', 0.9), result('b', 0.01)];
+    expect(applyRelevanceCutoff(results, 0)).toHaveLength(2);
+  });
+
+  it('returns results unchanged when the top score is non-positive', () => {
+    const results = [result('a', 0), result('b', -0.2)];
+    expect(applyRelevanceCutoff(results, 0.5)).toHaveLength(2);
+  });
+
+  it('handles an empty list', () => {
+    expect(applyRelevanceCutoff([], 0.5)).toEqual([]);
   });
 });
