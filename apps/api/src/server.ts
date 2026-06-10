@@ -4,6 +4,7 @@ import postgres from 'postgres';
 import { Redis } from 'ioredis';
 import { clerkMiddleware } from '@hono/clerk-auth';
 import { PgvectorStore } from '@iris/semantic-core';
+import { ConnectorHealthService } from '@iris/semantic-core/connector-health-service';
 import { createDefaultProvider } from '@iris/semantic-core/embedding-provider';
 import { logger } from '@iris/core/logger';
 
@@ -13,7 +14,7 @@ import { requireAuth, demoApiKeyAuth, errorHandler, defaultRateLimiter, syncRate
 import { registerConnectors } from './connector-registration.js';
 import { checkHealth } from './health.js';
 import { initTelemetry, shutdownTelemetry } from './telemetry.js';
-import { createConnectorRoutes } from './routes/connectors.js';
+import { createConnectorRoutes, createConnectorTypeRoutes } from './routes/connectors.js';
 import { createEntityRoutes } from './routes/entities.js';
 import { createQueryRoutes } from './routes/queries.js';
 import { createAuditRoutes } from './routes/audit.js';
@@ -207,6 +208,11 @@ function createApp(
     app.route('/api/v1/demo', createDemoBootstrapRoutes(sql));
   }
 
+  // Public connector-type catalog — the onboarding UI lists available connector
+  // types before the user has a workspace API key. Static manifest metadata only;
+  // registered before the authed router so it answers ahead of auth middleware.
+  app.route('/api/v1/connectors', createConnectorTypeRoutes());
+
   // Clerk's middleware throws "Missing Clerk Secret key" on every request when
   // CLERK_SECRET_KEY is unset, 500ing all /api/v1 routes before demoApiKeyAuth
   // can run. In DEMO_MODE auth is handled by demoApiKeyAuth + requireAuth
@@ -227,7 +233,12 @@ function createApp(
   }
 
   // Without a SyncJobQueue, POST /connectors/:id/sync silently no-ops.
-  const connectorRoutes = createConnectorRoutes(sql, redisUrl ? new SyncJobQueue(redisUrl) : undefined);
+  const connectorRoutes = createConnectorRoutes(
+    sql,
+    redisUrl ? new SyncJobQueue(redisUrl) : undefined,
+    undefined,
+    new ConnectorHealthService(sql),
+  );
 
   // Tighter limit on sync triggers: sliding window + token-bucket quota with burst
   if (redis) {

@@ -94,10 +94,12 @@ jobs:
 
       - name: Run onboarding golden path tests
         working-directory: tests
+        # tee the output so failures are diagnosable from the artifact
+        # (the gh token on the build host cannot read Actions logs)
         run: |
           npx playwright test onboarding-golden-path \
             --project=api \
-            --reporter=list
+            --reporter=list 2>&1 | tee onboarding-run.log
         env:
           API_URL: http://localhost:3901
           DEMO_SOURCE_DATABASE_URL: postgres://postgres:postgres@localhost:5432/iris_demo_source
@@ -107,5 +109,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: onboarding-playwright-report
-          path: tests/playwright-report/
+          path: |
+            tests/onboarding-run.log
+            tests/playwright-report/
           if-no-files-found: ignore

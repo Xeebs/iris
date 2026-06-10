@@ -8,6 +8,7 @@ vi.mock('@iris/connector-sdk', async (importOriginal) => {
     registry: {
       list: vi.fn(),
       get: vi.fn(),
+      has: vi.fn(),
       validateConfig: vi.fn(),
     },
   };
@@ -73,7 +74,11 @@ function makeApp(
   return app;
 }
 
-beforeEach(() => vi.clearAllMocks());
+beforeEach(() => {
+  vi.clearAllMocks();
+  // Real registry contract: has() answers existence, get() returns a registration (throws on miss)
+  vi.mocked(registry.has).mockReturnValue(true);
+});
 
 // ─── GET /types ───────────────────────────────────────────────────────────────
 
@@ -91,7 +96,7 @@ describe('GET /api/v1/connectors/types', () => {
 
 describe('GET /api/v1/connectors/types/:connectorId', () => {
   it('returns 200 with manifest when found', async () => {
-    vi.mocked(registry.get).mockReturnValue(MANIFEST as never);
+    vi.mocked(registry.get).mockReturnValue({ manifest: MANIFEST, factory: vi.fn() } as never);
     const app = makeApp({});
     const res = await app.request('/api/v1/connectors/types/hubspot');
     expect(res.status).toBe(200);
@@ -100,7 +105,7 @@ describe('GET /api/v1/connectors/types/:connectorId', () => {
   });
 
   it('returns 404 when connector type not found', async () => {
-    vi.mocked(registry.get).mockReturnValue(undefined as never);
+    vi.mocked(registry.has).mockReturnValue(false);
     const app = makeApp({});
     const res = await app.request('/api/v1/connectors/types/unknown');
     expect(res.status).toBe(404);
@@ -154,7 +159,7 @@ describe('POST /api/v1/connectors', () => {
   });
 
   it('returns 404 when connectorId type is not registered', async () => {
-    vi.mocked(registry.get).mockReturnValue(undefined as never);
+    vi.mocked(registry.has).mockReturnValue(false);
     const app = makeApp({});
     const res = await app.request('/api/v1/connectors', {
       method: 'POST',

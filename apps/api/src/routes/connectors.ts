@@ -6,7 +6,7 @@ import { registry } from '@iris/connector-sdk';
 import { logger } from '@iris/core/logger';
 import type { SyncJobQueue } from '@iris/queue';
 import type { SyncScheduleService } from '@iris/queue/sync-schedule-service';
-import type { ConnectorHealthService } from '@iris/semantic-core/connector-health-service';
+import type { ConnectorHealthService, ConnectorHealthStatus } from '@iris/semantic-core/connector-health-service';
 import { SchemaDiscovererService } from '@iris/semantic-core/schema-discoverer';
 
 import { ConnectorService } from '../services/connector-service.js';
@@ -49,6 +49,73 @@ const schemaConfirmationBodySchema = z.object({
 });
 
 /**
+ * Public connector-type catalog routes (no auth required).
+ *
+ * The onboarding flow lists available connector types before the user has a
+ * workspace API key, so this catalog is mounted publicly in server.ts —
+ * it only exposes static manifest metadata, never workspace data.
+ *
+ * @returns Hono router serving GET /types and GET /types/:connectorId
+ */
+export function createConnectorTypeRoutes(): Hono {
+  const routes = new Hono();
+
+  /** GET /api/v1/connectors/types — list all registered connector manifests */
+  routes.get('/types', (c) => {
+    const manifests: ConnectorManifest[] = registry.list();
+    return c.json({ data: manifests });
+  });
+
+  /** GET /api/v1/connectors/types/:connectorId — get a connector manifest */
+  routes.get('/types/:connectorId', (c) => {
+    const id = c.req.param('connectorId');
+    if (!registry.has(id)) {
+      return c.json({ error: { code: 'NOT_FOUND', message: `Connector type "${id}" not found` } }, 404);
+    }
+    return c.json({ data: registry.get(id).manifest });
+  });
+
+  return routes;
+}
+
+type LiveHealthResult = {
+  status: ConnectorHealthStatus;
+  latencyMs?: number;
+  errorMessage?: string;
+};
+
+/**
+ * Run a live health check against a connector instance's source system.
+ * Never throws — any failure is reported as an unhealthy status.
+ *
+ * @param connectorId - Registered connector type id (e.g. "postgres")
+ * @param config - Validated connector instance configuration
+ * @returns Health status with optional latency and error message
+ */
+async function runLiveHealthCheck(
+  connectorId: string,
+  config: Record<string, unknown>,
+): Promise<LiveHealthResult> {
+  try {
+    const registration = registry.get(connectorId);
+    const connector = registration.factory(config);
+    const connectResult = await connector.connect(config);
+    if (connectResult.isErr()) {
+      return { status: 'unhealthy', errorMessage: connectResult.error.message };
+    }
+    const health = await connector.healthCheck();
+    return {
+      status: health.healthy ? 'healthy' : 'unhealthy',
+      ...(health.latencyMs !== undefined ? { latencyMs: health.latencyMs } : {}),
+      ...(health.error !== undefined ? { errorMessage: health.error } : {}),
+    };
+  } catch (e) {
+    const error = e instanceof Error ? e : new Error(String(e));
+    return { status: 'unhealthy', errorMessage: error.message };
+  }
+}
+
+/**
  * @param sql - Postgres client for instance persistence
  * @param syncQueue - BullMQ queue for async connector sync jobs
  * @param scheduleService - Service for managing repeatable sync schedules
@@ -64,21 +131,8 @@ export function createConnectorRoutes(
   const service = new ConnectorService(sql);
   const schemaService = new SchemaDiscovererService(sql);
 
-  /** GET /api/v1/connectors/types — list all registered connector manifests */
-  routes.get('/types', (c) => {
-    const manifests: ConnectorManifest[] = registry.list();
-    return c.json({ data: manifests });
-  });
-
-  /** GET /api/v1/connectors/types/:connectorId — get a connector manifest */
-  routes.get('/types/:connectorId', (c) => {
-    const id = c.req.param('connectorId');
-    const manifest = registry.get(id);
-    if (!manifest) {
-      return c.json({ error: { code: 'NOT_FOUND', message: `Connector type "${id}" not found` } }, 404);
-    }
-    return c.json({ data: manifest });
-  });
+  // Connector-type catalog (also mounted publicly in server.ts for onboarding)
+  routes.route('/', createConnectorTypeRoutes());
 
   /** GET /api/v1/connectors?workspaceId= — list connector instances */
   routes.get('/', async (c) => {
@@ -109,8 +163,7 @@ export function createConnectorRoutes(
 
     const { workspaceId, connectorId, config } = body.data;
 
-    const manifest = registry.get(connectorId);
-    if (!manifest) {
+    if (!registry.has(connectorId)) {
       return c.json(
         { error: { code: 'NOT_FOUND', message: `Connector type "${connectorId}" not found` } },
         404,
@@ -384,7 +437,11 @@ export function createConnectorRoutes(
     return c.json({ data: result.value });
   });
 
-  /** GET /api/v1/connectors/:id/health?workspaceId= — get latest health for one instance */
+  /**
+   * GET /api/v1/connectors/:id/health?workspaceId= — latest health for one instance.
+   * If no health record exists yet (fresh instance), runs a live health check
+   * against the source system so onboarding gets an immediate answer.
+   */
   routes.get('/:id/health', async (c) => {
     const parsed = workspaceQuerySchema.safeParse(c.req.query());
     if (!parsed.success) {
@@ -394,15 +451,53 @@ export function createConnectorRoutes(
       return c.json({ error: { code: 'NOT_CONFIGURED', message: 'Health service not configured' } }, 503);
     }
     const id = c.req.param('id');
-    const result = await healthService.getHealth(id, parsed.data.workspaceId);
+    const { workspaceId } = parsed.data;
+    const result = await healthService.getHealth(id, workspaceId);
     if (result.isErr()) {
       log.error('Failed to get connector health', { instanceId: id, error: result.error });
       return c.json({ error: { code: 'INTERNAL_ERROR', message: 'Failed to get connector health' } }, 500);
     }
-    if (!result.value) {
-      return c.json({ error: { code: 'NOT_FOUND', message: `No health data for instance "${id}"` } }, 404);
+    if (result.value) {
+      return c.json({ data: result.value });
     }
-    return c.json({ data: result.value });
+
+    // No stored record — run a live check now.
+    const instanceResult = await service.getInstance(workspaceId, id);
+    if (instanceResult.isErr()) {
+      log.error('Failed to fetch instance for live health check', { instanceId: id, error: instanceResult.error });
+      return c.json({ error: { code: 'INTERNAL_ERROR', message: 'Failed to fetch connector instance' } }, 500);
+    }
+    if (!instanceResult.value) {
+      return c.json({ error: { code: 'NOT_FOUND', message: `Instance "${id}" not found` } }, 404);
+    }
+
+    const live = await runLiveHealthCheck(instanceResult.value.connectorId, instanceResult.value.config);
+    const recorded = await healthService.recordHealth(id, workspaceId, live.status, live.latencyMs, live.errorMessage);
+    if (recorded.isErr()) {
+      // Recording is best-effort — still return the live result.
+      log.warn('Failed to record live health check', { instanceId: id, error: recorded.error.message });
+      return c.json({
+        data: {
+          instanceId: id,
+          workspaceId,
+          status: live.status,
+          latencyMs: live.latencyMs ?? null,
+          errorMessage: live.errorMessage ?? null,
+          checkedAt: new Date(),
+        },
+      });
+    }
+    const rec = recorded.value;
+    return c.json({
+      data: {
+        instanceId: rec.instanceId,
+        workspaceId: rec.workspaceId,
+        status: rec.status,
+        latencyMs: rec.latencyMs,
+        errorMessage: rec.errorMessage,
+        checkedAt: rec.checkedAt,
+      },
+    });
   });
 
   const syncLogsQuerySchema = z.object({
