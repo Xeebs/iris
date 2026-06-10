@@ -154,7 +154,11 @@ export class FreshnessTracker {
 
       // Fetch applicable SLA
       const slaRows = await this.sql<{ max_age_seconds: number; warning_threshold_pct: number }[]>`
-        SELECT max_age_seconds, warning_threshold_pct
+        SELECT
+          -- BIGINT/NUMERIC arrive as strings from postgres.js — cast so the
+          -- declared row type is true at runtime
+          max_age_seconds::INTEGER AS max_age_seconds,
+          warning_threshold_pct::FLOAT AS warning_threshold_pct
         FROM freshness_slas
         WHERE workspace_id = ${workspaceId}
           AND (connector_id = ${row.connector_id} OR connector_id IS NULL)
@@ -317,14 +321,18 @@ export class FreshnessTracker {
     workspaceId: string,
   ): Promise<Result<StaleEventPrediction, FreshnessError>> {
     try {
-      const historyRows = await this.sql<{ created_at: Date }[]>`
-        SELECT created_at
+      // The prediction is about the entity's *modification* cadence, not when
+      // we happened to record sync events (a backfill records many events
+      // seconds apart for modifications that were hours apart). Each event
+      // stored its age at sync time, so reconstruct the modification instant.
+      const historyRows = await this.sql<{ modified_at: Date }[]>`
+        SELECT (created_at - age_seconds * INTERVAL '1 second') AS modified_at
         FROM freshness_events
         WHERE entity_id = ${entityId}
           AND connector_id = ${connectorId}
           AND workspace_id = ${workspaceId}
           AND event_type = 'sync'
-        ORDER BY created_at DESC
+        ORDER BY modified_at DESC
         LIMIT 20
       `;
 
@@ -358,7 +366,7 @@ export class FreshnessTracker {
       const intervals: number[] = [];
       for (let i = 0; i < historyRows.length - 1; i++) {
         const delta =
-          historyRows[i]!.created_at.getTime() - historyRows[i + 1]!.created_at.getTime();
+          historyRows[i]!.modified_at.getTime() - historyRows[i + 1]!.modified_at.getTime();
         intervals.push(delta / 1000);
       }
 
@@ -371,8 +379,8 @@ export class FreshnessTracker {
       const cv = avgIntervalSec > 0 ? stdDev / avgIntervalSec : 1;
       const confidence = Math.max(0, Math.min(100, Math.round((1 - cv) * 100)));
 
-      const lastSync = historyRows[0]!.created_at;
-      const estimatedNextModSec = lastSync.getTime() / 1000 + avgIntervalSec;
+      const lastModifiedAt = historyRows[0]!.modified_at;
+      const estimatedNextModSec = lastModifiedAt.getTime() / 1000 + avgIntervalSec;
 
       let estimatedStalenessAt: Date | null = null;
       if (slaSec !== null) {

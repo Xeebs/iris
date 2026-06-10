@@ -84,7 +84,7 @@ function buildStore(sql: SqlClient): AnalyticsStore {
         VALUES (
           ${pattern.workspaceId}::uuid,
           ${pattern.patternType},
-          ${JSON.stringify(pattern.definition)}::jsonb,
+          ${sql.json(pattern.definition)},
           ${pattern.confidenceScore},
           ${pattern.discoveredAt}
         )

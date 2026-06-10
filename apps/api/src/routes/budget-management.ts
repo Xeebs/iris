@@ -58,7 +58,7 @@ export function createBudgetManagementRoutes(sql: Sql) {
         INSERT INTO workspace_budgets
           (workspace_id, monthly_token_budget, rolling_window_days, alert_thresholds, auto_limit_mode, updated_at)
         VALUES
-          (${workspaceId}, ${monthlyTokenBudget}, ${rollingWindowDays}, ${JSON.stringify(alertThresholds)}::jsonb, ${autoLimitMode}, NOW())
+          (${workspaceId}, ${monthlyTokenBudget}, ${rollingWindowDays}, ${sql.json(alertThresholds)}, ${autoLimitMode}, NOW())
         ON CONFLICT (workspace_id) DO UPDATE SET
           monthly_token_budget = EXCLUDED.monthly_token_budget,
           rolling_window_days = EXCLUDED.rolling_window_days,

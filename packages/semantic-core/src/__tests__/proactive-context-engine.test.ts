@@ -7,8 +7,12 @@ vi.mock('@iris/core/logger', () => ({
 
 function makeSql(...responses: unknown[][]) {
   let idx = 0;
-  const fn = vi.fn().mockImplementation(() => Promise.resolve(responses[idx++] ?? []));
-  return fn as unknown as (s: TemplateStringsArray, ...v: unknown[]) => Promise<unknown[]>;
+  // services call sql.json() for jsonb params; echo the value through
+  const fn = Object.assign(
+    vi.fn().mockImplementation(() => Promise.resolve(responses[idx++] ?? [])),
+    { json: (v: unknown) => v },
+  );
+  return fn as unknown as ((s: TemplateStringsArray, ...v: unknown[]) => Promise<unknown[]>) & { json(v: unknown): unknown };
 }
 
 const profileRow = {

@@ -221,7 +221,7 @@ describe('FreshnessTracker', () => {
   describe('predictNextStaleEvent', () => {
     it('returns zero confidence with insufficient history', async () => {
       const sql = makeTaggedSql({
-        'freshness_events': [{ created_at: new Date() }],
+        'freshness_events': [{ modified_at: new Date() }],
         'sla_seconds': [{ entity_type: 'contact', max_age_seconds: 3600 }],
       });
       const tracker = new FreshnessTracker(sql);
@@ -239,7 +239,7 @@ describe('FreshnessTracker', () => {
     it('returns future timestamp when SLA defined and history available', async () => {
       const now = Date.now();
       const events = Array.from({ length: 5 }, (_, i) => ({
-        created_at: new Date(now - i * 3600 * 1000),
+        modified_at: new Date(now - i * 3600 * 1000),
       }));
 
       const sql = makeTaggedSql({
@@ -260,7 +260,7 @@ describe('FreshnessTracker', () => {
     it('returns null estimatedStalenessAt when no SLA defined', async () => {
       const now = Date.now();
       const events = Array.from({ length: 5 }, (_, i) => ({
-        created_at: new Date(now - i * 3600 * 1000),
+        modified_at: new Date(now - i * 3600 * 1000),
       }));
 
       const sql = makeTaggedSql({
@@ -291,7 +291,7 @@ describe('FreshnessTracker', () => {
       const now = Date.now();
       const interval = 1800;
       const events = Array.from({ length: 6 }, (_, i) => ({
-        created_at: new Date(now - i * interval * 1000),
+        modified_at: new Date(now - i * interval * 1000),
       }));
 
       const sql = makeTaggedSql({

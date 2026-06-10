@@ -39,7 +39,7 @@ beforeAll(async () => {
   for (const c of contacts) {
     await sql`
       INSERT INTO semantic_entities (entity_id, workspace_id, entity_type, label, attributes)
-      VALUES (${c.id}, ${WORKSPACE_ID}, 'contact', ${c.label}, ${JSON.stringify(c.attrs)}::jsonb)
+      VALUES (${c.id}, ${WORKSPACE_ID}, 'contact', ${c.label}, ${sql.json(c.attrs)})
       ON CONFLICT DO NOTHING
     `.catch(() => {});
   }

@@ -179,7 +179,7 @@ export function createNlQuerySessionsRoutes(sql: Sql) {
       const updated = questions.filter((_, i) => i !== questionIndex);
       await sql`
         UPDATE nlquery_sessions
-        SET follow_up_questions = ${JSON.stringify(updated)}::jsonb
+        SET follow_up_questions = ${sql.json(updated)}
         WHERE session_id = ${sessionId}
       `;
 

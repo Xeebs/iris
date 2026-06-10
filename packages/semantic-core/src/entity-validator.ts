@@ -6,7 +6,10 @@ import type { SemanticEntity, AttributeValue } from '@iris/connector-sdk';
 
 const log = logger.child({ service: 'entity-validator' });
 
-type SqlFn = (strings: TemplateStringsArray, ...values: unknown[]) => Promise<unknown[]>;
+type SqlFn = ((strings: TemplateStringsArray, ...values: unknown[]) => Promise<unknown[]>) & {
+  /** postgres.js typed json parameter — required for jsonb columns (plain strings are stored as jsonb string scalars) */
+  json(value: unknown): unknown;
+};
 
 // ─── Rule Definitions ─────────────────────────────────────────────────────────
 
@@ -263,7 +266,7 @@ export class EntityValidationEngine {
           (workspace_id, entity_type, rule_name, rule_definition, is_blocking, severity, created_by_user_id)
         VALUES
           (${rule.workspaceId}, ${rule.entityType}, ${rule.ruleName},
-           ${JSON.stringify(rule.definition)}::jsonb, ${rule.isBlocking},
+           ${this.sql.json(rule.definition)}, ${rule.isBlocking},
            ${rule.severity}, ${rule.createdByUserId})
         RETURNING *
       ` as Record<string, unknown>[];

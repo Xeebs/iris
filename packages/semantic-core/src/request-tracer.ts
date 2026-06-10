@@ -101,7 +101,7 @@ export class RequestTracer {
         (${span.traceId}, ${span.spanId}, ${span.parentSpanId ?? null},
          ${span.operationName}, ${span.serviceName},
          ${span.durationMs ?? null}, ${span.status},
-         ${JSON.stringify(span.metadata)}::jsonb,
+         ${this.sql.json(span.metadata as Parameters<typeof this.sql.json>[0])},
          ${span.errors ? JSON.stringify(span.errors) : null}::jsonb,
          ${span.startedAt}, ${span.endedAt ?? null}, ${span.workspaceId ?? null})
       ON CONFLICT (trace_id, span_id) DO NOTHING
@@ -157,8 +157,16 @@ export class RequestTracer {
    */
   async getTrace(traceId: string): Promise<Span[]> {
     const rows = await this.sql<Span[]>`
-      SELECT trace_id, span_id, parent_span_id, operation_name, service_name,
-             duration_ms, status, metadata, errors, started_at, ended_at, workspace_id
+      SELECT trace_id   AS "traceId",
+             span_id    AS "spanId",
+             parent_span_id AS "parentSpanId",
+             operation_name AS "operationName",
+             service_name   AS "serviceName",
+             duration_ms    AS "durationMs",
+             status, metadata, errors,
+             started_at AS "startedAt",
+             ended_at   AS "endedAt",
+             workspace_id AS "workspaceId"
       FROM request_traces
       WHERE trace_id = ${traceId}
       ORDER BY started_at ASC
@@ -183,9 +191,16 @@ export class RequestTracer {
     const cutoff = cursor ? new Date(cursor) : new Date(Date.now() + 1000);
 
     const rows = await this.sql<Span[]>`
-      SELECT DISTINCT ON (trace_id) trace_id, span_id, parent_span_id,
-             operation_name, service_name, duration_ms, status,
-             metadata, errors, started_at, ended_at, workspace_id
+      SELECT DISTINCT ON (trace_id) trace_id   AS "traceId",
+             span_id    AS "spanId",
+             parent_span_id AS "parentSpanId",
+             operation_name AS "operationName",
+             service_name   AS "serviceName",
+             duration_ms    AS "durationMs",
+             status, metadata, errors,
+             started_at AS "startedAt",
+             ended_at   AS "endedAt",
+             workspace_id AS "workspaceId"
       FROM request_traces
       WHERE started_at < ${cutoff}
         AND (${operationName}::text IS NULL OR operation_name ILIKE ${'%' + (operationName ?? '') + '%'})

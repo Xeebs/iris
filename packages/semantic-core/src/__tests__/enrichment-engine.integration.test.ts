@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import postgres from 'postgres';
 import { EnrichmentEngine, type EnrichmentStore, type EnrichmentData } from '../enrichment-engine.js';
 import { CompanyEnricher } from '../enrichers/company-enricher.js';
@@ -41,7 +41,7 @@ class PostgresEnrichmentStore implements EnrichmentStore {
         ${entityId},
         ${'00000000-0000-0000-0000-000000000001'}::uuid,
         ${data.source},
-        ${JSON.stringify(data.data)}::jsonb,
+        ${this.sql.json(data.data)},
         ${data.confidenceScore},
         ${data.fetchedAt},
         ${data.expiresAt}

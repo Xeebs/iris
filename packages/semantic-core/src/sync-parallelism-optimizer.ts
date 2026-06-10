@@ -207,7 +207,9 @@ export class SyncParallelismOptimizer {
     const rows = await this.sql<
       Array<{ connectorId: string; workerWeight: number }>
     >`
-      SELECT connector_id, worker_weight
+      SELECT
+        connector_id          AS "connectorId",
+        worker_weight::FLOAT  AS "workerWeight"
       FROM sync_optimization_configs
       WHERE workspace_id = ${workspaceId}
         AND connector_id = ANY(${connectorIds})
@@ -246,16 +248,22 @@ export class SyncParallelismOptimizer {
     >`
       SELECT
         COALESCE(
-          (SELECT AVG((1 - success_rate)) FROM reliability_scores
-           WHERE connector_id = ${connectorId} AND workspace_id = ${workspaceId}
-           ORDER BY computed_at DESC LIMIT 5),
+          -- "average error rate of the 5 most recent scores": ORDER BY/LIMIT
+          -- must wrap in a subquery — they are invalid alongside a bare
+          -- aggregate (42803). Aliases are quoted because Postgres lowercases
+          -- unquoted identifiers and this client does no case transform.
+          (SELECT AVG(1 - success_rate) FROM (
+             SELECT success_rate FROM reliability_scores
+             WHERE connector_id = ${connectorId} AND workspace_id = ${workspaceId}
+             ORDER BY computed_at DESC LIMIT 5
+           ) recent),
           0
-        ) AS recent_error_rate,
+        ) AS "recentErrorRate",
         (SELECT MAX(created_at) FROM reliability_alerts
          WHERE connector_id = ${connectorId} AND workspace_id = ${workspaceId}
            AND alert_type = 'warning'
            AND created_at > NOW() - INTERVAL '24 hours'
-        ) AS last_rate_limit_at
+        ) AS "lastRateLimitAt"
     `;
 
     const row = rows[0] ?? { recentErrorRate: 0, lastRateLimitAt: null };

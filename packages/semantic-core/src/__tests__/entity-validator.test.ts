@@ -42,7 +42,8 @@ function makeRule(
 }
 
 function makeSql(rows: unknown[] = []) {
-  const fn = vi.fn().mockResolvedValue(rows);
+  // services call sql.json() for jsonb params; echo the value through
+  const fn = Object.assign(vi.fn().mockResolvedValue(rows), { json: (v: unknown) => v });
   return fn as unknown as ConstructorParameters<typeof EntityValidationEngine>[0];
 }
 

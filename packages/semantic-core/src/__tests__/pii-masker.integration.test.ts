@@ -89,7 +89,8 @@ describe('PiiConfigService', () => {
   });
 
   it('deleteFieldConfig returns true when row deleted', async () => {
-    const trackSql = vi.fn(() => Promise.resolve([{ count: 1 }])) as unknown as ReturnType<typeof import('postgres').default>;
+    // postgres.js exposes the affected-row count as a property of the result array
+    const trackSql = vi.fn(() => Promise.resolve(Object.assign([], { count: 1 }))) as unknown as ReturnType<typeof import('postgres').default>;
     const svc = new PiiConfigService(trackSql);
     const result = await svc.deleteFieldConfig('ws1', 'email');
     expect(result.isOk()).toBe(true);

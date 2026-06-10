@@ -5,7 +5,10 @@ import { logger } from '@iris/core/logger';
 
 const log = logger.child({ service: 'index-repair-service' });
 
-type SqlFn = (strings: TemplateStringsArray, ...values: unknown[]) => Promise<unknown[]>;
+type SqlFn = ((strings: TemplateStringsArray, ...values: unknown[]) => Promise<unknown[]>) & {
+  /** postgres.js typed json parameter — required for jsonb columns (plain strings are stored as jsonb string scalars) */
+  json(value: unknown): unknown;
+};
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -100,7 +103,7 @@ export class IndexRepairService {
           SELECT entity_id FROM entity_vectors WHERE workspace_id = ${workspaceId}
         ` as Promise<{ entity_id: string }[]>,
         this.sql`
-          SELECT source_id, target_id FROM entity_relationships
+          SELECT entity_id AS source_id, related_entity_id AS target_id FROM entity_relationships
           WHERE workspace_id = ${workspaceId}
         ` as Promise<{ source_id: string; target_id: string }[]>,
       ]);
@@ -160,7 +163,7 @@ export class IndexRepairService {
       await this.sql`
         UPDATE integrity_scans
         SET status = 'completed', completed_at = now(), issue_count = ${issues.length},
-            report_json = ${JSON.stringify(report)}::jsonb
+            report_json = ${this.sql.json(report)}
         WHERE scan_id = ${scanId}
       `;
 

@@ -238,10 +238,13 @@ function csvEscape(value: string): string {
 
 // ─── BatchOperations class ────────────────────────────────────────────────────
 
-export type SqlFn = (
+export type SqlFn = ((
   strings: TemplateStringsArray,
   ...values: unknown[]
-) => Promise<unknown[]>;
+) => Promise<unknown[]>) & {
+  /** postgres.js typed json parameter — required for jsonb columns (plain strings are stored as jsonb string scalars) */
+  json(value: unknown): unknown;
+};
 
 /**
  * Orchestrates batch import/export operations against the entity store.
@@ -286,8 +289,8 @@ export class BatchOperations {
               ${workspaceId},
               ${entity.type},
               ${entity.label},
-              ${JSON.stringify(entity.attributes)}::jsonb,
-              ${JSON.stringify(entity.relationships)}::jsonb,
+              ${this.sql.json(entity.attributes)},
+              ${this.sql.json(entity.relationships)},
               ${entity.lastModified instanceof Date ? entity.lastModified.toISOString() : new Date().toISOString()},
               ${entity.sourceId}
             )

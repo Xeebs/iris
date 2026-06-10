@@ -58,9 +58,9 @@ function buildStore(sql: SqlClient): SchemaEvolutionStore {
         VALUES (
           ${v.connectorId},
           ${v.version},
-          ${JSON.stringify(v.schema)}::jsonb,
+          ${sql.json(v.schema as unknown as Parameters<typeof sql.json>[0])},
           ${v.releasedAt},
-          ${JSON.stringify(v.breakingChanges)}::jsonb
+          ${sql.json(v.breakingChanges as unknown as Parameters<typeof sql.json>[0])}
         )
         ON CONFLICT (connector_id, version) DO UPDATE SET
           schema_json = EXCLUDED.schema_json,

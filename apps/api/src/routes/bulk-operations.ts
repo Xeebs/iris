@@ -78,7 +78,7 @@ export function createBulkOperationsRoutes(sql: Sql): Hono {
           ${result.totalRecords},
           ${result.importedCount},
           ${result.errorCount},
-          ${JSON.stringify(result.errors)}::jsonb,
+          ${sql.json(result.errors)},
           ${result.status},
           NOW()
         )

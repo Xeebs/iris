@@ -80,7 +80,10 @@ interface SettingsRow {
   updated_at: string;
 }
 
-type SqlClient = (strings: TemplateStringsArray, ...values: unknown[]) => Promise<unknown[]>;
+type SqlClient = ((strings: TemplateStringsArray, ...values: unknown[]) => Promise<unknown[]>) & {
+  /** postgres.js typed json parameter — required for jsonb columns (plain strings are stored as jsonb string scalars) */
+  json(value: unknown): unknown;
+};
 
 function rowToProfile(r: BehaviorRow): AgentBehaviorProfile {
   return {
@@ -136,7 +139,7 @@ export class ProactiveContextEngine {
         VALUES (
           ${workspaceId}, ${agentId},
           ${entityTypes},
-          ${JSON.stringify({ [queryPattern]: 1 })}::jsonb,
+          ${this.sql.json({ [queryPattern]: 1 })},
           1,
           NOW()
         )
@@ -150,8 +153,8 @@ export class ProactiveContextEngine {
           ),
           query_patterns_json = agent_behavior_profiles.query_patterns_json ||
             jsonb_build_object(
-              ${queryPattern},
-              COALESCE((agent_behavior_profiles.query_patterns_json ->> ${queryPattern})::int, 0) + 1
+              ${queryPattern}::text,
+              COALESCE((agent_behavior_profiles.query_patterns_json ->> ${queryPattern}::text)::int, 0) + 1
             ),
           total_queries = agent_behavior_profiles.total_queries + 1,
           learned_at    = NOW()

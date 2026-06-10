@@ -95,7 +95,7 @@ export class EnterpriseSsoService {
           ${config.enabled ?? false},
           ${config.metadataUrl ?? null}, ${config.entityId ?? null},
           ${config.acsUrl ?? null}, ${config.issuer ?? null}, ${config.clientId ?? null},
-          ${JSON.stringify(attributeMappings)}::jsonb
+          ${this.sql.json(attributeMappings)}
         )
         ON CONFLICT (workspace_id, provider) DO UPDATE SET
           provider_name          = EXCLUDED.provider_name,
@@ -105,7 +105,7 @@ export class EnterpriseSsoService {
           acs_url                = COALESCE(${config.acsUrl ?? null}, sso_configurations.acs_url),
           issuer                 = COALESCE(${config.issuer ?? null}, sso_configurations.issuer),
           client_id              = COALESCE(${config.clientId ?? null}, sso_configurations.client_id),
-          attribute_mappings_json = ${JSON.stringify(attributeMappings)}::jsonb,
+          attribute_mappings_json = ${this.sql.json(attributeMappings)},
           updated_at             = NOW()
         RETURNING *
       `;
@@ -272,9 +272,9 @@ export class EnterpriseSsoService {
     `;
     await this.sql`
       INSERT INTO sso_users (user_id, workspace_id, external_id, external_email, sso_provider, synced_groups_json, last_sync_at)
-      VALUES (${userId}, ${workspaceId}, ${externalId}, ${email}, ${provider}, ${JSON.stringify(groups)}::jsonb, NOW())
+      VALUES (${userId}, ${workspaceId}, ${externalId}, ${email}, ${provider}, ${this.sql.json(groups)}, NOW())
       ON CONFLICT (workspace_id, external_id) DO UPDATE SET
-        synced_groups_json = ${JSON.stringify(groups)}::jsonb,
+        synced_groups_json = ${this.sql.json(groups)},
         external_email     = ${email},
         last_sync_at       = NOW()
     `;

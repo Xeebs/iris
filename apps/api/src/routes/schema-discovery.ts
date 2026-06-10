@@ -6,7 +6,10 @@ import { logger } from '@iris/core/logger';
 
 const log = logger.child({ route: 'schema-discovery' });
 
-type SqlFn = (strings: TemplateStringsArray, ...values: unknown[]) => Promise<unknown[]>;
+type SqlFn = ((strings: TemplateStringsArray, ...values: unknown[]) => Promise<unknown[]>) & {
+  /** postgres.js typed json parameter — see SchemaDiscoveryEngine */
+  json(value: unknown): unknown;
+};
 
 const confirmBodySchema = z.object({
   type: z.enum(['entity_type', 'relationship']),

@@ -19,7 +19,7 @@ beforeAll(async () => {
 
   await sql`DELETE FROM entity_type_suggestions WHERE connector_id = ${CONNECTOR_ID}`.catch(() => {});
   await sql`DELETE FROM relationship_suggestions WHERE connector_id = ${CONNECTOR_ID}`.catch(() => {});
-  await sql`DELETE FROM semantic_entities WHERE source_id LIKE ${CONNECTOR_ID + ':%'}`.catch(() => {});
+  await sql`DELETE FROM iris_entities WHERE source_id LIKE ${CONNECTOR_ID + ':%'}`.catch(() => {});
 
   // Seed HubSpot-like entities
   const entities = [
@@ -48,10 +48,10 @@ beforeAll(async () => {
 
   for (const e of entities) {
     await sql`
-      INSERT INTO semantic_entities (entity_id, workspace_id, entity_type, label, source_id, attributes)
+      INSERT INTO iris_entities (id, workspace_id, type, label, source_id, attributes, last_modified)
       VALUES (${e.entity_id}, 'test-ws', ${e.entity_type}, ${e.label},
               ${CONNECTOR_ID + ':' + e.entity_type + ':' + e.entity_id.split(':').at(-1)},
-              ${JSON.stringify(e.attrs)}::jsonb)
+              ${sql.json(e.attrs)}, NOW())
       ON CONFLICT DO NOTHING
     `.catch(() => {});
   }
@@ -60,7 +60,7 @@ beforeAll(async () => {
 afterAll(async () => {
   await sql`DELETE FROM entity_type_suggestions WHERE connector_id = ${CONNECTOR_ID}`.catch(() => {});
   await sql`DELETE FROM relationship_suggestions WHERE connector_id = ${CONNECTOR_ID}`.catch(() => {});
-  await sql`DELETE FROM semantic_entities WHERE source_id LIKE ${CONNECTOR_ID + ':%'}`.catch(() => {});
+  await sql`DELETE FROM iris_entities WHERE source_id LIKE ${CONNECTOR_ID + ':%'}`.catch(() => {});
   await sql.end();
 });
 

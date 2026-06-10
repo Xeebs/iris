@@ -4,7 +4,8 @@ import { IndexRepairService } from '../index-repair-service.js';
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function makeSql(defaultResult: unknown[] = []) {
-  const fn = vi.fn().mockResolvedValue(defaultResult);
+  // services call sql.json() for jsonb params; echo the value through
+  const fn = Object.assign(vi.fn().mockResolvedValue(defaultResult), { json: (v: unknown) => v });
   return fn as unknown as ConstructorParameters<typeof IndexRepairService>[0];
 }
 

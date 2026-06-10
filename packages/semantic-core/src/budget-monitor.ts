@@ -99,7 +99,10 @@ export function alertThresholdsCrossed(prevPct: number, newPct: number, threshol
 
 // ─── BudgetMonitor class ──────────────────────────────────────────────────────
 
-type SqlFn = (strings: TemplateStringsArray, ...values: unknown[]) => Promise<unknown[]>;
+type SqlFn = ((strings: TemplateStringsArray, ...values: unknown[]) => Promise<unknown[]>) & {
+  /** postgres.js typed json parameter — required for jsonb columns (plain strings are stored as jsonb string scalars) */
+  json(value: unknown): unknown;
+};
 
 export class BudgetMonitor {
   constructor(private readonly sql: SqlFn) {}
@@ -271,7 +274,7 @@ export class BudgetMonitor {
         INSERT INTO budget_alerts
           (workspace_id, threshold_pct, triggered_at, notification_channels_used)
         VALUES
-          (${workspaceId}, ${thresholdPct}, NOW(), ${JSON.stringify(notificationChannels)}::jsonb)
+          (${workspaceId}, ${thresholdPct}, NOW(), ${this.sql.json(notificationChannels)})
         ON CONFLICT DO NOTHING
       `;
 

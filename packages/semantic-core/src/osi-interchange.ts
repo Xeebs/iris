@@ -146,7 +146,7 @@ export class OsiInterchangeService {
         ${workspaceId},
         ${entityType},
         ${node.label},
-        ${JSON.stringify(attributes)}::jsonb,
+        ${this.sql.json(attributes as Parameters<typeof this.sql.json>[0])},
         '[]'::jsonb,
         NOW(),
         ${sourceId}

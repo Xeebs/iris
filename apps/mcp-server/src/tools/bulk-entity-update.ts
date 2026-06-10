@@ -64,7 +64,7 @@ export const bulkEntityUpdateTool = {
     const ids = matching.map((r) => r.id);
     await sql`
       UPDATE iris_entities
-      SET attributes = attributes || ${JSON.stringify(patch)}::jsonb,
+      SET attributes = attributes || ${sql.json(patch as Parameters<typeof sql.json>[0])},
           last_modified = NOW()
       WHERE id = ANY(${ids}::text[])
     `;

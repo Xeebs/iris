@@ -98,7 +98,7 @@ export class ResourceStreamManager {
           (session_id, workspace_id, client_id, query, expansion_level, cached_results_json, created_at, expires_at)
         VALUES (
           ${sessionId}, ${workspaceId}, ${clientId}, ${query}, ${level},
-          ${JSON.stringify([])}::jsonb, ${now}, ${expiresAt}
+          ${this.sql.json([])}, ${now}, ${expiresAt}
         )
       `;
 
@@ -173,7 +173,7 @@ export class ResourceStreamManager {
       await this.sql`
         UPDATE mcp_resource_sessions
         SET expansion_level = ${newLevel},
-            cached_results_json = ${JSON.stringify(session.cachedResults)}::jsonb
+            cached_results_json = ${this.sql.json(session.cachedResults as unknown as Parameters<typeof this.sql.json>[0])}
         WHERE session_id = ${sessionId}
       `;
 

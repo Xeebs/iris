@@ -146,14 +146,14 @@ export class DataLineageService {
         ${entityId},
         ${workspaceId},
         'unknown',
-        ${JSON.stringify({ transformations: [transformation] })},
+        ${this.sql.json({ transformations: [transformation] } as unknown as Parameters<typeof this.sql.json>[0])},
         now()
       )
       ON CONFLICT (entity_id, workspace_id) DO UPDATE SET
         lineage_json = jsonb_set(
           entity_lineage.lineage_json,
           '{transformations}',
-          (entity_lineage.lineage_json->'transformations') || ${JSON.stringify([transformation])}::jsonb
+          (entity_lineage.lineage_json->'transformations') || ${this.sql.json([transformation] as unknown as Parameters<typeof this.sql.json>[0])}
         ),
         last_modified_at = now()
     `;
@@ -233,15 +233,14 @@ export class DataLineageService {
       source_sync_job_id: origin.syncJobId ?? null,
       source_api_timestamp: origin.sourceApiTimestamp ?? null,
       last_modified_by: origin.modifiedBy ?? 'system',
+      last_modified_at: new Date(),
     }));
 
+    // postgres.js multi-row insert helper — the previous SELECT ... FROM
+    // ${sql(rows)} form is not a supported helper position and crashed
+    // inside the driver's identifier escaping.
     await this.sql`
-      INSERT INTO entity_lineage
-        (entity_id, workspace_id, source_connector_id, source_sync_job_id,
-         source_api_timestamp, last_modified_by, last_modified_at)
-      SELECT entity_id, workspace_id, source_connector_id, source_sync_job_id,
-             source_api_timestamp, last_modified_by, now()
-      FROM ${this.sql(rows)}
+      INSERT INTO entity_lineage ${this.sql(rows)}
       ON CONFLICT (entity_id, workspace_id) DO UPDATE SET
         source_connector_id  = EXCLUDED.source_connector_id,
         source_sync_job_id   = EXCLUDED.source_sync_job_id,

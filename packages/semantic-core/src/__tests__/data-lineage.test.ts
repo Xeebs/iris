@@ -10,6 +10,8 @@ function makeSql(rowSets: unknown[][]): ReturnType<typeof import('postgres')['de
       call++;
       return Promise.resolve(rows);
     },
+    // services call sql.json() for jsonb params; echo the value through
+    { json: (v: unknown) => v },
   ) as unknown as ReturnType<typeof import('postgres')['default']>;
 }
 
@@ -28,14 +30,14 @@ const transformation: LineageTransformation = {
 
 describe('DataLineageService.recordOrigin', () => {
   it('calls sql without throwing', async () => {
-    const sqlFn = vi.fn().mockResolvedValue([]);
+    const sqlFn = Object.assign(vi.fn().mockResolvedValue([]), { json: (v: unknown) => v });
     const service = new DataLineageService(sqlFn as never);
     await expect(service.recordOrigin('entity-1', 'ws-1', origin)).resolves.not.toThrow();
     expect(sqlFn).toHaveBeenCalledOnce();
   });
 
   it('handles origin with no optional fields', async () => {
-    const sqlFn = vi.fn().mockResolvedValue([]);
+    const sqlFn = Object.assign(vi.fn().mockResolvedValue([]), { json: (v: unknown) => v });
     const service = new DataLineageService(sqlFn as never);
     await expect(
       service.recordOrigin('entity-2', 'ws-1', { connectorId: 'slack' }),
@@ -46,7 +48,7 @@ describe('DataLineageService.recordOrigin', () => {
 
 describe('DataLineageService.addTransformation', () => {
   it('calls sql to upsert-append the transformation', async () => {
-    const sqlFn = vi.fn().mockResolvedValue([]);
+    const sqlFn = Object.assign(vi.fn().mockResolvedValue([]), { json: (v: unknown) => v });
     const service = new DataLineageService(sqlFn as never);
     await expect(
       service.addTransformation('entity-1', 'ws-1', transformation),
@@ -55,7 +57,7 @@ describe('DataLineageService.addTransformation', () => {
   });
 
   it('accepts all transformation types', async () => {
-    const sqlFn = vi.fn().mockResolvedValue([]);
+    const sqlFn = Object.assign(vi.fn().mockResolvedValue([]), { json: (v: unknown) => v });
     const service = new DataLineageService(sqlFn as never);
     const types: LineageTransformation['type'][] = [
       'embedding', 'deduplication', 'relationship', 'pii_masking', 'enrichment',
@@ -185,14 +187,14 @@ describe('DataLineageService.listEntityLineage', () => {
 
 describe('DataLineageService.recordOriginBatch', () => {
   it('skips DB call for empty batch', async () => {
-    const sqlFn = vi.fn().mockResolvedValue([]);
+    const sqlFn = Object.assign(vi.fn().mockResolvedValue([]), { json: (v: unknown) => v });
     const service = new DataLineageService(sqlFn as never);
     await service.recordOriginBatch([]);
     expect(sqlFn).not.toHaveBeenCalled();
   });
 
   it('calls sql twice (helper + INSERT) for non-empty batch', async () => {
-    const sqlFn = vi.fn().mockResolvedValue([]);
+    const sqlFn = Object.assign(vi.fn().mockResolvedValue([]), { json: (v: unknown) => v });
     const service = new DataLineageService(sqlFn as never);
     await service.recordOriginBatch([
       { entityId: 'e1', workspaceId: 'ws-1', origin: { connectorId: 'hubspot' } },
@@ -204,7 +206,7 @@ describe('DataLineageService.recordOriginBatch', () => {
 
 describe('DataLineageService.recordDependency', () => {
   it('returns ok on successful upsert', async () => {
-    const sqlFn = vi.fn().mockResolvedValue([]);
+    const sqlFn = Object.assign(vi.fn().mockResolvedValue([]), { json: (v: unknown) => v });
     const service = new DataLineageService(sqlFn as never);
     const result = await service.recordDependency('e1', 'e2', 'ws-1');
     expect(result.isOk()).toBe(true);
@@ -212,7 +214,7 @@ describe('DataLineageService.recordDependency', () => {
   });
 
   it('uses provided relationship type and confidence', async () => {
-    const sqlFn = vi.fn().mockResolvedValue([]);
+    const sqlFn = Object.assign(vi.fn().mockResolvedValue([]), { json: (v: unknown) => v });
     const service = new DataLineageService(sqlFn as never);
     const result = await service.recordDependency('e1', 'e2', 'ws-1', 'derived_from', 0.9);
     expect(result.isOk()).toBe(true);
@@ -229,7 +231,7 @@ describe('DataLineageService.recordDependency', () => {
 
 describe('DataLineageService.computeImpact', () => {
   it('returns empty affected list when no dependents', async () => {
-    const sqlFn = vi.fn().mockResolvedValue([]);
+    const sqlFn = Object.assign(vi.fn().mockResolvedValue([]), { json: (v: unknown) => v });
     const service = new DataLineageService(sqlFn as never);
     const result = await service.computeImpact('e-root', 'ws-1', 2);
     expect(result.isOk()).toBe(true);
@@ -282,7 +284,7 @@ describe('DataLineageService.computeImpact', () => {
 
 describe('DataLineageService.getLineageGraph', () => {
   it('returns empty ancestors and descendants when no edges exist', async () => {
-    const sqlFn = vi.fn().mockResolvedValue([]);
+    const sqlFn = Object.assign(vi.fn().mockResolvedValue([]), { json: (v: unknown) => v });
     const service = new DataLineageService(sqlFn as never);
     const result = await service.getLineageGraph('e-root', 'ws-1', 2);
     expect(result.isOk()).toBe(true);

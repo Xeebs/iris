@@ -88,9 +88,10 @@ describe('ConnectorCostAttributor — integration (simulated)', () => {
     const entityCount = 10000;
     const cost = computeIndexCostCents(entityCount);
 
-    // Verify the cost is in a reasonable range for 10k entities at text-embedding-3-small pricing
+    // text-embedding-3-small at $0.02/1M tokens and ~50 tokens per entity:
+    // 10k entities = 500K tokens = exactly $0.01, i.e. 1 cent
     expect(cost).toBeGreaterThan(0);
-    expect(cost).toBeLessThan(1); // should be well under $0.01 for 10k entities
+    expect(cost).toBeLessThanOrEqual(1);
   });
 
   it('produces archive_stale recommendation when a connector dominates total cost', async () => {

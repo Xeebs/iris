@@ -106,7 +106,8 @@ describe('alertThresholdsCrossed', () => {
 // ─── BudgetMonitor class ──────────────────────────────────────────────────────
 
 function makeSql(returnVal: unknown[] = []) {
-  return vi.fn().mockResolvedValue(returnVal);
+  // services call sql.json() for jsonb params; echo the value through
+  return Object.assign(vi.fn().mockResolvedValue(returnVal), { json: (v: unknown) => v });
 }
 
 const mockEvent: BudgetUsageEvent = {

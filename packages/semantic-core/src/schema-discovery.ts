@@ -4,7 +4,10 @@ import { logger } from '@iris/core/logger';
 
 const log = logger.child({ service: 'schema-discovery' });
 
-type SqlFn = (strings: TemplateStringsArray, ...values: unknown[]) => Promise<unknown[]>;
+type SqlFn = ((strings: TemplateStringsArray, ...values: unknown[]) => Promise<unknown[]>) & {
+  /** postgres.js typed json parameter — required for jsonb columns (plain strings are stored as jsonb string scalars) */
+  json(value: unknown): unknown;
+};
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -155,14 +158,14 @@ export function suggestRelationships(
 // ─── SchemaDiscoveryEngine ────────────────────────────────────────────────────
 
 /**
- * Analyzes existing semantic_entities to discover entity types and suggest relationships
+ * Analyzes existing iris_entities to discover entity types and suggest relationships
  * for a given connector. Stores suggestions in DB for human review and confirmation.
  */
 export class SchemaDiscoveryEngine {
   constructor(private readonly sql: SqlFn) {}
 
   /**
-   * Detect entity types by inspecting existing semantic_entities for a connector.
+   * Detect entity types by inspecting existing iris_entities rows for a connector.
    * Groups by entity_type and samples attribute keys to infer field types.
    *
    * @param connectorId - Connector to analyze
@@ -171,10 +174,10 @@ export class SchemaDiscoveryEngine {
   async detectEntityTypes(connectorId: string): Promise<Result<EntityTypeSuggestion[], Error>> {
     try {
       const typeCounts = await this.sql`
-        SELECT entity_type, COUNT(*)::int AS sample_count
-        FROM semantic_entities
+        SELECT type AS entity_type, COUNT(*)::int AS sample_count
+        FROM iris_entities
         WHERE source_id LIKE ${connectorId + ':%'}
-        GROUP BY entity_type
+        GROUP BY type
         ORDER BY sample_count DESC
       ` as { entity_type: string; sample_count: number }[];
 
@@ -187,9 +190,9 @@ export class SchemaDiscoveryEngine {
       for (const { entity_type, sample_count } of typeCounts) {
         const samples = await this.sql`
           SELECT attributes
-          FROM semantic_entities
+          FROM iris_entities
           WHERE source_id LIKE ${connectorId + ':%'}
-            AND entity_type = ${entity_type}
+            AND type = ${entity_type}
           LIMIT 50
         ` as { attributes: Record<string, unknown> }[];
 
@@ -260,7 +263,7 @@ export class SchemaDiscoveryEngine {
             (connector_id, entity_type, sample_count, fields_json, confidence, confirmed)
           VALUES
             (${connectorId}, ${suggestion.entityType}, ${suggestion.sampleCount},
-             ${JSON.stringify(suggestion.fields)}::jsonb, ${suggestion.confidence}, false)
+             ${this.sql.json(suggestion.fields)}, ${suggestion.confidence}, false)
           ON CONFLICT (connector_id, entity_type) DO UPDATE
             SET sample_count = EXCLUDED.sample_count,
                 fields_json = EXCLUDED.fields_json,

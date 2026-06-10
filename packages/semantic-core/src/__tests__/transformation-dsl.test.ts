@@ -6,7 +6,9 @@ import type { SemanticEntity } from '@iris/connector-sdk';
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function makeSql(result: unknown[] = []) {
-  return vi.fn().mockResolvedValue(result) as unknown as ConstructorParameters<typeof TransformationDSLEngine>[0];
+  // services call sql.json() for jsonb params; echo the value through
+  const fn = Object.assign(vi.fn().mockResolvedValue(result), { json: (v: unknown) => v });
+  return fn as unknown as ConstructorParameters<typeof TransformationDSLEngine>[0];
 }
 
 function makeEntity(attrs: Record<string, unknown> = {}): SemanticEntity {

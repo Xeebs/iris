@@ -6,7 +6,10 @@ import type { SemanticEntity, AttributeValue } from '@iris/connector-sdk';
 
 const log = logger.child({ service: 'transformation-dsl' });
 
-type SqlFn = (strings: TemplateStringsArray, ...values: unknown[]) => Promise<unknown[]>;
+type SqlFn = ((strings: TemplateStringsArray, ...values: unknown[]) => Promise<unknown[]>) & {
+  /** postgres.js typed json parameter — required for jsonb columns (plain strings are stored as jsonb string scalars) */
+  json(value: unknown): unknown;
+};
 
 // ─── Transformation Rule Types ────────────────────────────────────────────────
 
@@ -201,7 +204,7 @@ export class TransformationDSLEngine {
           (workspace_id, connector_id, entity_type, rule_name, steps, is_active)
         VALUES
           (${rule.workspaceId}, ${rule.connectorId ?? null}, ${rule.entityType ?? null},
-           ${rule.ruleName}, ${JSON.stringify(rule.steps)}::jsonb, ${rule.isActive})
+           ${rule.ruleName}, ${this.sql.json(rule.steps)}, ${rule.isActive})
         RETURNING *
       ` as Record<string, unknown>[];
 

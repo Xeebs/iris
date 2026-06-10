@@ -93,7 +93,10 @@ export class ReliabilityPredictor {
       const since = new Date(Date.now() - windowMs);
 
       const outcomes = await this.sql<SyncOutcome[]>`
-        SELECT succeeded_at, latency_ms, error_code
+        SELECT
+          succeeded_at AS "succeededAt",
+          latency_ms   AS "latencyMs",
+          error_code   AS "errorCode"
         FROM sync_outcomes
         WHERE connector_id = ${connectorId}
           AND workspace_id = ${workspaceId}

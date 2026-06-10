@@ -2,13 +2,17 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { RequestTracer, type Span, type TraceContext } from '../request-tracer.js';
 
 function makeSql(responses: Record<string, unknown[]> = {}) {
-  return vi.fn((strings: TemplateStringsArray) => {
-    const q = strings.raw.join('?');
-    for (const [key, rows] of Object.entries(responses)) {
-      if (q.includes(key)) return Promise.resolve(rows);
-    }
-    return Promise.resolve([]);
-  }) as unknown as ReturnType<typeof import('postgres').default>;
+  // services call sql.json() for jsonb params; echo the value through
+  return Object.assign(
+    vi.fn((strings: TemplateStringsArray) => {
+      const q = strings.raw.join('?');
+      for (const [key, rows] of Object.entries(responses)) {
+        if (q.includes(key)) return Promise.resolve(rows);
+      }
+      return Promise.resolve([]);
+    }),
+    { json: (v: unknown) => v },
+  ) as unknown as ReturnType<typeof import('postgres').default>;
 }
 
 function makeSpan(overrides: Partial<Span> = {}): Span {

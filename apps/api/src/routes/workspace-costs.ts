@@ -34,7 +34,7 @@ function buildCostStore(sql: Sql) {
           ${entry.date}::date,
           ${entry.costCategory},
           ${entry.amountCents},
-          ${JSON.stringify(entry.metadata)}::jsonb
+          ${sql.json(entry.metadata as Parameters<typeof sql.json>[0])}
         )
       `;
     },
