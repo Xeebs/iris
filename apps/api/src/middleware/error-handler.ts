@@ -26,6 +26,12 @@ export const errorHandler: ErrorHandler = (err, c) => {
     );
   }
 
-  log.error('Unhandled API error', { error: err, path: c.req.path });
+  // Spell out the Error fields — a raw Error under a non-`err` key serializes to {}.
+  log.error('Unhandled API error', {
+    path: c.req.path,
+    name: err.name,
+    message: err.message,
+    stack: err.stack,
+  });
   return c.json({ error: { code: 'INTERNAL_ERROR', message: 'An unexpected error occurred' } }, 500);
 };

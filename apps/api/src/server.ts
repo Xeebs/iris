@@ -148,7 +148,13 @@ function createApp(
     app.route('/api/v1/demo', createDemoBootstrapRoutes(sql));
   }
 
-  app.use('*', clerkMiddleware());
+  // Clerk's middleware throws "Missing Clerk Secret key" on every request when
+  // CLERK_SECRET_KEY is unset, 500ing all /api/v1 routes before demoApiKeyAuth
+  // can run. In DEMO_MODE auth is handled by demoApiKeyAuth + requireAuth
+  // (which still 401s anything unauthenticated), so skip Clerk entirely.
+  if (process.env['DEMO_MODE'] !== 'true') {
+    app.use('*', clerkMiddleware());
+  }
 
   const authed = new Hono();
   if (process.env['DEMO_MODE'] === 'true') {
