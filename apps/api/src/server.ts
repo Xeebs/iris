@@ -137,6 +137,14 @@ import { createContextSummarizationRoutes } from './routes/context-summarization
 import { createContextVersioningRoutes } from './routes/context-versioning.js';
 import { createFieldMappingsRoutes } from './routes/field-mappings.js';
 import { createEventStreamsRoutes } from './routes/event-streams.js';
+import { createGraphQLRoutes } from './routes/graphql.js';
+import { makeHaAdminRouter } from './routes/ha-admin.js';
+import { createHealthForecastRoutes } from './routes/health-forecasts.js';
+import { createIndexRepairRoutes } from './routes/index-repair.js';
+import { createLlmProviderRoutes } from './routes/llm-providers.js';
+import { createMcpResourceDiscoveryRoutes } from './routes/mcp-resource-discovery.js';
+import { createMcpStreamingRoutes } from './routes/mcp-streaming.js';
+import { createMcpSubscriptionRoutes } from './routes/mcp-subscriptions.js';
 import { openApiSpec } from './openapi.js';
 
 export { createApp };
@@ -398,6 +406,17 @@ function createApp(
   authed.route('/context', createContextVersioningRoutes(sql as never));
   authed.route('/connectors', createFieldMappingsRoutes(sql as never));
   authed.route('/', createEventStreamsRoutes(sql as never));
+
+  // Batch 9: graphql, ha-admin, health-forecasts, index-repair, llm-providers,
+  // mcp-resource-discovery, mcp-streaming, mcp-subscriptions.
+  authed.route('/graphql', createGraphQLRoutes(sqlFn));
+  authed.route('/admin/ha', makeHaAdminRouter(sql));
+  authed.route('/connectors', createHealthForecastRoutes(sql));
+  authed.route('/index-repair', createIndexRepairRoutes(sql));
+  authed.route('/llm-providers', createLlmProviderRoutes(sqlFn));
+  authed.route('/mcp', createMcpResourceDiscoveryRoutes());
+  authed.route('/mcp', createMcpStreamingRoutes());
+  authed.route('/mcp', createMcpSubscriptionRoutes(sql));
 
   // Webhook routes: inbound (unauthenticated) + events status (authenticated)
   app.route('/api/v1/webhooks', createWebhookRoutes(sql));
