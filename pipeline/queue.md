@@ -29,7 +29,7 @@ Completed tasks are moved to `pipeline/queue-archive.md` by `scripts/archive-que
 
 ### Task: S2-1 Real embedding provider end-to-end (Ollama, configurable dimensions)
 - **Layer**: 79 — Slice 2
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: Critical
 - **Description**: Make the existing `OllamaProvider` (`packages/semantic-core/src/providers/ollama-provider.ts`, selected via `EMBEDDING_PROVIDER=ollama` in `embedding-provider.ts`) work end to end on the Pi with `nomic-embed-text`. Ollama is already installed locally (see `packages/core` local-llm integration); pull the model with `ollama pull nomic-embed-text` and verify the provider returns real vectors. Critical issue: nomic-embed-text is 768-dim but the pgvector schema is `vector(1536)` — make the vector dimension follow the configured provider (provider exposes `dimensions`; migrations/PgvectorStore take the dimension from config), and fail hard at startup on a store/provider dimension mismatch with a clear error telling the user a re-index is required. Never pad or truncate vectors. Add unit tests for the dimension-mismatch guard and an integration test that indexes + retrieves 5 entities through Ollama for real (skip with a clear message if Ollama is unreachable). Verify locally: `EMBEDDING_PROVIDER=ollama` + `pnpm vitest run` on the affected files, then a manual index/retrieve round trip.
 - **Files**:

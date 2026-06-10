@@ -1,8 +1,11 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { PgvectorStore } from '../vector-store.js';
+import { createDefaultProvider } from '../embedding-provider.js';
 import type { SemanticEntity } from '@iris/connector-sdk';
 
 const DATABASE_URL = process.env['DATABASE_URL'];
+
+const DIMENSIONS = createDefaultProvider().getModelDimensions();
 
 function makeEntity(id: string, type = 'contact'): SemanticEntity {
   return {
@@ -17,14 +20,14 @@ function makeEntity(id: string, type = 'contact'): SemanticEntity {
 }
 
 function makeVector(seed: number): number[] {
-  return Array.from({ length: 1536 }, (_, i) => (i === seed ? 1.0 : 0.0));
+  return Array.from({ length: DIMENSIONS }, (_, i) => (i === seed ? 1.0 : 0.0));
 }
 
 describe.skipIf(!DATABASE_URL)('PgvectorStore integration', () => {
   let store: PgvectorStore;
 
   beforeAll(async () => {
-    store = new PgvectorStore(DATABASE_URL!);
+    store = new PgvectorStore(DATABASE_URL!, DIMENSIONS);
     await store.initialize();
     await store.delete(['hubspot:contact:it-1', 'hubspot:contact:it-2', 'hubspot:contact:it-3']);
   });

@@ -4,6 +4,7 @@ import { SemanticCache } from '@iris/cache/semantic-cache';
 import { ResponseCache } from '@iris/cache/response-cache';
 import { PgvectorStore, GlossaryService, MetricRegistry, ContextPermissionService, PiiConfigService } from '@iris/semantic-core';
 import type { VectorStore, ContextPermissions, WorkspacePiiConfig } from '@iris/semantic-core';
+import { createDefaultProvider } from '@iris/semantic-core/embedding-provider';
 import { logger } from '@iris/core/logger';
 import { Redis } from 'ioredis';
 import postgres from 'postgres';
@@ -225,7 +226,8 @@ async function main(): Promise<void> {
     log.warn('No IRIS_API_KEY set — running in unauthenticated dev mode (all workspaces accessible)');
   }
 
-  const vectorStore = new PgvectorStore(pgUrl);
+  const embeddingProvider = createDefaultProvider();
+  const vectorStore = new PgvectorStore(pgUrl, embeddingProvider.getModelDimensions());
   await vectorStore.initialize();
 
   const redis = new Redis(redisUrl);

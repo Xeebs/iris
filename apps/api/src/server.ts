@@ -4,6 +4,7 @@ import postgres from 'postgres';
 import { Redis } from 'ioredis';
 import { clerkMiddleware } from '@hono/clerk-auth';
 import { PgvectorStore } from '@iris/semantic-core';
+import { createDefaultProvider } from '@iris/semantic-core/embedding-provider';
 import { logger } from '@iris/core/logger';
 
 import { SyncJobQueue } from '@iris/queue';
@@ -447,7 +448,8 @@ async function main(): Promise<void> {
 
   const redisUrl = process.env['REDIS_URL'] ?? 'redis://localhost:6379';
   const sql = postgres(pgUrl);
-  const vectorStore = new PgvectorStore(pgUrl);
+  const embeddingProvider = createDefaultProvider();
+  const vectorStore = new PgvectorStore(pgUrl, embeddingProvider.getModelDimensions());
   await vectorStore.initialize();
   const redis = new Redis(redisUrl);
 

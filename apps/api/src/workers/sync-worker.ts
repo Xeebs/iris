@@ -216,9 +216,11 @@ if (process.env['SYNC_WORKER_STANDALONE'] === 'true') {
 
   const postgres = (await import('postgres')).default;
   const { PgvectorStore } = await import('@iris/semantic-core');
+  const { createDefaultProvider } = await import('@iris/semantic-core/embedding-provider');
 
   const sql = postgres(pgUrl);
-  const vectorStore = new PgvectorStore(pgUrl);
+  const embeddingProvider = createDefaultProvider();
+  const vectorStore = new PgvectorStore(pgUrl, embeddingProvider.getModelDimensions());
   await vectorStore.initialize();
 
   createSyncWorker(sql, vectorStore, openAiKey, redisUrl);

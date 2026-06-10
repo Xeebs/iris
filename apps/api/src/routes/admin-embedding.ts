@@ -85,7 +85,7 @@ export function createAdminEmbeddingRoutes(sql: SqlClient): Hono {
       return c.json({ error: { code: 'CONFIG_ERROR', message: 'DATABASE_URL not configured' } }, 500);
     }
 
-    const vectorStore = new PgvectorStore(pgUrl);
+    const vectorStore = new PgvectorStore(pgUrl, embeddingProvider.getModelDimensions());
 
     try {
       const reindexOpts: ReindexOptions = {};

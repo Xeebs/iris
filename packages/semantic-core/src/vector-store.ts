@@ -134,15 +134,47 @@ export function normalizeAttributes(value: unknown): SemanticEntity['attributes'
  */
 export class PgvectorStore implements VectorStore {
   private readonly sql: ReturnType<typeof postgres>;
+  private readonly dimensions: number;
 
-  constructor(connectionString: string) {
+  constructor(connectionString: string, dimensions: number = 1536) {
     this.sql = postgres(connectionString, { ssl: false });
+    this.dimensions = dimensions;
   }
 
-  /** Create the entities table if it doesn't exist. Run once at startup. */
+  /** Configured vector dimensionality for this store. */
+  getDimensions(): number {
+    return this.dimensions;
+  }
+
+  /**
+   * Create the entities table if it doesn't exist, using the configured
+   * vector dimension. If the table already exists, verifies that its stored
+   * dimension matches — throws a hard error if they differ (re-index required).
+   */
   async initialize(): Promise<void> {
     await this.sql`CREATE EXTENSION IF NOT EXISTS vector`;
-    await this.sql`
+
+    // Check existing column dimension to catch provider/store mismatches early.
+    const dimRows = await this.sql<Array<{ atttypmod: number }>>`
+      SELECT atttypmod
+      FROM pg_attribute
+      WHERE attrelid = 'iris_entities'::regclass
+        AND attname = 'embedding'
+        AND NOT attisdropped
+    `.catch(() => [] as Array<{ atttypmod: number }>);
+
+    if (dimRows.length > 0) {
+      const storedDim = dimRows[0]!.atttypmod;
+      if (storedDim !== -1 && storedDim !== this.dimensions) {
+        throw new IndexerError(
+          `Embedding dimension mismatch: store has vector(${storedDim}) but the configured provider needs ${this.dimensions} dimensions. ` +
+            `A full re-index is required — drop the iris_entities table and re-run migrations.`,
+        );
+      }
+    }
+
+    // dimensions is always a validated positive integer from EmbeddingProvider.getModelDimensions()
+    await this.sql.unsafe(`
       CREATE TABLE IF NOT EXISTS iris_entities (
         id            TEXT PRIMARY KEY,
         workspace_id  TEXT NOT NULL,
@@ -152,10 +184,10 @@ export class PgvectorStore implements VectorStore {
         relationships JSONB NOT NULL DEFAULT '[]',
         last_modified TIMESTAMPTZ NOT NULL,
         source_id     TEXT NOT NULL,
-        embedding     vector(1536),
+        embedding     vector(${this.dimensions}),
         indexed_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
       )
-    `;
+    `);
     await this.sql`
       CREATE INDEX IF NOT EXISTS iris_entities_embedding_idx
       ON iris_entities USING ivfflat (embedding vector_cosine_ops)
@@ -164,7 +196,7 @@ export class PgvectorStore implements VectorStore {
     await this.sql`CREATE INDEX IF NOT EXISTS iris_entities_workspace_idx ON iris_entities (workspace_id)`;
     await this.sql`CREATE INDEX IF NOT EXISTS iris_entities_type_idx ON iris_entities (type)`;
 
-    log.info('PgvectorStore initialized');
+    log.info('PgvectorStore initialized', { dimensions: this.dimensions });
   }
 
   async upsert(entities: SemanticEntity[], vectors: number[][], workspaceId?: string): Promise<void> {
