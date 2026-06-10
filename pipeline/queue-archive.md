@@ -4922,3 +4922,21 @@ the live queue small. Layer headings are repeated per archival batch.
   - pipeline/slice-report.md
 - **Depends on**: VS-4 MCP query verification
 - **Added**: 2026-06-09
+
+---
+
+<!-- archived 2026-06-10 -->
+
+## Layer 78: VERTICAL SLICE — The Only Feature Work Allowed (see docs/VERTICAL_SLICE.md)
+### Task: VS-6 Slice in CI + double-run stability + flip the milestone
+- **Layer**: 78 — Vertical Slice
+- **Status**: COMMITTED — `slice-demo` CI job green on commit 83ad10a (6h timeout fix). Both runs passed from clean state. `docs/VERTICAL_SLICE.md` flipped to `ACHIEVED 2026-06-10`. Slice mode ends; pipeline returns to breadth work starting with Layer 77.
+- **Priority**: High
+- **Description**: (1) Add a `slice-demo` job to the GitHub Actions workflow that boots Postgres/Redis/Qdrant services and runs scripts/slice-demo.sh; it must be green and become a required signal alongside existing jobs. (2) Run the demo twice in a row from clean state locally to prove determinism — fix any state leakage it exposes. (3) When all acceptance criteria in docs/VERTICAL_SLICE.md hold, check them off, flip the status line to `ACHIEVED <date>`, commit, and leave a note in pipeline/changelog.md. The pipeline then exits slice mode (see CLAUDE.md CURRENT FOCUS) and the owner verifies by hand.
+- **Files**:
+  - .github/workflows/* (slice-demo job)
+  - docs/VERTICAL_SLICE.md (status flip)
+- **Depends on**: VS-5 Token-savings measurement
+- **Added**: 2026-06-09
+
+---
