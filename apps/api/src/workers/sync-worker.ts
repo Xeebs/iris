@@ -79,8 +79,10 @@ export function createSyncWorker(
         const registration = registry.get(instance.connectorId);
         const connector = registration.factory(instance.config);
 
-        // 4–10. Run connect + sync + index under the resilience manager (retries, circuit breaker, bulkhead, timeout)
-        const { indexResult, cdcStrategy, allEntities, changedEntities } = await resilienceManager.execute(
+        // 4–9. Run connect + sync + CDC under the resilience manager (retries, circuit breaker, bulkhead, timeout).
+        // indexEntities() is kept outside — embedding generation via Ollama/OpenAI can be slow (>10s on CPU)
+        // and should not be subject to the connector-I/O timeout.
+        const { cdcStrategy, cdcConfig, deltas, allEntities, changedEntities } = await resilienceManager.execute(
           instance.connectorId,
           async () => {
             const connectResult = await connector.connect(instance.config);
@@ -113,18 +115,21 @@ export function createSyncWorker(
               .filter((d) => d.changeType !== 'unchanged')
               .map((d) => d.entity);
 
-            async function* changedEntityGenerator() {
-              for (const entity of changedEntities) yield entity;
-            }
-            const indexResult = await indexEntities(changedEntityGenerator(), vectorStore, { openAiApiKey, workspaceId });
-
-            const runResult = cdcManager.buildRunResult(deltas);
-            runResult.strategy = cdcStrategy;
-            await cdcManager.updateState(connectorInstanceId, workspaceId, runResult, cdcConfig);
-
-            return { indexResult, cdcStrategy, allEntities, changedEntities };
+            return { cdcStrategy, cdcConfig, deltas, allEntities, changedEntities };
           },
         );
+
+        // 10. Generate embeddings and index — outside resilience boundary so Ollama/OpenAI latency
+        //     does not trigger connector circuit breakers or the per-operation timeout.
+        async function* changedEntityGenerator() {
+          for (const entity of changedEntities) yield entity;
+        }
+        const indexResult = await indexEntities(changedEntityGenerator(), vectorStore, { openAiApiKey, workspaceId });
+
+        // 11. Advance the CDC cursor only after both sync and indexing succeed.
+        const runResult = cdcManager.buildRunResult(deltas);
+        runResult.strategy = cdcStrategy;
+        await cdcManager.updateState(connectorInstanceId, workspaceId, runResult, cdcConfig);
 
         log.info('Sync indexing complete', {
           connectorInstanceId,
