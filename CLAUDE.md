@@ -74,17 +74,18 @@ pnpm mcp:inspect      # Open MCP inspector for debugging
 
 The Iris build pipeline runs continuously via `scripts/daemon.py`. The daemon fires `claude --dangerously-skip-permissions` in a loop, driving the project forward from the current empty scaffold toward a working MVP.
 
-### CURRENT FOCUS — Vertical Slice ONLY (overrides all queue breadth)
+### CURRENT FOCUS — Slice 2: Iris in Real Use (overrides all queue breadth)
 
-**Read `docs/VERTICAL_SLICE.md` at the start of every cycle.** While its status line reads `NOT ACHIEVED`, the pipeline is in **slice mode**:
+**Read `docs/SLICE_2.md` at the start of every cycle.** While its status line reads `NOT ACHIEVED`, the pipeline is in **slice 2 mode**:
 
-- Task selection is restricted to the **CI Green Gate** and tasks in **Layer 78 — Vertical Slice** in `pipeline/queue.md`. All other UNWORKED tasks are frozen — do not select them, regardless of priority.
-- The task-researcher may only generate tasks that unblock or harden the slice (fixing a broken link in the connect → sync → index → serve → query → measure chain). It must not generate feature, dashboard, coverage-padding, or enterprise tasks.
-- "Done" for the slice is defined exclusively by the acceptance criteria in `docs/VERTICAL_SLICE.md` — a single command (`scripts/slice-demo.sh`) proving the end-to-end flow from a clean database, twice, with a token-savings report.
-- If a slice task reveals broken code elsewhere (unmounted route, broken migration, stub function on the slice path), fixing it **is** slice work — do it.
-- Only when every acceptance criterion is met, CI includes a green `slice-demo` job, and the status line in `docs/VERTICAL_SLICE.md` is flipped to `ACHIEVED`, may the pipeline resume normal queue-driven breadth work.
+- Task selection is restricted to the **CI Green Gate**, tasks in **Layer 79 — Slice 2** in `pipeline/queue.md`, and finishing the in-flight **Layer 77** route-mounting task (which never takes priority over an UNWORKED Layer 79 task). All other UNWORKED tasks are frozen — do not select them, regardless of priority.
+- The task-researcher may only generate tasks that unblock or harden Slice 2 (real embeddings, real data source, eval accuracy, onboarding golden path, real MCP client connection). It must not generate feature, dashboard-breadth, coverage-padding, or enterprise tasks.
+- "Done" is defined exclusively by the acceptance criteria in `docs/SLICE_2.md` — `scripts/slice2-demo.sh` proving the chain with real embeddings and a real data source, an eval harness at ≥90% accuracy and ≥70% token savings, twice from clean state, green in CI.
+- If a slice task reveals broken code elsewhere (dimension mismatch, broken transformer, dead dashboard page on the golden path), fixing it **is** slice work — do it.
+- The final acceptance criterion (owner uses Iris from their own Claude Code session) is **owner-verified and not waivable** — the pipeline must never flip it or the status line. When every script-verifiable criterion is green, write `current_phase: AWAITING_OWNER` to state and exit; the owner flips the status line personally.
+- Slice 1 (`docs/VERTICAL_SLICE.md`) is ACHIEVED and its `slice-demo` CI job is the regression guard for the plumbing — keep it green, never weaken it.
 
-Rationale: 344 cycles produced enormous surface area but the core value proposition has never been demonstrated end to end. Working product first; features second.
+Rationale: Slice 1 proved the plumbing against fixtures with fake embeddings and a scripted client. Slice 2 makes every fake link real: real data, real vectors, real client, measured accuracy. After Slice 2 comes a prune-and-consolidate pass — not more breadth.
 
 ### CI Green Gate — MANDATORY, Highest Priority
 
@@ -108,11 +109,11 @@ Read the `CI STATUS` line the daemon put in your prompt and act per the CI Green
 
 ### Phase 1 — Task Research (conditional)
 
-Spawn the **task-researcher** subagent whenever fewer than 3 UNWORKED items remain in `pipeline/queue.md`. There is no date restriction — run it every cycle if needed until new tasks are added. The researcher scans the PRD, existing stubs, and TODO comments to generate 3–5 new tasks. It updates `pipeline/state.json` with `last_research: <today>`. **In slice mode (see CURRENT FOCUS), count only UNWORKED Layer 78 tasks, and the researcher may only generate slice-path tasks.**
+Spawn the **task-researcher** subagent whenever fewer than 3 UNWORKED items remain in `pipeline/queue.md`. There is no date restriction — run it every cycle if needed until new tasks are added. The researcher scans the PRD, existing stubs, and TODO comments to generate 3–5 new tasks. It updates `pipeline/state.json` with `last_research: <today>`. **In slice 2 mode (see CURRENT FOCUS), count only UNWORKED Layer 79 tasks, and the researcher may only generate slice-2-path tasks.**
 
 ### Phase 2 — Plan
 
-Select the top UNWORKED High-priority task from `pipeline/queue.md` — **in slice mode, only from Layer 78 — Vertical Slice**. Read the relevant section of `docs/PRD.md`, the applicable `.claude/rules/*.md` files, and any existing stub code. Produce a concrete implementation plan and mark the task `IN_PROGRESS` in `pipeline/queue.md`. Write `pipeline/state.json` with `current_phase: PLAN, active_task: <task-name>`.
+Select the top UNWORKED High-priority task from `pipeline/queue.md` — **in slice 2 mode, only from Layer 79 — Slice 2 (or the in-flight Layer 77 task if no Layer 79 task is UNWORKED)**. Read the relevant section of `docs/PRD.md`, the applicable `.claude/rules/*.md` files, and any existing stub code. Produce a concrete implementation plan and mark the task `IN_PROGRESS` in `pipeline/queue.md`. Write `pipeline/state.json` with `current_phase: PLAN, active_task: <task-name>`.
 
 ### Phase 3 — Implement
 
@@ -156,7 +157,7 @@ Tool output lands in your context and is paid for on every subsequent turn. Keep
 **Stop** under any of these conditions:
 0. **Task batch complete** — you have committed 3 tasks this session. Exit cleanly; the daemon respawns a fresh session in seconds (short sessions keep context lean — a long session pays for its entire history on every turn).
 1. **Rate limited** — write `rate_limit_hit: true` and current phase/task to state, then exit.
-2. **Queue exhausted after research** — task-researcher ran and produced 0 new tasks. Write `current_phase: IDLE` to state, then exit. **In slice mode, before declaring exhaustion: run `scripts/slice-demo.sh` (if it exists). If it fails, each failure is a new slice task — add it and continue. If it passes all acceptance criteria in `docs/VERTICAL_SLICE.md`, flip its status line to `ACHIEVED`, commit, push, and exit IDLE — green CI is authoritative, no owner sign-off is required, and the next session resumes normal queue-driven breadth work.**
+2. **Queue exhausted after research** — task-researcher ran and produced 0 new tasks. Write `current_phase: IDLE` to state, then exit. **In slice 2 mode, before declaring exhaustion: run `scripts/slice2-demo.sh` (if it exists). If it fails, each failure is a new slice task — add it and continue. If every script-verifiable criterion in `docs/SLICE_2.md` passes, write `current_phase: AWAITING_OWNER` and exit — the owner-verified criterion and the status-line flip belong to the owner alone; never flip them yourself.**
 
 Never stop mid-task or after a single quick task unless rate-limited. Never stop because `last_research` is today — always attempt research when the queue is low. Within a session's 3-task batch, drive all work forward until genuinely blocked.
 

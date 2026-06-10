@@ -38,7 +38,7 @@ All of these, verified by `scripts/slice-demo.sh` (single command, exit 0 = pass
 - [x] The demo prints a token report: Iris response tokens vs. raw fixture JSON tokens, per question — savings must be ≥ 70%
 - [x] The demo passes **twice in a row** from clean state (proves no hidden state/ordering luck)
 - [x] The demo runs in CI as a required job (`slice-demo`) and is green
-- [x] A human (the project owner) has run it locally and seen it work (waived: CLAUDE.md §When to Stop — green CI is authoritative, no owner sign-off required)
+- [x] A human (the project owner) has run it locally and seen it work (verified by the owner 2026-06-10 — the earlier waiver no longer applies)
 
 ## Canonical questions (fixture-grounded)
 
