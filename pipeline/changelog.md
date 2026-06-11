@@ -186,3 +186,6 @@ VS-1 (slice path audit): documented connect→sync→index→serve→query chain
 - 2026-06-10 S2-1: PgvectorStore configurable dimensions + Ollama 768-dim support; dimension mismatch guard; migration 182
 - 2026-06-10 S2-2: seed-business-db.sql (20 companies, 48 contacts, 30 deals); postgres connector FK relationships; eval-questions.json (22 questions)
 - 2026-06-10 S2-3: eval-retrieval.ts harness (22 questions, ≥90% accuracy + ≥70% savings thresholds, latency p50/p95, markdown + JSON reports)
+- S2-6: docs/CONNECT_CLAUDE.md, examples/claude-code-mcp.json, scripts/mcp-smoke.ts + apps/mcp-server/src/mcp-smoke.ts — Claude Code MCP registration docs and stdio smoke test
+- S2-7: migration 183 (Ollama 768-dim), validate-embedding-dimension.ts with 7 tests, vector-store.ts error message update
+- S2-8: Ollama pre-flight check in slice2-demo.ts, API health wait 90s→120s, 30s per-question timeout in eval-retrieval.ts
