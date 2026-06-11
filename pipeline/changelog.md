@@ -4,6 +4,8 @@ Completed tasks are logged here by the daemon after each successful commit.
 
 ---
 
+- 2026-06-11 fix(scripts): inject pnpm corepack shim in slice2-demo.sh so the script runs in daemon-spawned shells (PATH fix, demo confirmed 22/22 100% accuracy 79.2% savings)
+
 2026-06-11 — fix(dashboard): add 10 missing shadcn/ui components; fix exactOptionalPropertyTypes violations in stream-progress-monitor and streaming-preview-panel (pre-existing, off-golden-path)
 
 - 2026-06-11 | fix(semantic-core,connector-postgres): S2-17 — amount_usd attribute resolution in superlative detection + labelColumns in manifest schema; demo passes 22/22 twice in a row (100% accuracy, 79.1% token savings)

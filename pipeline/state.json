@@ -5,9 +5,9 @@
   "last_cycle": "2026-06-11",
   "last_research": "2026-06-11",
   "last_commit": "2026-06-11",
-  "cycle_count": 476,
+  "cycle_count": 477,
   "rate_limit_hit": false,
   "mode": "SLICE_2",
-  "session_tasks_committed": 0,
-  "note": "Cycle 476: CI GREEN. No UNWORKED Layer 79 tasks remain. All script-verifiable Slice 2 acceptance criteria confirmed passing across cycles 432/452/472/473/474/475. Remaining criterion: owner registers Iris in their own Claude Code, asks real questions against seeded data in a live session, confirms correct answers, and flips the docs/SLICE_2.md status line + acceptance checkbox personally. Non-waivable per CLAUDE.md. Pipeline remains in AWAITING_OWNER until owner sign-off."
+  "session_tasks_committed": 1,
+  "note": "Cycle 477: CI GREEN. Fixed slice2-demo.sh pnpm PATH issue for daemon-spawned shells (corepack shim injection). Demo confirmed passing locally: 22/22 accuracy (100%), 79.2% token savings, p50 218ms p95 307ms. All script-verifiable Slice 2 acceptance criteria remain green. No UNWORKED Layer 79 tasks remain. Remaining criterion: owner registers Iris in their own Claude Code, asks real questions against seeded data in a live session, confirms correct answers, and flips the docs/SLICE_2.md status line + acceptance checkbox personally. Non-waivable per CLAUDE.md. Pipeline remains in AWAITING_OWNER until owner sign-off."
 }
