@@ -32,11 +32,13 @@ vi.mock('@iris/core/logger', () => ({
 
 vi.mock('crypto', () => ({ randomUUID: () => 'test-uuid-1234' }));
 
-import routeModule from '../routes/federation';
+import { createFederationRoutes } from '../routes/federation';
+
+const mockSql = {} as never;
 
 function buildApp() {
   const app = new Hono();
-  app.route('/federation', routeModule);
+  app.route('/federation', createFederationRoutes(mockSql));
   return app;
 }
 

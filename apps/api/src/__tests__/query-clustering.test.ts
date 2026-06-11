@@ -48,11 +48,13 @@ vi.mock('@iris/core/logger', () => ({
   logger: { child: () => ({ info: vi.fn(), error: vi.fn(), warn: vi.fn() }) },
 }));
 
-import routeModule from '../routes/query-clustering';
+import { createQueryClusteringRoutes } from '../routes/query-clustering';
+
+const mockSql = {} as never;
 
 function buildApp() {
   const app = new Hono();
-  app.route('/cache', routeModule);
+  app.route('/cache', createQueryClusteringRoutes(mockSql));
   return app;
 }
 

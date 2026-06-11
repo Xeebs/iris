@@ -147,6 +147,40 @@ import { createLlmProviderRoutes } from './routes/llm-providers.js';
 import { createMcpResourceDiscoveryRoutes } from './routes/mcp-resource-discovery.js';
 import { createMcpStreamingRoutes } from './routes/mcp-streaming.js';
 import { createMcpSubscriptionRoutes } from './routes/mcp-subscriptions.js';
+import { makeMcpToolDiscoveryRouter } from './routes/mcp-tool-discovery.js';
+import { createMetricsAnomalyRoutes } from './routes/metrics-anomalies.js';
+import { createMultiConnectorOptimizerRoutes } from './routes/multi-connector-optimizer.js';
+import { createNlQueryGeneratorRoutes } from './routes/nl-query-generator.js';
+import { createNlQuerySessionsRoutes } from './routes/nl-query-sessions.js';
+import { createOsiInterchangeRoutes } from './routes/osi-interchange.js';
+import { createPiiMaskingAuditRoutes } from './routes/pii-masking-audit.js';
+import { createQueryCostAnalysisRoutes } from './routes/query-cost-analysis.js';
+import { createQueryExecutionPlansRoutes } from './routes/query-execution-plans.js';
+import { makeQueryExpansionRouter } from './routes/query-expansion.js';
+import { createQueryExplanationRoutes } from './routes/query-explanation.js';
+import { createQueryLearningRoutes } from './routes/query-learning.js';
+import { createQueryOptimizationRoutes } from './routes/query-optimization.js';
+import { makeQueryTemplatesRouter } from './routes/query-templates.js';
+import { makeRelationshipRecommendationsRouter } from './routes/relationship-recommendations.js';
+import { createRelevanceRoutes } from './routes/relevance.js';
+import { createReliabilityScoringRoutes } from './routes/reliability-scoring.js';
+import { makeRetentionPoliciesRouter } from './routes/retention-policies.js';
+import { createSchemaDiscoveryRoutes } from './routes/schema-discovery.js';
+import { createSchemaMigrationRoutes } from './routes/schema-migrations.js';
+import { createSCIMRoutes } from './routes/scim.js';
+import { createSdkDownloadsRoutes } from './routes/sdk-downloads.js';
+import { makeSearchQualityRouter } from './routes/search-quality.js';
+import { makeTeamRecommendationsRouter } from './routes/team-recommendations.js';
+import { makeTemporalCacheRouter } from './routes/temporal-cache.js';
+import { createTransformationRoutes } from './routes/transformations.js';
+import { createWebhookAdminRoutes } from './routes/webhook-admin.js';
+import { makeWebhookDlqRouter } from './routes/webhook-dlq-admin.js';
+import { createWorkspaceMembersRoutes } from './routes/workspace-members.js';
+import { createFederationRoutes } from './routes/federation.js';
+import { createLlmCostOptimizationRoutes } from './routes/llm-cost-optimization.js';
+import { createMcpAutoToolsRoutes } from './routes/mcp-auto-tools.js';
+import { createQueryClusteringRoutes } from './routes/query-clustering.js';
+import { createRelationshipInferenceRoutes } from './routes/relationship-inference.js';
 import { openApiSpec } from './openapi.js';
 
 export { createApp };
@@ -429,6 +463,55 @@ function createApp(
   authed.route('/mcp', createMcpResourceDiscoveryRoutes());
   authed.route('/mcp', createMcpStreamingRoutes());
   authed.route('/mcp', createMcpSubscriptionRoutes(sql));
+
+  // Batch 10: mcp-tool-discovery, metrics-anomalies, multi-connector-optimizer,
+  // nl-query-generator, nl-query-sessions, osi-interchange, pii-masking-audit,
+  // query-cost-analysis, query-execution-plans.
+  authed.route('/mcp', makeMcpToolDiscoveryRouter(sql));
+  authed.route('/metrics', createMetricsAnomalyRoutes(sql as never));
+  authed.route('/query-optimizer', createMultiConnectorOptimizerRoutes(sql as never));
+  authed.route('/queries', createNlQueryGeneratorRoutes(sql as never));
+  authed.route('/nl-query-sessions', createNlQuerySessionsRoutes(sql as never));
+  authed.route('/workspace', createOsiInterchangeRoutes(sql as never));
+  authed.route('/admin/pii', createPiiMaskingAuditRoutes(sql as never));
+  authed.route('/queries', createQueryCostAnalysisRoutes(sql as never));
+  authed.route('/query-execution-plans', createQueryExecutionPlansRoutes(sql as never));
+
+  // Batch 11: query-expansion, query-explanation, query-learning, query-optimization,
+  // query-templates, relationship-recommendations, relevance, reliability-scoring,
+  // retention-policies, schema-discovery.
+  authed.route('/query-expansion', makeQueryExpansionRouter(sql));
+  authed.route('/queries', createQueryExplanationRoutes());
+  authed.route('/query-learning', createQueryLearningRoutes(sql as never));
+  authed.route('/query-optimization', createQueryOptimizationRoutes(sql as never));
+  authed.route('/templates', makeQueryTemplatesRouter(sql));
+  authed.route('/relationship-recommendations', makeRelationshipRecommendationsRouter(sql));
+  authed.route('/admin/relevance', createRelevanceRoutes(sql as never));
+  authed.route('/connectors', createReliabilityScoringRoutes(sql as never));
+  authed.route('/admin/retention-policies', makeRetentionPoliciesRouter(sql));
+  authed.route('/connectors', createSchemaDiscoveryRoutes(sql as never));
+
+  // Batch 12: schema-migrations, scim, sdk-downloads, search-quality,
+  // team-recommendations, temporal-cache, transformations, webhook-admin,
+  // webhook-dlq-admin, workspace-members.
+  authed.route('/schema-migrations', createSchemaMigrationRoutes(sql as never));
+  authed.route('/scim/v2', createSCIMRoutes(sql as never));
+  authed.route('/sdks', createSdkDownloadsRoutes(sql as never));
+  authed.route('/search-quality', makeSearchQualityRouter(sql));
+  authed.route('/', makeTeamRecommendationsRouter(sql));
+  authed.route('/', makeTemporalCacheRouter(sql));
+  authed.route('/transformations', createTransformationRoutes(sql as never));
+  authed.route('/webhooks', createWebhookAdminRoutes(sql as never));
+  authed.route('/admin/webhooks', makeWebhookDlqRouter(sql));
+  authed.route('/workspace', createWorkspaceMembersRoutes(sql as never));
+
+  // Batch 13: SqlBindings-refactored routes — federation, llm-cost-optimization,
+  // mcp-auto-tools, query-clustering, relationship-inference.
+  authed.route('/federation', createFederationRoutes(sql as never));
+  authed.route('/llm-cost-optimization', createLlmCostOptimizationRoutes(sql as never));
+  authed.route('/mcp/auto-tools', createMcpAutoToolsRoutes(sql as never));
+  authed.route('/cache', createQueryClusteringRoutes(sql as never));
+  authed.route('/graph', createRelationshipInferenceRoutes(sql as never));
 
   // Webhook routes: inbound (unauthenticated) + events status (authenticated)
   app.route('/api/v1/webhooks', createWebhookRoutes(sql));

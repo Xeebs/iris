@@ -36,11 +36,13 @@ vi.mock('@iris/core/logger', () => ({
   logger: { child: () => ({ info: vi.fn(), error: vi.fn(), warn: vi.fn() }) },
 }));
 
-import routeModule from '../routes/relationship-inference';
+import { createRelationshipInferenceRoutes } from '../routes/relationship-inference';
+
+const mockSql = {} as never;
 
 function buildApp() {
   const app = new Hono();
-  app.route('/graph', routeModule);
+  app.route('/graph', createRelationshipInferenceRoutes(mockSql));
   return app;
 }
 

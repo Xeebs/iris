@@ -59,11 +59,13 @@ vi.mock('@iris/core/logger', () => ({
   logger: { child: () => ({ info: vi.fn(), error: vi.fn(), warn: vi.fn() }) },
 }));
 
-import routeModule from '../routes/llm-cost-optimization';
+import { createLlmCostOptimizationRoutes } from '../routes/llm-cost-optimization';
+
+const mockSql = {} as never;
 
 function buildApp() {
   const app = new Hono();
-  app.route('/llm-cost-optimization', routeModule);
+  app.route('/llm-cost-optimization', createLlmCostOptimizationRoutes(mockSql));
   return app;
 }
 

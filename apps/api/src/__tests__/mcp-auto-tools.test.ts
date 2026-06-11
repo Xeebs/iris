@@ -60,11 +60,13 @@ vi.mock('@iris/core/logger', () => ({
   logger: { child: () => ({ info: vi.fn(), error: vi.fn(), warn: vi.fn() }) },
 }));
 
-import routeModule from '../routes/mcp-auto-tools';
+import { createMcpAutoToolsRoutes } from '../routes/mcp-auto-tools';
+
+const mockSql = {} as never;
 
 function buildApp() {
   const app = new Hono();
-  app.route('/mcp/auto-tools', routeModule);
+  app.route('/mcp/auto-tools', createMcpAutoToolsRoutes(mockSql));
   return app;
 }
 
