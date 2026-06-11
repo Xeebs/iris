@@ -107,3 +107,42 @@ Completed tasks are moved to `pipeline/queue-archive.md` by `scripts/archive-que
   - tests/e2e/field-permission-enforcement-workflow.spec.ts
 - **Depends on**: Granular Access Control with Field-Level & Connector-Level Permissions
 - **Added**: 2026-06-09
+
+---
+
+## Layer 79: Slice 2 — Retrieval Quality Hardening
+
+**Context**: The Slice 2 demo is currently achieving 86.4% accuracy (19/22 questions passing) with the eval harness. The required threshold is ≥90% (20/22 or better). Three questions are failing: Q12 (superlative/ranking), Q17 (multi-attribute relationship expansion), and Q19 (numeric threshold filtering). These represent systematic gaps in the retrieval pipeline's ability to handle aggregate queries, deep relationship expansion, and attribute-based filtering. All three tasks below must pass the eval harness to unblock the owner sign-off phase.
+
+### Task: S2-14 Fix aggregate/superlative question retrieval (Q12)
+- **Layer**: 79 — Slice 2
+- **Status**: COMMITTED
+- **Priority**: High
+- **Description**: Q12 ("What is the second largest deal?") is failing because the retrieval pipeline does not rank entities by numeric attributes during search. The query "second largest deal" should retrieve deals sorted by amount, then return the second-highest. Currently, semantic search ranks by query similarity, not by domain attributes. Fix by enhancing the retrieval pipeline to detect superlative/ranking intent in queries (largest, smallest, second, third, highest, lowest, most, least, most recent, oldest) and apply post-retrieval sorting on the detected numeric attribute (amount for deals, employees for companies, etc.). Implement in `packages/semantic-core/src/retrieval.ts`: (1) Add a `detectSuperlativeIntent(query: string): { attribute?: string; rank: 'largest'|'smallest'|'second'|...}` function that parses the query and returns the target attribute and rank; (2) Enhance `retrieveContext` to apply `topK*3` initial retrieval (to get a larger candidate pool), then sort by the detected attribute and slice to the requested rank. Test: add a test case for superlative queries to `packages/semantic-core/src/__tests__/retrieval.test.ts` verifying that "second largest deal" returns the deal with the 2nd-highest amount. Reference `.claude/rules/embedding-patterns.md`.
+- **Files**:
+  - packages/semantic-core/src/retrieval.ts
+  - packages/semantic-core/src/__tests__/retrieval.test.ts
+- **Depends on**: nothing
+- **Added**: 2026-06-11
+
+### Task: S2-15 Fix relationship expansion for multi-attribute queries (Q17)
+- **Layer**: 79 — Slice 2
+- **Status**: COMMITTED
+- **Priority**: High
+- **Description**: Q17 ("Who are the contacts at Forge Manufacturing and what are their titles?") is failing because it is returning the company entity and some contacts, but missing one contact name ("George Lewis"). This is a relationship expansion depth issue — the query should retrieve both the company AND all its direct contact relationships. The problem is likely in the interleaved expansion logic that expands relationships immediately after vector search. Currently, the function may be truncating results before relationship traversal completes, causing some related entities to be dropped due to the `contextBudget` constraint. Fix by: (1) Running relationship expansion BEFORE token budgeting (expand all direct relationships first, then apply token constraints to the final set), not after. Modify `retrieveContext` in `packages/semantic-core/src/retrieval.ts` to reorder the steps. (2) Test the fix: add a unit test to `packages/semantic-core/src/__tests__/retrieval.test.ts` that verifies a company query ("contacts at company X") retrieves ALL contacts belonging to that company, even if some are identical to other returned contacts (dedup happens post-retrieval). Run the eval harness and confirm Q17 passes.
+- **Files**:
+  - packages/semantic-core/src/retrieval.ts
+  - packages/semantic-core/src/__tests__/retrieval.test.ts
+- **Depends on**: nothing
+- **Added**: 2026-06-11
+
+### Task: S2-16 Fix numeric attribute filtering (Q19)
+- **Layer**: 79 — Slice 2
+- **Status**: COMMITTED
+- **Priority**: High
+- **Description**: Q19 ("Which companies have more than 200 employees?") is failing because it is returning only one company (Summit Ventures with exactly 200 employees) and missing two others (Globex and Forge Manufacturing with >200). This is an attribute-based filtering issue — the query contains a numeric threshold ("more than 200") that semantic search cannot detect on its own. The retrieval pipeline must infer from the query that this is a filtering operation on the `employees` attribute and apply a post-retrieval filter: keep only entities where `entity.attributes.employees > 200`. Implement: (1) Add a `detectAttributeFilter(query: string): { attribute?: string; operator: '>'|'<'|'=='|'!='; value: number|string}` function to parse queries like "more than N", "greater than N", "at least N", "fewer than N", etc. (2) Enhance `retrieveContext` to apply this filter post-search, before returning results. (3) Test: add test cases to `packages/semantic-core/src/__tests__/retrieval.test.ts` for numeric and string filters ("companies with >200 employees", "deals in closed_won stage"). Reference `.claude/rules/api-conventions.md` for validation patterns.
+- **Files**:
+  - packages/semantic-core/src/retrieval.ts
+  - packages/semantic-core/src/__tests__/retrieval.test.ts
+- **Depends on**: nothing
+- **Added**: 2026-06-11

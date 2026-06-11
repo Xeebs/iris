@@ -1,5 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { retrieveContext, reciprocalRankFusion } from '../retrieval.js';
+import {
+  retrieveContext,
+  reciprocalRankFusion,
+  detectSuperlativeIntent,
+  detectAttributeFilter,
+} from '../retrieval.js';
 import type { VectorStore, VectorSearchResult } from '../vector-store.js';
 import type { SemanticEntity } from '@iris/connector-sdk';
 import { ok, err } from 'neverthrow';
@@ -576,5 +581,374 @@ describe('retrieveContext — queryExpansion', () => {
     expect(mockCreate).toHaveBeenCalledWith(
       expect.objectContaining({ input: 'pipeline' }),
     );
+  });
+});
+
+// ─── detectSuperlativeIntent ─────────────────────────────────────────────────
+
+describe('detectSuperlativeIntent', () => {
+  it('returns null for non-superlative queries', () => {
+    expect(detectSuperlativeIntent('show me all deals')).toBeNull();
+    expect(detectSuperlativeIntent('contacts at Acme Corp')).toBeNull();
+    expect(detectSuperlativeIntent('deals in negotiation stage')).toBeNull();
+  });
+
+  it('detects "largest" with rank 1', () => {
+    const r = detectSuperlativeIntent('What is the largest deal?');
+    expect(r).not.toBeNull();
+    expect(r!.direction).toBe('largest');
+    expect(r!.rank).toBe(1);
+    expect(r!.attribute).toBe('amount');
+  });
+
+  it('detects "second largest" with rank 2', () => {
+    const r = detectSuperlativeIntent('What is the second largest deal?');
+    expect(r).not.toBeNull();
+    expect(r!.direction).toBe('largest');
+    expect(r!.rank).toBe(2);
+    expect(r!.attribute).toBe('amount');
+  });
+
+  it('detects "third largest" with rank 3', () => {
+    const r = detectSuperlativeIntent('What is the third largest deal by amount?');
+    expect(r!.rank).toBe(3);
+    expect(r!.direction).toBe('largest');
+  });
+
+  it('detects "smallest" direction', () => {
+    const r = detectSuperlativeIntent('Which is the smallest deal?');
+    expect(r!.direction).toBe('smallest');
+    expect(r!.rank).toBe(1);
+  });
+
+  it('infers employees attribute for company employee queries', () => {
+    const r = detectSuperlativeIntent('Which company has the most employees?');
+    expect(r!.attribute).toBe('employees');
+    expect(r!.direction).toBe('largest');
+  });
+
+  it('infers revenue attribute', () => {
+    const r = detectSuperlativeIntent('What is the highest revenue company?');
+    expect(r!.attribute).toBe('annual_revenue');
+  });
+});
+
+// ─── detectAttributeFilter ───────────────────────────────────────────────────
+
+describe('detectAttributeFilter', () => {
+  it('returns null for non-filter queries', () => {
+    expect(detectAttributeFilter('show me all companies')).toBeNull();
+    expect(detectAttributeFilter('largest deal')).toBeNull();
+  });
+
+  it('detects "more than N" as > operator', () => {
+    const f = detectAttributeFilter('companies with more than 200 employees');
+    expect(f).not.toBeNull();
+    expect(f!.operator).toBe('>');
+    expect(f!.value).toBe(200);
+    expect(f!.attribute).toBe('employees');
+  });
+
+  it('detects "greater than N" as > operator', () => {
+    const f = detectAttributeFilter('deals greater than 50000');
+    expect(f!.operator).toBe('>');
+    expect(f!.value).toBe(50000);
+    expect(f!.attribute).toBe('amount');
+  });
+
+  it('detects "at least N" as >= operator', () => {
+    const f = detectAttributeFilter('companies with at least 100 employees');
+    expect(f!.operator).toBe('>=');
+    expect(f!.value).toBe(100);
+    expect(f!.attribute).toBe('employees');
+  });
+
+  it('detects "fewer than N" as < operator', () => {
+    const f = detectAttributeFilter('companies with fewer than 50 employees');
+    expect(f!.operator).toBe('<');
+    expect(f!.value).toBe(50);
+  });
+
+  it('handles comma-formatted numbers', () => {
+    const f = detectAttributeFilter('deals over 1,000,000');
+    expect(f!.value).toBe(1000000);
+  });
+});
+
+// ─── retrieveContext — superlative post-sort ──────────────────────────────────
+
+describe('retrieveContext — superlative post-sort (S2-14)', () => {
+  const mockCreate = vi.fn();
+  let savedEmbeddingProvider: string | undefined;
+
+  function makeDeal(id: string, amount: number): SemanticEntity {
+    return {
+      id,
+      type: 'deal',
+      label: `Deal ${id}`,
+      attributes: { amount, stage: 'closed_won' },
+      relationships: [],
+      lastModified: new Date('2026-01-01'),
+      sourceId: id,
+    };
+  }
+
+  beforeEach(() => {
+    savedEmbeddingProvider = process.env['EMBEDDING_PROVIDER'];
+    delete process.env['EMBEDDING_PROVIDER'];
+    process.env['AZURE_OPENAI_ENDPOINT'] = 'https://test.openai.azure.com';
+    process.env['AZURE_OPENAI_API_KEY'] = 'test-key';
+    vi.mocked(AzureOpenAI).mockImplementation(
+      () => ({ embeddings: { create: mockCreate } }) as unknown as AzureOpenAI,
+    );
+    mockCreate.mockResolvedValue({
+      data: [{ index: 0, embedding: mockQueryVector }],
+      model: 'text-embedding-3-small',
+      usage: { prompt_tokens: 5, total_tokens: 5 },
+    });
+  });
+
+  afterEach(() => {
+    if (savedEmbeddingProvider !== undefined) {
+      process.env['EMBEDDING_PROVIDER'] = savedEmbeddingProvider;
+    } else {
+      delete process.env['EMBEDDING_PROVIDER'];
+    }
+    delete process.env['AZURE_OPENAI_ENDPOINT'];
+    delete process.env['AZURE_OPENAI_API_KEY'];
+    vi.clearAllMocks();
+  });
+
+  it('returns the largest deal for "largest deal" query', async () => {
+    const deals = [
+      { entity: makeDeal('deal:1', 50000), score: 0.9 },
+      { entity: makeDeal('deal:2', 145000), score: 0.8 },
+      { entity: makeDeal('deal:3', 128000), score: 0.7 },
+    ];
+    const store = makeMockVectorStore(deals);
+
+    const result = await retrieveContext('What is the largest deal?', store, {
+      workspaceId: 'ws-1',
+      topK: 5,
+      expandRelationships: false,
+      maxDepth: 0,
+    });
+
+    expect(result.entities).toHaveLength(1);
+    expect(result.entities[0]!.id).toBe('deal:2');
+    expect(result.entities[0]!.attributes['amount']).toBe(145000);
+  });
+
+  it('returns the second largest deal for "second largest deal" query', async () => {
+    const deals = [
+      { entity: makeDeal('deal:1', 50000), score: 0.9 },
+      { entity: makeDeal('deal:2', 145000), score: 0.8 },
+      { entity: makeDeal('deal:3', 128000), score: 0.7 },
+    ];
+    const store = makeMockVectorStore(deals);
+
+    const result = await retrieveContext('What is the second largest deal?', store, {
+      workspaceId: 'ws-1',
+      topK: 5,
+      expandRelationships: false,
+      maxDepth: 0,
+    });
+
+    expect(result.entities).toHaveLength(1);
+    expect(result.entities[0]!.id).toBe('deal:3');
+    expect(result.entities[0]!.attributes['amount']).toBe(128000);
+  });
+
+  it('widens the topK 3× so the Nth deal is always in the candidate pool', async () => {
+    const store = makeMockVectorStore([]);
+    await retrieveContext('What is the second largest deal?', store, {
+      workspaceId: 'ws-1',
+      topK: 5,
+      expandRelationships: false,
+      maxDepth: 0,
+    });
+    // topK=5 → effectiveTopK=15 → search called with 15 (non-hybrid path)
+    expect(store.search).toHaveBeenCalledWith(
+      expect.any(Array),
+      15,
+      expect.any(Object),
+    );
+  });
+});
+
+// ─── retrieveContext — attribute filter post-processing ───────────────────────
+
+describe('retrieveContext — attribute filter post-processing (S2-16)', () => {
+  const mockCreate = vi.fn();
+  let savedEmbeddingProvider: string | undefined;
+
+  function makeCompany(id: string, employees: number): SemanticEntity {
+    return {
+      id,
+      type: 'company',
+      label: `Company ${id}`,
+      attributes: { employees, industry: 'Tech' },
+      relationships: [],
+      lastModified: new Date('2026-01-01'),
+      sourceId: id,
+    };
+  }
+
+  beforeEach(() => {
+    savedEmbeddingProvider = process.env['EMBEDDING_PROVIDER'];
+    delete process.env['EMBEDDING_PROVIDER'];
+    process.env['AZURE_OPENAI_ENDPOINT'] = 'https://test.openai.azure.com';
+    process.env['AZURE_OPENAI_API_KEY'] = 'test-key';
+    vi.mocked(AzureOpenAI).mockImplementation(
+      () => ({ embeddings: { create: mockCreate } }) as unknown as AzureOpenAI,
+    );
+    mockCreate.mockResolvedValue({
+      data: [{ index: 0, embedding: mockQueryVector }],
+      model: 'text-embedding-3-small',
+      usage: { prompt_tokens: 5, total_tokens: 5 },
+    });
+  });
+
+  afterEach(() => {
+    if (savedEmbeddingProvider !== undefined) {
+      process.env['EMBEDDING_PROVIDER'] = savedEmbeddingProvider;
+    } else {
+      delete process.env['EMBEDDING_PROVIDER'];
+    }
+    delete process.env['AZURE_OPENAI_ENDPOINT'];
+    delete process.env['AZURE_OPENAI_API_KEY'];
+    vi.clearAllMocks();
+  });
+
+  it('filters companies with more than 200 employees', async () => {
+    const companies = [
+      { entity: makeCompany('co:1', 120), score: 0.9 },
+      { entity: makeCompany('co:2', 500), score: 0.85 },
+      { entity: makeCompany('co:3', 200), score: 0.8 },
+      { entity: makeCompany('co:4', 300), score: 0.75 },
+    ];
+    const store = makeMockVectorStore(companies);
+
+    const result = await retrieveContext(
+      'Which companies have more than 200 employees?',
+      store,
+      { workspaceId: 'ws-1', topK: 10, expandRelationships: false, maxDepth: 0 },
+    );
+
+    const ids = result.entities.map((e) => e.id);
+    expect(ids).toContain('co:2');
+    expect(ids).toContain('co:4');
+    expect(ids).not.toContain('co:1');
+    expect(ids).not.toContain('co:3'); // exactly 200, not > 200
+  });
+
+  it('falls back to full results when no entities pass the filter', async () => {
+    const companies = [{ entity: makeCompany('co:1', 50), score: 0.9 }];
+    const store = makeMockVectorStore(companies);
+
+    const result = await retrieveContext(
+      'Companies with more than 500 employees',
+      store,
+      { workspaceId: 'ws-1', topK: 5, expandRelationships: false, maxDepth: 0 },
+    );
+
+    // No entities pass → keep original results rather than returning empty
+    expect(result.entities).toHaveLength(1);
+    expect(result.entities[0]!.id).toBe('co:1');
+  });
+});
+
+// ─── retrieveContext — seenIds lazy population (S2-15) ───────────────────────
+
+describe('retrieveContext — seenIds lazy population (S2-15)', () => {
+  const mockCreate = vi.fn();
+  let savedEmbeddingProvider: string | undefined;
+
+  beforeEach(() => {
+    savedEmbeddingProvider = process.env['EMBEDDING_PROVIDER'];
+    delete process.env['EMBEDDING_PROVIDER'];
+    process.env['AZURE_OPENAI_ENDPOINT'] = 'https://test.openai.azure.com';
+    process.env['AZURE_OPENAI_API_KEY'] = 'test-key';
+    vi.mocked(AzureOpenAI).mockImplementation(
+      () => ({ embeddings: { create: mockCreate } }) as unknown as AzureOpenAI,
+    );
+    mockCreate.mockResolvedValue({
+      data: [{ index: 0, embedding: mockQueryVector }],
+      model: 'text-embedding-3-small',
+      usage: { prompt_tokens: 5, total_tokens: 5 },
+    });
+  });
+
+  afterEach(() => {
+    if (savedEmbeddingProvider !== undefined) {
+      process.env['EMBEDDING_PROVIDER'] = savedEmbeddingProvider;
+    } else {
+      delete process.env['EMBEDDING_PROVIDER'];
+    }
+    delete process.env['AZURE_OPENAI_ENDPOINT'];
+    delete process.env['AZURE_OPENAI_API_KEY'];
+    vi.clearAllMocks();
+  });
+
+  it('places a contact immediately after its company even when the contact also appears in the initial search list', async () => {
+    const company = makeEntity('company:forge', 'company');
+    const georgelewis = makeEntity('contact:george', 'contact');
+    const hannah = makeEntity('contact:hannah', 'contact');
+
+    // Initial search returns: company (rank 1), then george (rank 2), then hannah (rank 3)
+    // Without the fix, george would be skipped during company reverse-expansion
+    // (already in seenIds) and appear at rank-2 position instead of directly after company.
+    const store: VectorStore = {
+      ...makeMockVectorStore([
+        { entity: company, score: 0.95 },
+        { entity: georgelewis, score: 0.7 },
+        { entity: hannah, score: 0.65 },
+      ]),
+      getByRelationshipTarget: vi.fn().mockImplementation((_ws: string, targetId: string) => {
+        if (targetId === 'company:forge') return Promise.resolve([georgelewis, hannah]);
+        return Promise.resolve([]);
+      }),
+    };
+
+    const result = await retrieveContext(
+      'contacts at Forge Manufacturing and their titles',
+      store,
+      { workspaceId: 'ws-1', topK: 5, expandRelationships: true, maxDepth: 1 },
+    );
+
+    const ids = result.entities.map((e) => e.id);
+    // company:forge must be first
+    expect(ids[0]).toBe('company:forge');
+    // Both contacts must be immediately after the company (positions 1 and 2)
+    expect(ids[1]).toBe('contact:george');
+    expect(ids[2]).toBe('contact:hannah');
+    // No duplicates
+    expect(ids.filter((id) => id === 'contact:george')).toHaveLength(1);
+    expect(ids.filter((id) => id === 'contact:hannah')).toHaveLength(1);
+  });
+
+  it('does not emit a duplicate when a contact is in both initial search and reverse expansion', async () => {
+    const company = makeEntity('company:acme', 'company');
+    const contact = makeEntity('contact:alice', 'contact');
+
+    const store: VectorStore = {
+      ...makeMockVectorStore([
+        { entity: company, score: 0.9 },
+        { entity: contact, score: 0.8 },
+      ]),
+      getByRelationshipTarget: vi.fn().mockImplementation((_ws: string, targetId: string) => {
+        if (targetId === 'company:acme') return Promise.resolve([contact]);
+        return Promise.resolve([]);
+      }),
+    };
+
+    const result = await retrieveContext('contacts at Acme', store, {
+      workspaceId: 'ws-1',
+      topK: 5,
+      expandRelationships: true,
+      maxDepth: 1,
+    });
+
+    expect(result.entities.filter((e) => e.id === 'contact:alice')).toHaveLength(1);
   });
 });

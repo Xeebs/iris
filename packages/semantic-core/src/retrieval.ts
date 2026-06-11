@@ -8,6 +8,87 @@ import type { VectorStore } from './vector-store.js';
 import { detectEntityTypes, expandQuery } from './query-decomposer.js';
 import type { Result } from 'neverthrow';
 
+/** Detected superlative/ranking intent for queries like "second largest deal". */
+export type SuperlativeIntent = {
+  /** Numeric attribute to sort by, e.g. 'amount' for deals, 'employees' for companies. */
+  attribute: string;
+  direction: 'largest' | 'smallest';
+  /** 1-based rank: 1 = top result, 2 = second, etc. */
+  rank: number;
+};
+
+/** Detected numeric filter condition for queries like "more than 200 employees". */
+export type AttributeFilter = {
+  attribute: string;
+  operator: '>' | '<' | '>=' | '<=' | '==';
+  value: number;
+};
+
+/**
+ * Detect superlative ranking intent in a natural language query.
+ * Returns null if the query contains no recognisable superlative pattern.
+ *
+ * @param query - Natural language query text
+ * @returns Superlative intent if detected, null otherwise
+ */
+export function detectSuperlativeIntent(query: string): SuperlativeIntent | null {
+  const q = query.toLowerCase();
+
+  const isLargest = /\b(largest|biggest|highest|greatest|top|maximum|most)\b/.test(q);
+  const isSmallest = /\b(smallest|lowest|minimum|cheapest|least expensive|fewest)\b/.test(q);
+  if (!isLargest && !isSmallest) return null;
+
+  const ordinalMap: Array<[RegExp, number]> = [
+    [/\b(first|1st)\b/, 1],
+    [/\b(second|2nd)\b/, 2],
+    [/\b(third|3rd)\b/, 3],
+    [/\b(fourth|4th)\b/, 4],
+    [/\b(fifth|5th)\b/, 5],
+  ];
+  let rank = 1;
+  for (const [pat, n] of ordinalMap) {
+    if (pat.test(q)) { rank = n; break; }
+  }
+
+  let attribute = 'amount'; // default for deal queries
+  if (/\bemploy(ee)?s?\b/.test(q)) attribute = 'employees';
+  else if (/\brevenue\b/.test(q)) attribute = 'annual_revenue';
+
+  return { attribute, direction: isSmallest ? 'smallest' : 'largest', rank };
+}
+
+/**
+ * Detect a numeric attribute filter in a natural language query.
+ * Returns null if no numeric comparison pattern is found.
+ *
+ * @param query - Natural language query text
+ * @returns Attribute filter if detected, null otherwise
+ */
+export function detectAttributeFilter(query: string): AttributeFilter | null {
+  const patterns: Array<[RegExp, '>' | '<' | '>=' | '<=' | '==']> = [
+    [/\b(?:more than|greater than|over|above|exceed[s]?)\s+(\d[\d,]*)\b/i, '>'],
+    [/\bat least\s+(\d[\d,]*)\b/i, '>='],
+    [/\b(?:less than|fewer than|under|below)\s+(\d[\d,]*)\b/i, '<'],
+    [/\bat most\s+(\d[\d,]*)\b/i, '<='],
+    [/\bexactly\s+(\d[\d,]*)\b/i, '=='],
+  ];
+
+  for (const [pat, op] of patterns) {
+    const m = query.match(pat);
+    if (!m) continue;
+    const numStr = m[m.length - 1]!.replace(/,/g, '');
+    const value = parseInt(numStr, 10);
+    if (isNaN(value)) continue;
+
+    let attribute = 'amount';
+    if (/\bemploy(ee)?s?\b/i.test(query)) attribute = 'employees';
+    else if (/\brevenue\b/i.test(query)) attribute = 'annual_revenue';
+
+    return { attribute, operator: op, value };
+  }
+  return null;
+}
+
 // Minimal graph interface — Neo4jGraphStore satisfies this via structural typing
 interface RelatedEntityResult {
   id: string;
@@ -125,6 +206,15 @@ export async function retrieveContext(
   const queryVector = await embedQuery(embeddingInput);
   const queryEmbeddingMs = Date.now() - embeddingStart;
 
+  // Detect query intent so we can widen the candidate pool and post-filter.
+  // Both detectors run upfront — results applied after expansion below.
+  const superlativeIntent = detectSuperlativeIntent(query);
+  const attributeFilter = detectAttributeFilter(query);
+  // Widen the search pool 3× for aggregate/filter queries that need to scan
+  // many entities to find the Nth-ranked or threshold-matching ones.
+  const effectiveTopK =
+    superlativeIntent || attributeFilter ? opts.topK * 3 : opts.topK;
+
   // Auto-detect entity types from the query when caller hasn't specified them
   let resolvedEntityTypes = opts.entityTypes;
   if (opts.autoDetectEntityTypes && resolvedEntityTypes === undefined && opts.availableEntityTypes) {
@@ -148,14 +238,14 @@ export async function retrieveContext(
   let searchResults;
   if (useHybrid) {
     const [vectorResults, bm25Results] = await Promise.all([
-      vectorStore.search(queryVector, opts.topK * 2, vectorFilter),
-      vectorStore.bm25Search!(opts.workspaceId, query, opts.topK * 2, resolvedEntityTypes),
+      vectorStore.search(queryVector, effectiveTopK * 2, vectorFilter),
+      vectorStore.bm25Search!(opts.workspaceId, query, effectiveTopK * 2, resolvedEntityTypes),
     ]);
     searchResults = reciprocalRankFusion(
       applyRelevanceCutoff(vectorResults, relevanceCutoff),
       applyRelevanceCutoff(bm25Results, relevanceCutoff),
       opts.rrfK ?? 60,
-    ).slice(0, opts.topK);
+    ).slice(0, effectiveTopK);
     log.debug('Hybrid search: RRF merge complete', {
       vectorHits: vectorResults.length,
       bm25Hits: bm25Results.length,
@@ -163,7 +253,7 @@ export async function retrieveContext(
     });
   } else {
     searchResults = applyRelevanceCutoff(
-      await vectorStore.search(queryVector, opts.topK, vectorFilter),
+      await vectorStore.search(queryVector, effectiveTopK, vectorFilter),
       relevanceCutoff,
     );
   }
@@ -179,6 +269,48 @@ export async function retrieveContext(
     scores = expandedResult.scores;
   }
   const graphExpansionMs = Date.now() - graphStart;
+
+  // Post-process: superlative ranking (e.g. "second largest deal" → sort + slice)
+  if (superlativeIntent) {
+    const { attribute, direction, rank } = superlativeIntent;
+    const candidates = expanded.filter(
+      (e) => e.attributes[attribute] !== null &&
+             e.attributes[attribute] !== undefined &&
+             !isNaN(Number(e.attributes[attribute])),
+    );
+    candidates.sort((a, b) => {
+      const av = Number(a.attributes[attribute]);
+      const bv = Number(b.attributes[attribute]);
+      return direction === 'largest' ? bv - av : av - bv;
+    });
+    const target = candidates[rank - 1];
+    if (target) {
+      expanded = [target];
+      scores = [1.0];
+      log.debug('Superlative post-sort applied', { attribute, direction, rank });
+    }
+  }
+
+  // Post-process: numeric attribute filter (e.g. "companies with > 200 employees")
+  if (attributeFilter && !superlativeIntent) {
+    const { attribute, operator, value } = attributeFilter;
+    const filtered = expanded.filter((e) => {
+      const val = Number(e.attributes[attribute]);
+      if (isNaN(val)) return false;
+      switch (operator) {
+        case '>':  return val >  value;
+        case '<':  return val <  value;
+        case '>=': return val >= value;
+        case '<=': return val <= value;
+        case '==': return val === value;
+      }
+    });
+    if (filtered.length > 0) {
+      expanded = filtered;
+      scores = filtered.map(() => 0.7);
+      log.debug('Attribute filter applied', { attribute, operator, value, matches: filtered.length });
+    }
+  }
 
   log.info('Retrieved context', {
     query: query.slice(0, 50),
@@ -254,7 +386,12 @@ async function expandViaRelationships(
   vectorStore: VectorStore,
   opts: RetrievalOptions,
 ): Promise<{ entities: SemanticEntity[]; scores: number[] }> {
-  const seenIds = new Set(entities.map((e) => e.id));
+  // seenIds starts empty for the interleaved path so that a contact that also
+  // appears in the initial search list doesn't block reverse-expansion of its
+  // parent company from placing it in the correct (earlier) position.
+  // The graphStore path pre-populates seenIds since it pushes all entities
+  // upfront before the expansion loop.
+  const seenIds = new Set<string>();
   const expanded: SemanticEntity[] = [];
   const expandedScores: number[] = [];
 
@@ -262,6 +399,8 @@ async function expandViaRelationships(
     // Preferred path: use the graph store to find related entity IDs, then fetch from vector store
     expanded.push(...entities);
     expandedScores.push(...scores);
+    // Pre-populate seenIds so graph expansion doesn't re-add existing entities
+    for (const e of entities) seenIds.add(e.id);
 
     for (const entity of entities) {
       const relResult = await opts.graphStore.getRelated(entity.id, opts.workspaceId);
@@ -287,10 +426,21 @@ async function expandViaRelationships(
     // company ranks #1 (e.g. "contacts at Acme Corp"), its contacts appear at
     // positions 2-N rather than after all 20 initial results, keeping them
     // within the 2000-token context budget.
+    //
+    // seenIds is intentionally NOT pre-populated with all initial entity IDs.
+    // Pre-populating would block reverse-expansion of a company from adding
+    // a contact that also appears (lower-ranked) in the initial search results
+    // — the contact would be placed at its search-rank position instead of
+    // immediately after its parent company, and might fall outside the budget.
     for (let i = 0; i < entities.length; i++) {
       const entity = entities[i]!;
 
+      // Skip if already emitted (can happen when the same entity appears
+      // in both forward-expansion of an earlier entity and the initial list).
+      if (seenIds.has(entity.id)) continue;
+
       // Emit the entity itself
+      seenIds.add(entity.id);
       expanded.push(entity);
       expandedScores.push(scores[i] ?? 0.5);
 

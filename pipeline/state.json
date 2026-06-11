@@ -2,12 +2,12 @@
   "current_phase": "COMMITTED",
   "active_task": null,
   "active_layer": 79,
-  "last_cycle": "2026-06-10",
-  "last_research": "2026-06-10",
-  "last_commit": "2026-06-10",
-  "cycle_count": 370,
+  "last_cycle": "2026-06-11",
+  "last_research": "2026-06-11",
+  "last_commit": "2026-06-11",
+  "cycle_count": 371,
   "rate_limit_hit": false,
   "mode": "SLICE_2",
-  "session_tasks_committed": 3,
-  "note": "Session complete (3 tasks): S2-11 interleaved expansion + test env fix, S2-12 CONNECT_CLAUDE.md port fixes + validation doc, S2-13 owner sign-off guide. All Layer 79 tasks committed — queue is exhausted. Next session: task-researcher (Slice 2 only), then slice2-demo.sh → AWAITING_OWNER if all criteria pass."
+  "session_tasks_committed": 1,
+  "note": "S2-14/15/16 committed: superlative detection (Q12), seenIds lazy population (Q17), numeric attribute filter (Q19). These target the 3 failing eval questions (86.4% → ≥90%). Next: archive these tasks, check if further Slice 2 gaps exist, then run slice2-demo.sh or await CI to confirm eval threshold met."
 }
