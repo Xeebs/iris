@@ -35,6 +35,8 @@ const REQUIRED_SAVINGS = 0.7;
 // A hung query fails that question but lets the eval continue to the next one.
 const QUERY_TIMEOUT_MS = 30_000;
 
+const VERBOSE = process.argv.includes('--verbose');
+
 const ROOT = join(fileURLToPath(new URL('.', import.meta.url)), '..', '..', '..');
 
 type EvalQuestion = {
@@ -95,6 +97,31 @@ function percentile(sorted: number[], p: number): number {
   if (sorted.length === 0) return 0;
   const idx = Math.ceil((p / 100) * sorted.length) - 1;
   return sorted[Math.max(0, idx)] ?? 0;
+}
+
+/** Build a "Debugging Failed Questions" markdown section from failed results. */
+function buildFailedQuestionsSection(results: QuestionResult[]): string[] {
+  const failed = results.filter((r) => !r.passed);
+  if (failed.length === 0) return ['## Debugging Failed Questions', '', '_All questions passed._', ''];
+
+  const lines: string[] = ['## Debugging Failed Questions', ''];
+  for (const r of failed) {
+    lines.push(`### ${r.id}: ${r.question}`);
+    lines.push('');
+    if (r.isError) lines.push('**Status:** ERROR');
+    if (r.overBudget) lines.push(`**Status:** Over budget (${r.irisTokens} > ${CONTEXT_BUDGET} tokens)`);
+    if (r.missingFacts.length > 0) {
+      lines.push(`**Missing facts:**`);
+      for (const f of r.missingFacts) lines.push(`- \`${f}\``);
+    }
+    lines.push('');
+    lines.push('**Raw response (first 1000 chars):**');
+    lines.push('```');
+    lines.push(r.response.slice(0, 1000));
+    lines.push('```');
+    lines.push('');
+  }
+  return lines;
 }
 
 async function main(): Promise<void> {
@@ -201,6 +228,9 @@ async function main(): Promise<void> {
       if (isError) console.error(`  ERROR response`);
       if (missingFacts.length > 0) console.error(`  missing: ${JSON.stringify(missingFacts)}`);
       if (overBudget) console.error(`  over budget: ${irisTokens} > ${CONTEXT_BUDGET}`);
+      console.error(`  response (first 500 chars): ${text.slice(0, 500)}`);
+    } else if (VERBOSE) {
+      console.log(`  response: ${text}`);
     }
   }
 
@@ -277,6 +307,7 @@ async function main(): Promise<void> {
     `| Query latency p50 | — (measure only) | ${p50}ms | — |`,
     `| Query latency p95 | — (measure only) | ${p95}ms | — |`,
     '',
+    ...buildFailedQuestionsSection(results),
   ].join('\n');
 
   await writeFile(join(ROOT, 'pipeline', 'slice2-eval-report.md'), report, 'utf8');

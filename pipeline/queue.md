@@ -27,26 +27,60 @@ Completed tasks are moved to `pipeline/queue-archive.md` by `scripts/archive-que
 
 > While `docs/SLICE_2.md` reads `NOT ACHIEVED`, the pipeline selects ONLY from this layer, the CI gate, and the in-flight Layer 77 task. Goal: the owner connects a real data source, registers Iris in their own Claude Code, and gets correct answers with real embeddings — accuracy and token cost measured by an eval harness.
 
-### Task: S2-8 Verify slice2-demo Ollama robustness + timeout tuning
-- **Layer**: 79 — Slice 2
-- **Status**: COMMITTED
-- **Priority**: High
-- **Description**: The recent fix (commit 8160c9e) separated embedding generation from the resilience timeout boundary to prevent Ollama embedding jobs (>10s on CI CPU-only) from timing out. This fix is correct but the demo script may have other timeout fragility: (1) the API server startup waits 90s for /health endpoint to be ready — this might be tight on CI if Ollama is slow; (2) the eval harness queries the MCP server via stdio with no explicit timeout per question, so a slow embedding query could hang the eval; (3) no fallback if Ollama becomes unavailable mid-sync. Harden scripts/slice2-demo.ts: (1) increase API health wait from 90s to 120s with explicit logging of waited time; (2) add a `queryTimeoutMs` parameter to the MCP client's callTool invocation (10s per question) so eval hangs don't stall the whole demo; (3) add explicit Ollama availability check before syncing ("ollama list" or a POST to /api/embeddings with a test prompt) and fail clearly if Ollama is not responding. Add inline comments explaining each timeout rationale. Tests: mock slow Ollama responses and verify the demo still passes (by advancing the timeouts in test env or by simulating delays with prom).
-- **Files**:
-  - scripts/slice2-demo.ts (timeout tuning)
-  - scripts/slice2-demo.sh (documentation of timeout env vars if configurable)
-- **Depends on**: S2-4
-- **Added**: 2026-06-10
-
 ### Task: S2-9 Eval harness CI job robustness + troubleshooting UX
 - **Layer**: 79 — Slice 2
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: Medium
 - **Description**: The eval harness (apps/mcp-server/src/eval-retrieval.ts) is embedded in scripts/slice2-demo.ts as a subprocess. When it fails (accuracy <90% or savings <70%), the demo logs appear in the CI artifact but the root cause (missing facts in responses, dim mismatches, query errors) can be hard to spot. Improve debuggability: (1) when a question fails (missing facts, over-budget, or error), log the full response text before trimming; (2) add a `--verbose` flag to eval-retrieval.ts that prints the raw MCP query-context response for every question (useful for debugging); (3) ensure the slice2-eval-report.md includes a "Debugging Failed Questions" section listing which questions failed and their raw responses; (4) add a new `scripts/debug-eval-locally.sh` that runs the eval harness standalone against a local MCP server without needing the full demo setup (useful for iteration — just point it at a running instance). These changes make it faster to iterate on eval failures in CI without re-running the full 30+ minute demo.
 - **Files**:
   - apps/mcp-server/src/eval-retrieval.ts (verbose logging + response capture)
   - scripts/debug-eval-locally.sh (new)
 - **Depends on**: S2-3
+- **Added**: 2026-06-10
+
+### Task: S2-10 Retrieval quality fix — relationship queries
+- **Layer**: 79 — Slice 2
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: The eval harness shows 81.8% accuracy; the ≥90% threshold is blocked by 4 failing questions, all in the "relationship" and "aggregate_superlative" categories (Q01, Q12, Q17, Q19 from eval-questions.json). Specifically: Q01 (contacts at Acme Corp), Q17 (contacts at Forge Manufacturing with titles), Q12 (second largest deal), Q19 (companies with >200 employees). These questions require the retrieval system to: (1) traverse entity-to-entity relationships (contact→company, deal→company); (2) rank/filter by numeric fields (deal amount, employee count); (3) return all matching related entities, not just the primary entity. Root cause investigation: audit the `query-context` tool (apps/mcp-server/src/tools/query-context.ts) and the semantic retrieval layer (packages/semantic-core/src/retriever.ts) to confirm: (a) relationship edges are being indexed with both directions (contact→company AND company→contact), (b) the cosine similarity threshold (currently 0.70 for related entity suggestions, per embedding-patterns.md) is appropriate for these entity types, (c) numeric field filtering works correctly in the response assembly. Fix: improve relationship edge population or adjust retrieval parameters based on findings. Success: run eval-questions.json questions Q01, Q12, Q17, Q19 in isolation and confirm all 4 pass.
+- **Files**:
+  - packages/semantic-core/src/retriever.ts (relationship edge retrieval)
+  - apps/mcp-server/src/tools/query-context.ts (relationship assembly)
+- **Depends on**: nothing
+- **Added**: 2026-06-10
+
+### Task: S2-11 CI stability — slice2-demo dual-run validation
+- **Layer**: 79 — Slice 2
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: The slice2-demo CI job in .github/workflows/slice2-demo.yml is configured to run the demo twice from clean state (lines 105–123). This acceptance criterion (docs/SLICE_2.md line 34) proves determinism — that the demo is not dependent on hidden state. However, this has never been validated in a live CI run. Run the job locally or inspect a recent CI run to confirm: (1) both runs complete successfully (exit 0), (2) both runs achieve ≥90% accuracy on the eval harness, (3) Ollama model caching works (second run should be faster), (4) database setup (seed-business-db.sql) is reproducible from clean state. If any run fails, diagnose and add fixes to S2-10. Add a summary comment to .github/workflows/slice2-demo.yml documenting the dual-run success. Success: green CI run with both runs passing, or task redirects findings to S2-10.
+- **Files**:
+  - .github/workflows/slice2-demo.yml (validation + documentation comment)
+- **Depends on**: S2-10
+- **Added**: 2026-06-10
+
+### Task: S2-12 Deployment readiness — CONNECT_CLAUDE.md end-to-end validation
+- **Layer**: 79 — Slice 2
+- **Status**: UNWORKED
+- **Priority**: High
+- **Description**: The docs/CONNECT_CLAUDE.md guide explains how to register Iris as an MCP server in Claude Code. However, the E2E flow has never been validated by a real user. Create a narrative test (not an automated test — this is owner-preparedness): (1) follow all steps in CONNECT_CLAUDE.md from scratch (assume a fresh Iris checkout with the seeded demo data), (2) successfully connect to Claude Code via the documented method, (3) ask the 22 eval questions from eval-questions.json and confirm ≥90% return correct facts, (4) document any UX friction points (missing env vars, unclear paths, incomplete instructions), (5) update CONNECT_CLAUDE.md with fixes. This task prepares the owner to do the final verification step. Success: CONNECT_CLAUDE.md is known to work end-to-end, and a summary document lists any barriers encountered and how they were resolved (or intentionally deferred to post-Slice 2).
+- **Files**:
+  - docs/CONNECT_CLAUDE.md (validation + UX fixes)
+  - docs/SLICE_2_CONNECT_VALIDATION.md (new — narrative of the E2E test)
+- **Depends on**: S2-10
+- **Added**: 2026-06-10
+
+### Task: S2-13 Post-slice preparation — owner sign-off guide
+- **Layer**: 79 — Slice 2
+- **Status**: UNWORKED
+- **Priority**: Medium
+- **Description**: The final acceptance criterion (docs/SLICE_2.md line 40) is owner verification: "The owner has registered Iris in their own Claude Code via the documented steps, asked real questions against the seeded data in a live session, and confirmed correct answers. The owner flips this checkbox and the status line personally." This is NOT waivable by CI. Prepare for this step by: (1) ensuring docs/SLICE_2.md status line can be changed to "ACHIEVED" with a one-line edit, (2) writing a hand-off checklist in docs/SLICE_2_OWNER_SIGN_OFF.md that lists exactly what the owner needs to do (bootstrap a workspace, create postgres connector, run slice2-demo to seed data OR use an existing workspace, connect Claude Code, ask 5 representative questions, verify answers are correct), (3) add a note to CONNECT_CLAUDE.md linking to the owner sign-off checklist, (4) verify that the dashboard onboarding golden path test (tests/e2e/onboarding-golden-path.spec.ts) is green in CI. Success: all script-verifiable acceptance criteria pass (S2-10, S2-11, S2-12, Playwright E2E test green), and the owner sign-off guide is clear and ready.
+- **Files**:
+  - docs/SLICE_2.md (status line ready for owner flip)
+  - docs/SLICE_2_OWNER_SIGN_OFF.md (new — checklist)
+  - docs/CONNECT_CLAUDE.md (cross-link to sign-off guide)
+  - tests/e2e/onboarding-golden-path.spec.ts (verify CI green)
+- **Depends on**: S2-10, S2-11, S2-12
 - **Added**: 2026-06-10
 
 ---
