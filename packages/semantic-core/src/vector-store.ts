@@ -57,6 +57,13 @@ export interface VectorStore {
    * Requires the fts_vector column (migration 049_add_fts_vector.sql).
    */
   bm25Search?(workspaceId: string, queryText: string, topK: number, entityTypes?: string[]): Promise<VectorSearchResult[]>;
+
+  /**
+   * Find all entities within a workspace whose relationships array contains
+   * an entry pointing to the given targetId (reverse relationship traversal).
+   * Optional — used for "who are the contacts at <Company>?" style queries.
+   */
+  getByRelationshipTarget?(workspaceId: string, targetId: string): Promise<SemanticEntity[]>;
 }
 
 /**
@@ -415,6 +422,38 @@ export class PgvectorStore implements VectorStore {
         sourceId: r.source_id,
       },
       score: r.score,
+    }));
+  }
+
+  async getByRelationshipTarget(workspaceId: string, targetId: string): Promise<SemanticEntity[]> {
+    type RelRow = {
+      id: string;
+      type: string;
+      label: string;
+      attributes: unknown;
+      relationships: unknown;
+      last_modified: Date;
+      source_id: string;
+    };
+
+    const rows = await this.sql<RelRow[]>`
+      SELECT id, type, label, attributes, relationships, last_modified, source_id
+      FROM iris_entities
+      WHERE workspace_id = ${workspaceId}
+        AND EXISTS (
+          SELECT 1 FROM jsonb_array_elements(relationships) AS rel
+          WHERE rel->>'targetId' = ${targetId}
+        )
+    `;
+
+    return rows.map((r) => ({
+      id: r.id,
+      type: r.type,
+      label: r.label,
+      attributes: normalizeAttributes(r.attributes),
+      relationships: normalizeRelationships(r.relationships),
+      lastModified: r.last_modified,
+      sourceId: r.source_id,
     }));
   }
 

@@ -303,6 +303,21 @@ async function expandViaRelationships(
         }
       }
     }
+
+    // Reverse expansion: also find entities that reference the found entities.
+    // Fixes queries like "contacts at Acme Corp" where the company is found first
+    // but contacts point TO the company (not the other way around).
+    if (vectorStore.getByRelationshipTarget) {
+      for (const entity of entities) {
+        const reverseRelated = await vectorStore.getByRelationshipTarget(opts.workspaceId, entity.id);
+        for (const related of reverseRelated) {
+          if (seenIds.has(related.id)) continue;
+          expanded.push(related);
+          expandedScores.push(0.5);
+          seenIds.add(related.id);
+        }
+      }
+    }
   }
 
   return { entities: expanded, scores: expandedScores };

@@ -33,7 +33,7 @@ const inputSchema = {
     .int()
     .positive()
     .max(50)
-    .default(10)
+    .default(20)
     .describe('Maximum entities to retrieve before compression'),
   expansionLevel: z
     .enum(['summary', 'detailed', 'full'])
