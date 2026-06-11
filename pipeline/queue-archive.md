@@ -5234,3 +5234,66 @@ the live queue small. Layer headings are repeated per archival batch.
   - pipeline/slice2-eval-summary.json (updated by demo run)
 - **Depends on**: S2-1 through S2-16
 - **Added**: 2026-06-11
+
+---
+
+<!-- archived 2026-06-11 -->
+
+## Layer 79 — Slice 2
+### Task: Document Azure embeddings in CONNECT_CLAUDE.md and example .mcp.json
+- **Layer**: 79 — Slice 2
+- **Status**: COMMITTED
+- **Priority**: High
+- **Description**: The Pi is configured with Azure embeddings (EMBEDDING_PROVIDER=azure, text-embedding-3-small, 1536-dim) but the owner-facing docs (docs/CONNECT_CLAUDE.md) and example config (examples/claude-code-mcp.json) only mention ollama and OpenAI. This creates confusion when the owner tries to set up their .mcp.json or re-index data. (1) Update docs/CONNECT_CLAUDE.md to mention Azure as a third option in Step 2 (Set environment variables) and Step 4 (Register Iris in Claude Code). (2) Update examples/claude-code-mcp.json to include commented-out Azure env vars alongside the existing Ollama config. (3) Add a prominent warning in the troubleshooting section about embedding provider mismatch — if data was indexed with Azure (1536-dim) but the MCP server is configured for Ollama (768-dim), retrieval will fail silently. Include recovery steps: identify the original provider from pipeline/slice2-eval-summary.json, and either set the same provider in .mcp.json or re-index from scratch.
+- **Files**:
+  - docs/CONNECT_CLAUDE.md
+  - examples/claude-code-mcp.json
+- **Depends on**: nothing
+- **Added**: 2026-06-11
+
+---
+
+<!-- archived 2026-06-11 -->
+
+## Layer 79 — Slice 2
+### Task: Verify .mcp.json path resolution in startup validation
+- **Layer**: 79 — Slice 2
+- **Status**: COMMITTED
+- **Priority**: High
+- **Description**: The owner must set the absolute path to apps/mcp-server/dist/server.js in .mcp.json. If the path is wrong (relative, symlink-broken, missing dist/), the MCP server fails silently in Claude Code's tool loading. Add a validation step to apps/mcp-server/src/server.ts startup: when running as an MCP server (detect via stdio or SLICE_WORKSPACE_ID env), log the resolved __filename and validate that dist/server.js is the actual entry point. On path mismatch, throw a clear error: "MCP server started from wrong path: expected /correct/path, got /actual/path. Check examples/claude-code-mcp.json and .mcp.json." Document this in docs/CONNECT_CLAUDE.md troubleshooting section.
+- **Files**:
+  - apps/mcp-server/src/server.ts
+  - docs/CONNECT_CLAUDE.md
+- **Depends on**: nothing
+- **Added**: 2026-06-11
+
+---
+
+---
+
+<!-- archived 2026-06-11 -->
+
+## Layer 79: Slice 2 — Iris in Real Use
+### Task: Fix SLICE_2_OWNER_SIGN_OFF.md for Azure Embeddings Default
+- **Layer**: 79 — Slice 2 — Iris in Real Use
+- **Status**: COMMITTED
+- **Priority**: High
+- **Description**: The owner sign-off checklist currently hardcodes Ollama as the embedding provider, but the Pi setup (.env.local) and the last eval run (slice2-eval-summary.json) both confirm Azure is the default. Update docs/SLICE_2_OWNER_SIGN_OFF.md: (1) Pre-flight section (lines 14-17): replace "Ollama is running..." with clear instructions to detect which provider is configured (mention checking .env.local and slice2-eval-summary.json), list setup for both Azure and Ollama side by side, (2) Step 2 template (line 70): replace hardcoded `"EMBEDDING_PROVIDER": "ollama"` with `"EMBEDDING_PROVIDER": "azure"` and a note that Ollama users should override, (3) Step 4 troubleshooting (line 156): expand "Empty results" section to mention provider dimension mismatch (768-dim vs 1536-dim) as a root cause. Reference docs/CONNECT_CLAUDE.md section "How to check which provider indexed the current data" (lines 79-87) for the detection pattern. After edits, verify the sign-off doc reads coherently end-to-end (owner can follow it blind without knowing Azure vs Ollama beforehand). Do NOT modify SLICE_2.md status line or any acceptance criteria — this is doc clarity only.
+- **Files**: docs/SLICE_2_OWNER_SIGN_OFF.md
+- **Depends on**: nothing
+- **Added**: 2026-06-11
+
+---
+
+<!-- archived 2026-06-11 -->
+
+## Layer 79: SLICE 2 — Iris in Real Use (see docs/SLICE_2.md)
+### Task: S2-18 Fix SLICE_2.md eval harness path reference
+- **Layer**: 79 — SLICE 2
+- **Status**: COMMITTED
+- **Priority**: High
+- **Description**: Fix incorrect documentation path that will confuse the owner during sign-off. SLICE_2.md line 32 states the eval harness is at `scripts/eval-retrieval.ts`, but the actual file is at `apps/mcp-server/src/eval-retrieval.ts`. Update the acceptance criterion bullet to reference the correct path so the owner can find and inspect the eval harness if needed. Also verify that all other path references in SLICE_2.md and SLICE_2_OWNER_SIGN_OFF.md match actual file locations (seed SQL, demo script, etc.). This is a documentation-only fix with zero risk.
+- **Files**: 
+  - docs/SLICE_2.md
+- **Depends on**: nothing
+- **Added**: 2026-06-11

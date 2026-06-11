@@ -4,6 +4,7 @@ Completed tasks are logged here by the daemon after each successful commit.
 
 ---
 
+- 2026-06-11 docs(slice2): fix incorrect eval harness path in SLICE_2.md (scripts/eval-retrieval.ts → apps/mcp-server/src/eval-retrieval.ts); all other sign-off doc paths verified correct (S2-18)
 - 2026-06-11 fix(scripts): inject pnpm corepack shim in slice2-demo.sh so the script runs in daemon-spawned shells (PATH fix, demo confirmed 22/22 100% accuracy 79.2% savings)
 
 2026-06-11 — fix(dashboard): add 10 missing shadcn/ui components; fix exactOptionalPropertyTypes violations in stream-progress-monitor and streaming-preview-panel (pre-existing, off-golden-path)

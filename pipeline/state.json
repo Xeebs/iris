@@ -5,9 +5,9 @@
   "last_cycle": "2026-06-11",
   "last_research": "2026-06-11",
   "last_commit": "2026-06-11",
-  "cycle_count": 486,
+  "cycle_count": 487,
   "rate_limit_hit": false,
   "mode": "SLICE_2",
-  "session_tasks_committed": 3,
-  "note": "Cycle 486: CI GREEN. 3 tasks committed this session, exiting cleanly. S2-13: Azure embedding docs (CONNECT_CLAUDE.md + examples). S2-14: MCP startup path validation. S2-15: SLICE_2_OWNER_SIGN_OFF.md provider-agnostic. All Layer 79 tasks exhausted. Owner must: (1) stop any running iris.service, (2) cd ~/my-projects/mcp-test && source .env.local, then open claude, (3) ask real questions against seeded data, (4) confirm correct answers and flip docs/SLICE_2.md status to ACHIEVED."
+  "session_tasks_committed": 1,
+  "note": "Cycle 487: S2-18 committed — fixed incorrect eval harness path in docs/SLICE_2.md (scripts/eval-retrieval.ts → apps/mcp-server/src/eval-retrieval.ts). All Layer 79 tasks exhausted. All script-verifiable Slice 2 criteria green (22/22 eval, 79.2% savings, CI green, onboarding Playwright green). Owner must: (1) stop any running iris.service, (2) run scripts/slice2-demo.sh to seed fresh data, (3) configure .mcp.json with the printed API key, (4) open Claude Code and ask real questions against the seeded data, (5) confirm correct answers and flip docs/SLICE_2.md status to ACHIEVED."
 }

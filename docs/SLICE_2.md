@@ -29,7 +29,7 @@ The same unbroken chain as Slice 1, with every fake link made real:
 Script-verifiable (all enforced by `scripts/slice2-demo.sh`, single command, exit 0 = pass):
 
 - [ ] `scripts/slice2-demo.sh` runs the full chain from a **fresh database** with a **real embedding provider** (the script must refuse to run with `EMBEDDING_PROVIDER=hash-deterministic`) and a **real connector source** (live local Postgres seeded by the script — not static fixture JSON)
-- [ ] The eval harness (`scripts/eval-retrieval.ts`) runs ≥20 questions against the indexed data; **≥90% of answers contain the expected facts**, every response within `contextBudget`
+- [ ] The eval harness (`apps/mcp-server/src/eval-retrieval.ts`) runs ≥20 questions against the indexed data; **≥90% of answers contain the expected facts**, every response within `contextBudget`
 - [ ] The demo prints a token report (Iris response tokens vs. raw-data-paste baseline per question); **total savings ≥ 70%**
 - [ ] The demo passes **twice in a row** from clean state
 - [ ] A `slice2-demo` CI job runs the demo (Ollama + nomic-embed-text installed and cached in the runner) and is green
