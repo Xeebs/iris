@@ -5297,3 +5297,17 @@ the live queue small. Layer headings are repeated per archival batch.
   - docs/SLICE_2.md
 - **Depends on**: nothing
 - **Added**: 2026-06-11
+
+---
+
+<!-- archived 2026-06-11 -->
+
+## Layer 79 — Slice 2
+### Task: Print API key in slice2-demo.sh final output
+- **Layer**: 79 — Slice 2
+- **Status**: COMMITTED
+- **Priority**: High
+- **Description**: The `slice2-demo.sh` script does not print the `IRIS_API_KEY` at the end, blocking the owner from extracting it per Step 1 of `docs/SLICE_2_OWNER_SIGN_OFF.md`. The checklist expects: "Workspace: <uuid>" and "IRIS_API_KEY=iris_<token>" printed near the end of the script output. Fix by modifying `scripts/slice2-demo.ts` to capture the API key variable after bootstrap (line 275) and print it alongside workspace ID just before final exit. Ensure the format matches the expected output in the sign-off checklist (lines 36-46). No new tests needed — verify by running the demo once and confirming the key appears in stdout before the PASS message.
+- **Files**: scripts/slice2-demo.ts
+- **Depends on**: nothing
+- **Added**: 2026-06-11

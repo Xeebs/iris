@@ -356,6 +356,11 @@ async function main(): Promise<void> {
     });
   })).catch((e: unknown) => fail(`Eval harness timed out or crashed: ${e instanceof Error ? e.message : String(e)}`));
 
+  console.log('\n=== MCP CONFIG CREDENTIALS ===');
+  console.log(`Workspace: ${workspaceId}`);
+  console.log(`IRIS_API_KEY=${apiKey}`);
+  console.log('(Copy these into .mcp.json — see docs/SLICE_2_OWNER_SIGN_OFF.md Step 2)');
+
   console.log('\nSLICE 2 DEMO (real data → real embeddings → eval ≥90% accuracy ≥70% savings): PASS');
   for (const child of children) child.kill('SIGTERM');
   process.exit(0);

@@ -1,13 +1,13 @@
 {
-  "current_phase": "AWAITING_OWNER",
-  "active_task": null,
+  "current_phase": "IMPLEMENT",
+  "active_task": "Print API key in slice2-demo.sh final output",
   "active_layer": "79",
   "last_cycle": "2026-06-11",
   "last_research": "2026-06-11",
   "last_commit": "2026-06-11",
-  "cycle_count": 491,
+  "cycle_count": 492,
   "rate_limit_hit": false,
   "mode": "SLICE_2",
   "session_tasks_committed": 0,
-  "note": "Cycle 491: AWAITING_OWNER — no pipeline work to do. All Layer 79 tasks exhausted and committed. CI GREEN (daemon-confirmed). slice2-demo.sh verified green this cycle (22/22 eval, 79.2% savings). Owner must: (1) stop any running iris.service, (2) run scripts/slice2-demo.sh to seed fresh data, (3) configure .mcp.json with the printed API key, (4) open Claude Code and ask real questions against the seeded data, (5) confirm correct answers and flip docs/SLICE_2.md status to ACHIEVED. See docs/SLICE_2_OWNER_SIGN_OFF.md for step-by-step instructions."
+  "note": "Cycle 492: Implementing S2-print-api-key — adding IRIS_API_KEY to final slice2-demo.ts output so owner can copy credentials per SLICE_2_OWNER_SIGN_OFF.md Step 1."
 }
