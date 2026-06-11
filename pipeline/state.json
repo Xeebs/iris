@@ -5,9 +5,9 @@
   "last_cycle": "2026-06-11",
   "last_research": "2026-06-11",
   "last_commit": "2026-06-11",
-  "cycle_count": 472,
+  "cycle_count": 474,
   "rate_limit_hit": false,
   "mode": "SLICE_2",
   "session_tasks_committed": 0,
-  "note": "Cycle 472 research: task-researcher verified all script-verifiable acceptance criteria PASS. (1) slice2-demo.sh runs from fresh DB with real embeddings (OpenAI text-embedding-3-small), real data source (Postgres iris_demo_source), syncs 98 entities. (2) Eval harness: 22 questions, 100% accuracy (≥90% req), 79.2% token savings (≥70% req). (3) Demo passes twice in a row from clean state. (4) CI all green: Slice 2 Demo, Onboarding Golden Path, Slice Demo, Load Testing. (5) onboarding-golden-path.spec.ts exists and is green. (6) CONNECT_CLAUDE.md complete, SLICE_2_OWNER_SIGN_OFF.md complete, examples/claude-code-mcp.json ready. Zero unmet technical criteria. Zero new tasks generated — all Layer 79 already completed. Awaiting owner sign-off per docs/SLICE_2.md (non-waivable: owner registers Iris in their Claude Code, asks 5 canonical questions, confirms correct answers, flips status line personally). Pipeline exits cleanly; owner-verified criterion cannot be automated."
+  "note": "Cycle 474: CI GREEN. No UNWORKED Layer 79 tasks remain. All script-verifiable Slice 2 acceptance criteria confirmed passing across cycles 432/452/472/473: slice2-demo.sh with real embeddings + real Postgres source (98 entities), eval harness 22/22 questions 100% accuracy 79.2% token savings, demo passed twice from clean state, all CI jobs green (Slice 2 Demo, Onboarding Golden Path, Slice Demo, Load Testing). Remaining criterion: owner registers Iris in their own Claude Code, asks real questions against seeded data in a live session, confirms correct answers, and flips the docs/SLICE_2.md status line + acceptance checkbox personally. Non-waivable per CLAUDE.md. Pipeline remains in AWAITING_OWNER until owner sign-off."
 }
