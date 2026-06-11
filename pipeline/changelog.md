@@ -201,3 +201,4 @@ VS-1 (slice path audit): documented connect→sync→index→serve→query chain
 2026-06-11 S2-10: reverse relationship expansion in PgvectorStore + retrieval, topK 10→20 in query-context
 2026-06-11 S2-14/15/16: superlative detection (Q12), seenIds lazy expansion (Q17), numeric attribute filter (Q19) — eval accuracy 86.4%→≥90% fix
 feat(api): complete Layer 77 route-mounting sweep — all 34 remaining routes mounted
+- [332c3c2] docs(connect): document Azure embedding provider in CONNECT_CLAUDE.md and examples — added Azure option to Step 2, created examples/claude-code-mcp-azure.json, fixed smoke test command

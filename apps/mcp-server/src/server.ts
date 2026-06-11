@@ -177,6 +177,19 @@ export function createMcpServer(
 async function main(): Promise<void> {
   initTelemetry();
 
+  // Validate startup path so a bad .mcp.json (wrong path, relative path, missing build)
+  // surfaces as a clear log entry instead of a cryptic failure in Claude Code.
+  const scriptPath = process.argv[1] ?? 'unknown';
+  log.info('MCP server starting', { scriptPath, cwd: process.cwd() });
+  if (!scriptPath.endsWith('dist/server.js') && !scriptPath.endsWith('dist/server')) {
+    log.warn(
+      'MCP server started from unexpected path — expected apps/mcp-server/dist/server.js. ' +
+      'Check that (1) the MCP server is built (`pnpm --filter @iris/mcp-server build`), ' +
+      'and (2) .mcp.json uses the correct absolute path to dist/server.js.',
+      { scriptPath }
+    );
+  }
+
   const pgUrl = process.env['DATABASE_URL'];
   const redisUrl = process.env['REDIS_URL'] ?? 'redis://localhost:6379';
   const openAiKey = process.env['OPENAI_API_KEY'] ?? '';

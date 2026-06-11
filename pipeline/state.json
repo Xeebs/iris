@@ -1,6 +1,6 @@
 {
-  "current_phase": "TEST",
-  "active_task": "Document Azure embeddings in CONNECT_CLAUDE.md and example .mcp.json",
+  "current_phase": "COMMITTED",
+  "active_task": null,
   "active_layer": "79",
   "last_cycle": "2026-06-11",
   "last_research": "2026-06-11",
@@ -8,6 +8,6 @@
   "cycle_count": 486,
   "rate_limit_hit": false,
   "mode": "SLICE_2",
-  "session_tasks_committed": 0,
-  "note": "Cycle 486: CI GREEN. Working on S2-13: updated CONNECT_CLAUDE.md with Azure embedding docs, created examples/claude-code-mcp-azure.json, updated examples/claude-code-mcp.json."
+  "session_tasks_committed": 2,
+  "note": "Cycle 486: CI GREEN. 2 tasks committed. S2-13: Azure embedding docs. S2-14: MCP startup path validation + troubleshooting docs."
 }

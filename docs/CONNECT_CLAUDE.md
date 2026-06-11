@@ -180,10 +180,12 @@ All tools respect the `contextBudget` parameter (default: 2000 tokens) and never
 
 ## Troubleshooting
 
-**"Server failed to start"**
+**"Server failed to start" / Iris tools not appearing in Claude Code**
 - Confirm `DATABASE_URL` is correct and the database is accessible: `psql $DATABASE_URL -c '\l'`
 - Verify the MCP server is built: `pnpm --filter @iris/mcp-server build`
 - Check migrations: `pnpm db:migrate`
+- Confirm `.mcp.json` uses an **absolute path** to `apps/mcp-server/dist/server.js`. Relative paths fail silently. Run `ls /absolute/path/to/iris/apps/mcp-server/dist/server.js` to verify the file exists.
+- The server logs its startup path on every launch. If there is a path mismatch, you will see a `warn` log entry saying "MCP server started from unexpected path". Check the log to confirm the right file is being loaded.
 
 **"Invalid IRIS_API_KEY"**
 - The key is scoped to a workspace; make sure you are using the key for the workspace that contains your indexed data

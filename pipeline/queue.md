@@ -97,20 +97,9 @@ Completed tasks are moved to `pipeline/queue-archive.md` by `scripts/archive-que
 
 > Tasks that directly unblock or harden the owner's live Slice 2 session. Only generated when the vertical slice (Layer 78) is ACHIEVED.
 
-### Task: Document Azure embeddings in CONNECT_CLAUDE.md and example .mcp.json
-- **Layer**: 79 — Slice 2
-- **Status**: COMMITTED
-- **Priority**: High
-- **Description**: The Pi is configured with Azure embeddings (EMBEDDING_PROVIDER=azure, text-embedding-3-small, 1536-dim) but the owner-facing docs (docs/CONNECT_CLAUDE.md) and example config (examples/claude-code-mcp.json) only mention ollama and OpenAI. This creates confusion when the owner tries to set up their .mcp.json or re-index data. (1) Update docs/CONNECT_CLAUDE.md to mention Azure as a third option in Step 2 (Set environment variables) and Step 4 (Register Iris in Claude Code). (2) Update examples/claude-code-mcp.json to include commented-out Azure env vars alongside the existing Ollama config. (3) Add a prominent warning in the troubleshooting section about embedding provider mismatch — if data was indexed with Azure (1536-dim) but the MCP server is configured for Ollama (768-dim), retrieval will fail silently. Include recovery steps: identify the original provider from pipeline/slice2-eval-summary.json, and either set the same provider in .mcp.json or re-index from scratch.
-- **Files**:
-  - docs/CONNECT_CLAUDE.md
-  - examples/claude-code-mcp.json
-- **Depends on**: nothing
-- **Added**: 2026-06-11
-
 ### Task: Verify .mcp.json path resolution in startup validation
 - **Layer**: 79 — Slice 2
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: High
 - **Description**: The owner must set the absolute path to apps/mcp-server/dist/server.js in .mcp.json. If the path is wrong (relative, symlink-broken, missing dist/), the MCP server fails silently in Claude Code's tool loading. Add a validation step to apps/mcp-server/src/server.ts startup: when running as an MCP server (detect via stdio or SLICE_WORKSPACE_ID env), log the resolved __filename and validate that dist/server.js is the actual entry point. On path mismatch, throw a clear error: "MCP server started from wrong path: expected /correct/path, got /actual/path. Check examples/claude-code-mcp.json and .mcp.json." Document this in docs/CONNECT_CLAUDE.md troubleshooting section.
 - **Files**:
