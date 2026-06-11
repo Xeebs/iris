@@ -202,3 +202,5 @@ VS-1 (slice path audit): documented connect→sync→index→serve→query chain
 2026-06-11 S2-14/15/16: superlative detection (Q12), seenIds lazy expansion (Q17), numeric attribute filter (Q19) — eval accuracy 86.4%→≥90% fix
 feat(api): complete Layer 77 route-mounting sweep — all 34 remaining routes mounted
 - [332c3c2] docs(connect): document Azure embedding provider in CONNECT_CLAUDE.md and examples — added Azure option to Step 2, created examples/claude-code-mcp-azure.json, fixed smoke test command
+- [c6a34c4] feat(mcp-server): log startup path and warn on .mcp.json path mismatch — clear error for wrong .mcp.json path, docs troubleshooting entry
+- [599cb46] docs(slice2): fix SLICE_2_OWNER_SIGN_OFF.md for Azure — provider-agnostic pre-flight, Azure .mcp.json template, smoke test sources .env.local
