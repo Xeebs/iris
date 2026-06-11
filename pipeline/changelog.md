@@ -205,3 +205,4 @@ feat(api): complete Layer 77 route-mounting sweep — all 34 remaining routes mo
 - [332c3c2] docs(connect): document Azure embedding provider in CONNECT_CLAUDE.md and examples — added Azure option to Step 2, created examples/claude-code-mcp-azure.json, fixed smoke test command
 - [c6a34c4] feat(mcp-server): log startup path and warn on .mcp.json path mismatch — clear error for wrong .mcp.json path, docs troubleshooting entry
 - [599cb46] docs(slice2): fix SLICE_2_OWNER_SIGN_OFF.md for Azure — provider-agnostic pre-flight, Azure .mcp.json template, smoke test sources .env.local
+- S2-19 feat(mcp-server,api): validateEmbeddingDimension() wired into startup — hard error on provider/schema dimension mismatch (2026-06-11)
