@@ -4,11 +4,10 @@
   "active_layer": "79",
   "last_cycle": "2026-06-11",
   "last_research": "2026-06-11",
-  "last_state_update": "2026-06-11 — task-researcher cycle 493",
   "last_commit": "2026-06-11",
   "cycle_count": 492,
   "rate_limit_hit": false,
   "mode": "SLICE_2",
   "session_tasks_committed": 1,
-  "note": "Cycle 492: Fixed slice2-demo.ts to print IRIS_API_KEY in final output — owner can now copy credentials from terminal per sign-off doc. All script-verifiable Slice 2 criteria green (22/22 eval, 79.2% savings, CI green). Owner must: (1) run scripts/slice2-demo.sh, (2) copy printed IRIS_API_KEY + Workspace UUID, (3) configure .mcp.json per docs/SLICE_2_OWNER_SIGN_OFF.md, (4) ask verification questions in Claude Code, (5) flip docs/SLICE_2.md status to ACHIEVED."
+  "note": "Cycle 492: All Slice 2 script-verifiable criteria green. This session: (1) committed cycle-491 state, (2) fixed slice2-demo.ts to print IRIS_API_KEY in final output, (3) researcher fixed sign-off checklist (API key format, deal owner name Sarah Kim, company names Pacific Logistics / Ember Energy). Queue exhausted — 0 UNWORKED Layer 79 tasks remain. CI GREEN. Owner must: run scripts/slice2-demo.sh → copy printed IRIS_API_KEY + Workspace UUID → configure .mcp.json per docs/SLICE_2_OWNER_SIGN_OFF.md → ask verification questions in Claude Code → flip docs/SLICE_2.md to ACHIEVED."
 }
