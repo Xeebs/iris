@@ -54,12 +54,39 @@ Iris reads its config from environment variables. Export these before starting C
 export DATABASE_URL="postgresql://postgres:postgres@localhost:5432/iris"
 export REDIS_URL="redis://localhost:6379"
 export IRIS_API_KEY="iris_your_key_here"
-export EMBEDDING_PROVIDER="ollama"            # or "openai"
-export OLLAMA_ENDPOINT="http://localhost:11434" # if using Ollama
-# export OPENAI_API_KEY="sk-..."              # if using EMBEDDING_PROVIDER=openai
 ```
 
-**Important:** `EMBEDDING_PROVIDER` must match the provider used when the data was indexed. Mixing providers (e.g., indexing with `ollama` then querying with `openai`) produces meaningless similarity scores.
+Then add the embedding provider block that matches how the data was indexed. **Pick exactly one:**
+
+```bash
+# Option A — Ollama (nomic-embed-text, 768-dim, runs locally on the Pi)
+export EMBEDDING_PROVIDER="ollama"
+export OLLAMA_ENDPOINT="http://localhost:11434"
+
+# Option B — OpenAI (text-embedding-3-small, 1536-dim)
+export EMBEDDING_PROVIDER="openai"
+export OPENAI_API_KEY="sk-..."
+
+# Option C — Azure OpenAI (text-embedding-3-small, 1536-dim)
+#             This is the default for the Iris Pi setup — check .env.local to confirm.
+export EMBEDDING_PROVIDER="azure"
+export AZURE_OPENAI_ENDPOINT="https://your-resource.cognitiveservices.azure.com/"
+export AZURE_OPENAI_API_KEY="your-azure-api-key"
+export AZURE_OPENAI_API_VERSION="2023-05-15"
+export AZURE_OPENAI_SMALL_DEPLOYMENT="text-embedding-3-small"
+```
+
+**How to check which provider indexed the current data:**
+
+```bash
+# Fastest: read the last eval run
+python3 -c "import json; d=json.load(open('pipeline/slice2-eval-summary.json')); print('Provider:', d['embeddingProvider'])"
+
+# Or read the environment directly
+grep EMBEDDING_PROVIDER .env.local
+```
+
+**Important:** `EMBEDDING_PROVIDER` must match the provider used when the data was indexed. Mixing providers (e.g., indexing with `azure`/1536-dim then querying with `ollama`/768-dim) produces meaningless similarity scores and empty results.
 
 ## Step 3: Register Iris in Claude Code
 
@@ -88,6 +115,12 @@ Then edit `.mcp.json` and replace:
 - `iris_your_api_key_here` → your API key from Step 1
 - Adjust `DATABASE_URL`, `EMBEDDING_PROVIDER`, etc. to match your setup
 
+For Azure embeddings (the default Pi setup), use `examples/claude-code-mcp-azure.json` instead:
+
+```bash
+cp examples/claude-code-mcp-azure.json .mcp.json
+```
+
 Place `.mcp.json` in your project directory (Claude Code picks it up automatically) or in `~/.claude/mcp.json` for global registration.
 
 ## Step 4: Verify the connection
@@ -103,14 +136,15 @@ Open a new Claude Code session. The Iris MCP server will appear in the tool list
 Or verify programmatically before opening Claude Code:
 
 ```bash
+# Source your environment first so the embedding provider vars are available:
+source .env.local   # or export each var from Step 2 manually
+
 SLICE_WORKSPACE_ID=<your-workspace-id> \
 IRIS_API_KEY=<your-api-key> \
-DATABASE_URL=postgresql://postgres:postgres@localhost:5432/iris \
-EMBEDDING_PROVIDER=ollama \
   node --import tsx scripts/mcp-smoke.ts
 ```
 
-The smoke test connects to the MCP server over stdio (the same transport Claude Code uses), lists tools, calls `query-context`, and exits 0 on success.
+The smoke test connects to the MCP server over stdio (the same transport Claude Code uses), lists tools, calls `query-context`, and exits 0 on success. It inherits `EMBEDDING_PROVIDER` and provider-specific vars from the environment.
 
 ## Environment variable reference
 
@@ -119,9 +153,14 @@ The smoke test connects to the MCP server over stdio (the same transport Claude 
 | `DATABASE_URL` | Yes | — | PostgreSQL connection string for the Iris database |
 | `REDIS_URL` | No | `redis://localhost:6379` | Redis URL |
 | `IRIS_API_KEY` | Recommended | — | MCP API key scoped to your workspace. Omit to run in unauthenticated dev mode (all workspaces accessible — only for local development) |
-| `EMBEDDING_PROVIDER` | Yes | `ollama` | `ollama` (nomic-embed-text, 768-dim) or `openai` (text-embedding-3-small, 1536-dim) |
+| `EMBEDDING_PROVIDER` | Yes | `ollama` | `ollama` (768-dim), `openai` (1536-dim), or `azure` / `azure-openai` (1536-dim) |
+| `OLLAMA_ENDPOINT` | No | `http://localhost:11434` | Ollama base URL (required when `EMBEDDING_PROVIDER=ollama`) |
 | `OPENAI_API_KEY` | If openai | — | Required when `EMBEDDING_PROVIDER=openai` |
-| `OLLAMA_ENDPOINT` | No | `http://localhost:11434` | Ollama base URL |
+| `AZURE_OPENAI_ENDPOINT` | If azure | — | Azure OpenAI resource URL (e.g., `https://your-resource.cognitiveservices.azure.com/`) |
+| `AZURE_OPENAI_API_KEY` | If azure | — | Azure OpenAI API key |
+| `AZURE_OPENAI_API_VERSION` | No | `2023-05-15` | Azure OpenAI API version |
+| `AZURE_OPENAI_SMALL_DEPLOYMENT` | No | `text-embedding-3-small` | Deployment name for the small embedding model |
+| `AZURE_OPENAI_LARGE_DEPLOYMENT` | No | `text-embedding-3-large` | Deployment name for the large embedding model |
 
 ## Available MCP tools
 
@@ -155,9 +194,10 @@ All tools respect the `contextBudget` parameter (default: 2000 tokens) and never
 - Verify `EMBEDDING_PROVIDER` matches what was used at index time
 
 **Embedding provider mismatch**
-- Ollama (nomic-embed-text) produces 768-dim vectors; OpenAI text-embedding-3-small produces 1536-dim vectors
-- If you indexed with one provider and query with another, similarities are meaningless
-- Fix: re-index from scratch with the correct provider: drop the `iris_entities` table data and re-trigger sync
+- Provider dimensions: `ollama` (nomic-embed-text) → 768-dim; `openai` → 1536-dim; `azure` → 1536-dim
+- If you indexed with one provider and query with another, similarities are meaningless and results will be empty or wrong
+- The Pi demo data was indexed with `azure` (1536-dim) — verify with `grep EMBEDDING_PROVIDER .env.local` or `python3 -c "import json; d=json.load(open('pipeline/slice2-eval-summary.json')); print(d['embeddingProvider'])"`
+- Fix: set `EMBEDDING_PROVIDER` to the same value used at index time, or re-index from scratch: `psql $DATABASE_URL -c "TRUNCATE iris_entities"` then re-run `scripts/slice2-demo.sh`
 
 **High latency**
 - Ollama embeddings on CPU (e.g., Raspberry Pi) are slower than GPU — the server is functional but query latency will be higher

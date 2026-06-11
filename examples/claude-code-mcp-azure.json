@@ -8,15 +8,9 @@
         "DATABASE_URL": "postgresql://postgres:postgres@localhost:5432/iris",
         "REDIS_URL": "redis://localhost:6379",
         "IRIS_API_KEY": "iris_your_api_key_here",
-
-        "EMBEDDING_PROVIDER": "ollama",
-
-        "OLLAMA_ENDPOINT": "http://localhost:11434",
-
-        "OPENAI_API_KEY": "",
-
-        "AZURE_OPENAI_ENDPOINT": "",
-        "AZURE_OPENAI_API_KEY": "",
+        "EMBEDDING_PROVIDER": "azure",
+        "AZURE_OPENAI_ENDPOINT": "https://your-resource.cognitiveservices.azure.com/",
+        "AZURE_OPENAI_API_KEY": "your-azure-api-key-here",
         "AZURE_OPENAI_API_VERSION": "2023-05-15",
         "AZURE_OPENAI_SMALL_DEPLOYMENT": "text-embedding-3-small"
       }
