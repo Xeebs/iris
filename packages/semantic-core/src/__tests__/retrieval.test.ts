@@ -55,8 +55,12 @@ const mockQueryVector = Array.from({ length: 1536 }, (_, i) => (i === 0 ? 1 : 0)
 
 describe('retrieveContext', () => {
   const mockCreate = vi.fn();
+  let savedEmbeddingProvider: string | undefined;
 
   beforeEach(() => {
+    // Isolate from EMBEDDING_PROVIDER in .env.local — tests rely on the Azure mock path
+    savedEmbeddingProvider = process.env['EMBEDDING_PROVIDER'];
+    delete process.env['EMBEDDING_PROVIDER'];
     process.env['AZURE_OPENAI_ENDPOINT'] = 'https://test.openai.azure.com';
     process.env['AZURE_OPENAI_API_KEY'] = 'test-key';
     vi.mocked(AzureOpenAI).mockImplementation(
@@ -70,6 +74,11 @@ describe('retrieveContext', () => {
   });
 
   afterEach(() => {
+    if (savedEmbeddingProvider !== undefined) {
+      process.env['EMBEDDING_PROVIDER'] = savedEmbeddingProvider;
+    } else {
+      delete process.env['EMBEDDING_PROVIDER'];
+    }
     delete process.env['AZURE_OPENAI_ENDPOINT'];
     delete process.env['AZURE_OPENAI_API_KEY'];
     vi.clearAllMocks();
@@ -154,6 +163,42 @@ describe('retrieveContext', () => {
     const ids = result.entities.map((e) => e.id);
     expect(ids).toContain('hubspot:contact:1');
     expect(ids).toContain('hubspot:company:2');
+    // Contact is emitted first, then its referenced company immediately after (interleaved)
+    expect(ids[0]).toBe('hubspot:contact:1');
+    expect(ids[1]).toBe('hubspot:company:2');
+  });
+
+  it('interleaves reverse-expanded entities immediately after their parent', async () => {
+    const company = makeEntity('hubspot:company:1', 'company');
+    const contact1 = makeEntity('hubspot:contact:10', 'contact');
+    const contact2 = makeEntity('hubspot:contact:11', 'contact');
+    const otherCompany = makeEntity('hubspot:company:2', 'company');
+
+    const store: VectorStore = {
+      ...makeMockVectorStore([
+        { entity: company, score: 0.95 },
+        { entity: otherCompany, score: 0.7 },
+      ]),
+      getByRelationshipTarget: vi.fn().mockImplementation((_ws: string, targetId: string) => {
+        if (targetId === 'hubspot:company:1') return Promise.resolve([contact1, contact2]);
+        return Promise.resolve([]);
+      }),
+    };
+
+    const result = await retrieveContext('contacts at Acme Corp', store, {
+      workspaceId: 'ws-1',
+      topK: 5,
+      expandRelationships: true,
+      maxDepth: 1,
+    });
+
+    const ids = result.entities.map((e) => e.id);
+    // company:1 first, then its contacts immediately after, then otherCompany
+    expect(ids[0]).toBe('hubspot:company:1');
+    expect(ids[1]).toBe('hubspot:contact:10');
+    expect(ids[2]).toBe('hubspot:contact:11');
+    expect(ids[3]).toBe('hubspot:company:2');
+    expect(result.entities).toHaveLength(4);
   });
 
   it('expands related entities via graphStore when provided', async () => {
@@ -425,8 +470,11 @@ describe('reciprocalRankFusion', () => {
 
 describe('retrieveContext — queryExpansion', () => {
   const mockCreate = vi.fn();
+  let savedEmbeddingProvider: string | undefined;
 
   beforeEach(() => {
+    savedEmbeddingProvider = process.env['EMBEDDING_PROVIDER'];
+    delete process.env['EMBEDDING_PROVIDER'];
     process.env['AZURE_OPENAI_ENDPOINT'] = 'https://test.openai.azure.com';
     process.env['AZURE_OPENAI_API_KEY'] = 'test-key';
     vi.mocked(AzureOpenAI).mockImplementation(
@@ -440,6 +488,11 @@ describe('retrieveContext — queryExpansion', () => {
   });
 
   afterEach(() => {
+    if (savedEmbeddingProvider !== undefined) {
+      process.env['EMBEDDING_PROVIDER'] = savedEmbeddingProvider;
+    } else {
+      delete process.env['EMBEDDING_PROVIDER'];
+    }
     delete process.env['AZURE_OPENAI_ENDPOINT'];
     delete process.env['AZURE_OPENAI_API_KEY'];
     vi.clearAllMocks();

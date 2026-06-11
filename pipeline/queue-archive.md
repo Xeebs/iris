@@ -5077,3 +5077,50 @@ the live queue small. Layer headings are repeated per archival batch.
   - scripts/slice2-demo.sh (documentation of timeout env vars if configurable)
 - **Depends on**: S2-4
 - **Added**: 2026-06-10
+
+---
+
+<!-- archived 2026-06-10 -->
+
+## Layer 79: SLICE 2 — Iris in Real Use (see docs/SLICE_2.md)
+### Task: S2-9 Eval harness CI job robustness + troubleshooting UX
+- **Layer**: 79 — Slice 2
+- **Status**: COMMITTED
+- **Priority**: Medium
+- **Description**: The eval harness (apps/mcp-server/src/eval-retrieval.ts) is embedded in scripts/slice2-demo.ts as a subprocess. When it fails (accuracy <90% or savings <70%), the demo logs appear in the CI artifact but the root cause (missing facts in responses, dim mismatches, query errors) can be hard to spot. Improve debuggability: (1) when a question fails (missing facts, over-budget, or error), log the full response text before trimming; (2) add a `--verbose` flag to eval-retrieval.ts that prints the raw MCP query-context response for every question (useful for debugging); (3) ensure the slice2-eval-report.md includes a "Debugging Failed Questions" section listing which questions failed and their raw responses; (4) add a new `scripts/debug-eval-locally.sh` that runs the eval harness standalone against a local MCP server without needing the full demo setup (useful for iteration — just point it at a running instance). These changes make it faster to iterate on eval failures in CI without re-running the full 30+ minute demo.
+- **Files**:
+  - apps/mcp-server/src/eval-retrieval.ts (verbose logging + response capture)
+  - scripts/debug-eval-locally.sh (new)
+- **Depends on**: S2-3
+- **Added**: 2026-06-10
+
+---
+
+<!-- archived 2026-06-10 -->
+
+## Layer 79: SLICE 2 — Iris in Real Use (see docs/SLICE_2.md)
+### Task: S2-10 Retrieval quality fix — relationship queries
+- **Layer**: 79 — Slice 2
+- **Status**: COMMITTED
+- **Priority**: High
+- **Description**: The eval harness shows 81.8% accuracy; the ≥90% threshold is blocked by 4 failing questions, all in the "relationship" and "aggregate_superlative" categories (Q01, Q12, Q17, Q19 from eval-questions.json). Specifically: Q01 (contacts at Acme Corp), Q17 (contacts at Forge Manufacturing with titles), Q12 (second largest deal), Q19 (companies with >200 employees). These questions require the retrieval system to: (1) traverse entity-to-entity relationships (contact→company, deal→company); (2) rank/filter by numeric fields (deal amount, employee count); (3) return all matching related entities, not just the primary entity. Root cause investigation: audit the `query-context` tool (apps/mcp-server/src/tools/query-context.ts) and the semantic retrieval layer (packages/semantic-core/src/retriever.ts) to confirm: (a) relationship edges are being indexed with both directions (contact→company AND company→contact), (b) the cosine similarity threshold (currently 0.70 for related entity suggestions, per embedding-patterns.md) is appropriate for these entity types, (c) numeric field filtering works correctly in the response assembly. Fix: improve relationship edge population or adjust retrieval parameters based on findings. Success: run eval-questions.json questions Q01, Q12, Q17, Q19 in isolation and confirm all 4 pass.
+- **Files**:
+  - packages/semantic-core/src/retriever.ts (relationship edge retrieval)
+  - apps/mcp-server/src/tools/query-context.ts (relationship assembly)
+- **Depends on**: nothing
+- **Added**: 2026-06-10
+
+---
+
+<!-- archived 2026-06-10 -->
+
+## Layer 79: SLICE 2 — Iris in Real Use (see docs/SLICE_2.md)
+### Task: S2-11 CI stability — slice2-demo dual-run validation
+- **Layer**: 79 — Slice 2
+- **Status**: COMMITTED
+- **Priority**: High
+- **Description**: The slice2-demo CI job in .github/workflows/slice2-demo.yml is configured to run the demo twice from clean state (lines 105–123). This acceptance criterion (docs/SLICE_2.md line 34) proves determinism — that the demo is not dependent on hidden state. However, this has never been validated in a live CI run. Run the job locally or inspect a recent CI run to confirm: (1) both runs complete successfully (exit 0), (2) both runs achieve ≥90% accuracy on the eval harness, (3) Ollama model caching works (second run should be faster), (4) database setup (seed-business-db.sql) is reproducible from clean state. If any run fails, diagnose and add fixes to S2-10. Add a summary comment to .github/workflows/slice2-demo.yml documenting the dual-run success. Success: green CI run with both runs passing, or task redirects findings to S2-10.
+- **Files**:
+  - .github/workflows/slice2-demo.yml (validation + documentation comment)
+- **Depends on**: S2-10
+- **Added**: 2026-06-10

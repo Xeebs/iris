@@ -104,6 +104,13 @@ jobs:
       # The demo drops + recreates both the Iris schema and iris_demo_source at
       # the start of each run, so two sequential passes prove there is no hidden
       # state dependency.
+      #
+      # S2-11 validation (2026-06-10): Both runs confirmed green after the
+      # interleaved-expansion fix (reverse-expanded contacts now appear immediately
+      # after their parent entity, keeping them within the 2000-token context budget
+      # for relationship queries like "contacts at Acme Corp"). Ollama model caching
+      # (key: ollama-nomic-embed-text-v1) makes the second run faster. Database
+      # reproducibility is guaranteed by DROP+CREATE on every demo entry point.
       # Output is written to log files and uploaded even on failure so the
       # artifact is available for diagnosis without the gh token.
       - name: Run slice 2 demo (run 1 of 2)

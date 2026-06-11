@@ -106,6 +106,8 @@ describe('generateEmbeddings', () => {
   const mockCreate = vi.fn();
 
   beforeEach(() => {
+    // Clear EMBEDDING_PROVIDER so tests use the Azure path (which IS mocked)
+    vi.stubEnv('EMBEDDING_PROVIDER', '');
     vi.stubEnv('AZURE_OPENAI_ENDPOINT', 'https://test.openai.azure.com/');
     vi.stubEnv('AZURE_OPENAI_API_KEY', 'test-key');
     vi.stubEnv('AZURE_OPENAI_API_VERSION', '2023-05-15');

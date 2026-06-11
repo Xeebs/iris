@@ -4,6 +4,7 @@ Completed tasks are logged here by the daemon after each successful commit.
 
 ---
 
+- 2026-06-10 | feat(semantic-core): S2-11 interleaved relationship expansion — contacts appear immediately after parent company, fixing Q01/Q17 accuracy; test env isolation for EMBEDDING_PROVIDER
 - 2026-06-10 | feat(dashboard,tests): S2-5 onboarding golden path — postgres config form, MCP snippet screen, Playwright API tests, CI job
 - 2026-06-10 | feat(scripts,api,connector-postgres): S2-4 slice2-demo.sh + CI job — real-data demo driver, Ollama CI job, postgres connector labelColumns, eval path fix, connector registration
 - 2026-06-10 | feat(api): mount batch-3 routes in server.ts — sync-metrics, context-search, enrichments, entity-validation, bulk-ops, analytics-pipeline, insights
@@ -189,3 +190,5 @@ VS-1 (slice path audit): documented connect→sync→index→serve→query chain
 - S2-6: docs/CONNECT_CLAUDE.md, examples/claude-code-mcp.json, scripts/mcp-smoke.ts + apps/mcp-server/src/mcp-smoke.ts — Claude Code MCP registration docs and stdio smoke test
 - S2-7: migration 183 (Ollama 768-dim), validate-embedding-dimension.ts with 7 tests, vector-store.ts error message update
 - S2-8: Ollama pre-flight check in slice2-demo.ts, API health wait 90s→120s, 30s per-question timeout in eval-retrieval.ts
+2026-06-11 S2-9: eval harness troubleshooting UX (verbose flag, failed-question response logging, debug-eval-locally.sh)
+2026-06-11 S2-10: reverse relationship expansion in PgvectorStore + retrieval, topK 10→20 in query-context

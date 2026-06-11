@@ -126,12 +126,21 @@ describe('reciprocalRankFusion', () => {
 });
 
 describe('retrieveContext hybrid search', () => {
+  let savedEmbeddingProvider: string | undefined;
+
   beforeAll(() => {
+    savedEmbeddingProvider = process.env['EMBEDDING_PROVIDER'];
+    delete process.env['EMBEDDING_PROVIDER'];
     process.env['AZURE_OPENAI_ENDPOINT'] = 'https://mock.openai.azure.com';
     process.env['AZURE_OPENAI_API_KEY'] = 'mock-key';
   });
 
   afterAll(() => {
+    if (savedEmbeddingProvider !== undefined) {
+      process.env['EMBEDDING_PROVIDER'] = savedEmbeddingProvider;
+    } else {
+      delete process.env['EMBEDDING_PROVIDER'];
+    }
     delete process.env['AZURE_OPENAI_ENDPOINT'];
     delete process.env['AZURE_OPENAI_API_KEY'];
   });

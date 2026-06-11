@@ -255,11 +255,14 @@ async function expandViaRelationships(
   opts: RetrievalOptions,
 ): Promise<{ entities: SemanticEntity[]; scores: number[] }> {
   const seenIds = new Set(entities.map((e) => e.id));
-  const expanded = [...entities];
-  const expandedScores = [...scores];
+  const expanded: SemanticEntity[] = [];
+  const expandedScores: number[] = [];
 
   if (opts.graphStore) {
     // Preferred path: use the graph store to find related entity IDs, then fetch from vector store
+    expanded.push(...entities);
+    expandedScores.push(...scores);
+
     for (const entity of entities) {
       const relResult = await opts.graphStore.getRelated(entity.id, opts.workspaceId);
       if (relResult.isErr()) {
@@ -279,8 +282,19 @@ async function expandViaRelationships(
       }
     }
   } else {
-    // Fallback path: use inline entity.relationships array and look up by ID
-    for (const entity of entities) {
+    // Interleaved path: for each entity, emit it immediately followed by its
+    // forward- and reverse-expanded neighbours. This ensures that when a
+    // company ranks #1 (e.g. "contacts at Acme Corp"), its contacts appear at
+    // positions 2-N rather than after all 20 initial results, keeping them
+    // within the 2000-token context budget.
+    for (let i = 0; i < entities.length; i++) {
+      const entity = entities[i]!;
+
+      // Emit the entity itself
+      expanded.push(entity);
+      expandedScores.push(scores[i] ?? 0.5);
+
+      // Forward expansion: entities referenced by this entity's FK relationships.
       // relationships round-trips through JSONB — tolerate malformed entries
       // (missing/non-string targetId) instead of poisoning the whole query:
       // postgres.js rejects undefined parameters with UNDEFINED_VALUE.
@@ -302,13 +316,9 @@ async function expandViaRelationships(
           seenIds.add(rel.targetId);
         }
       }
-    }
 
-    // Reverse expansion: also find entities that reference the found entities.
-    // Fixes queries like "contacts at Acme Corp" where the company is found first
-    // but contacts point TO the company (not the other way around).
-    if (vectorStore.getByRelationshipTarget) {
-      for (const entity of entities) {
+      // Reverse expansion: entities that reference this entity (e.g., contacts at a company).
+      if (vectorStore.getByRelationshipTarget) {
         const reverseRelated = await vectorStore.getByRelationshipTarget(opts.workspaceId, entity.id);
         for (const related of reverseRelated) {
           if (seenIds.has(related.id)) continue;
