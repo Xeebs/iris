@@ -23,23 +23,6 @@ Completed tasks are moved to `pipeline/queue-archive.md` by `scripts/archive-que
 
 ---
 
-## Layer 77: API Surface Wiring (Critical Product Gap)
-
-> Mid-flight from before the Slice 2 pivot. May be finished (it repairs an existing product gap), but never takes priority over an UNWORKED Layer 79 task.
-
-### Task: Mount orphaned API route modules in server.ts
-- **Layer**: 77 — API Surface Wiring
-- **Status**: IN_PROGRESS — Batches 2–9 committed (2026-06-10): 34 routes now mounted in total (api-keys, search, usage, mcp-tools, query-analytics, connector-health, documents, sync-metrics, context-search, enrichments, validation, bulk-ops, analytics-pipeline, insights, dedup-admin, entity-change-stream, enrichment-quality, freshness-tracking, governance-dashboard, admin-cost-audit, workspace-costs, computed-metrics, api-version-admin, business-rules, cache-optimization, cache-prewarming, connector-performance, data-quality, quota-management, slo-admin, backup-recovery, budget-management, circuit-breaker-admin, compliance-audit, connector-benchmarks, cost-attribution, data-lineage, entity-reconciliation, batch-recommendations, health-scorecards, dsr, entity-subscriptions, entity-lifecycle, sync-optimizer, agent-feedback, context-deltas, context-summarization, context-versioning, field-mappings, event-streams, graphql, ha-admin, health-forecasts, index-repair, llm-providers, mcp-resource-discovery, mcp-streaming, mcp-subscriptions). 34 routes still unmounted. Next: mcp-tool-discovery, metrics-anomalies, multi-connector-optimizer, nl-query-generator, nl-query-sessions, osi-interchange, pii-masking-audit, query-cost-analysis, query-execution-plans, plus SqlBindings refactors for federation, llm-cost-optimization, mcp-auto-tools, query-clustering, relationship-inference.
-- **Priority**: High
-- **Description**: ~80 route factories in `apps/api/src/routes/*.ts` are exported and have passing unit tests but are NEVER mounted in `apps/api/src/server.ts`, so their endpoints return 404 in the running server. The pipeline generates a route module + test but does not wire it into `createApp`. This means many "implemented" features (including core flows like `/api/v1/api-keys` MCP key management, which the e2e fixtures depend on) are unreachable. Fix incrementally: (1) enumerate unmounted factories — for each `export function (create*Routes|make*Router)` in routes/, check it is referenced in server.ts; (2) for each, determine its constructor dependencies (sql / sql+redis / sql+vectorStore / sql+masterSecret) and the prefix asserted by its own test file (`app.route('<prefix>', ...)`); (3) mount in `createApp` under that prefix on the `authed` router (or `app` for unauthenticated webhooks), resolving any prefix collisions and sourcing required secrets from env; (4) build (`pnpm --filter @iris/api build`), commit a small BATCH (5–10 routes), push, and watch the Load Testing *Integration* job (boots the server, hits /health) to confirm boot. NEVER mount all at once — a single bad constructor (I/O at construction) or route collision breaks server boot and turns CI red. Each batch must keep CI green before the next.
-- **Files**:
-  - apps/api/src/server.ts (route mounts)
-  - any route factory whose signature/types need a small fix to mount
-- **Depends on**: nothing
-- **Added**: 2026-06-09
-
----
-
 ## Layer 74: Post-MVP Scale - Developer Experience & Advanced Analytics — ❄ FROZEN (Slice 2 mode)
 
 > Frozen 2026-06-10 by the Slice 2 pivot. Do not select tasks from this layer while `docs/SLICE_2.md` reads `NOT ACHIEVED`. After Slice 2, these re-enter the queue only if they serve a user-visible flow (post-slice prune comes first — see docs/SLICE_2.md "After the slice").

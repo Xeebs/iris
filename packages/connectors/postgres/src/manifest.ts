@@ -17,6 +17,7 @@ export const manifest: ConnectorManifest = {
           entityType: z.string().min(1).default('row'),
           updatedAtColumn: z.string().optional(),
           labelColumn: z.string().optional(),
+          labelColumns: z.array(z.string()).optional(),
         }),
       )
       .min(1),

@@ -4,6 +4,7 @@ Completed tasks are logged here by the daemon after each successful commit.
 
 ---
 
+- 2026-06-11 | fix(semantic-core,connector-postgres): S2-17 — amount_usd attribute resolution in superlative detection + labelColumns in manifest schema; demo passes 22/22 twice in a row (100% accuracy, 79.1% token savings)
 - 2026-06-10 | docs(docs): S2-13 SLICE_2_OWNER_SIGN_OFF.md checklist + CONNECT_CLAUDE.md cross-link
 - 2026-06-10 | docs(mcp-server,docs): S2-12 CONNECT_CLAUDE.md port fixes (3000→3001, 4000→3000), DEMO_MODE note, validation narrative
 - 2026-06-10 | feat(semantic-core): S2-11 interleaved relationship expansion — contacts appear immediately after parent company, fixing Q01/Q17 accuracy; test env isolation for EMBEDDING_PROVIDER

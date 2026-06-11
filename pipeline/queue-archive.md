@@ -5198,3 +5198,39 @@ the live queue small. Layer headings are repeated per archival batch.
   - packages/semantic-core/src/__tests__/retrieval.test.ts
 - **Depends on**: nothing
 - **Added**: 2026-06-11
+
+---
+
+<!-- archived 2026-06-11 -->
+
+## Layer 77: API Surface Wiring (Critical Product Gap)
+### Task: Mount orphaned API route modules in server.ts
+- **Layer**: 77 — API Surface Wiring
+- **Status**: COMMITTED — All batches complete (2026-06-11): all route modules in apps/api/src/routes/ are now mounted in server.ts. Batches 10-13 committed in 992845c: mcp-tool-discovery, metrics-anomalies, multi-connector-optimizer, nl-query-generator, nl-query-sessions, osi-interchange, pii-masking-audit, query-cost-analysis, query-execution-plans, query-expansion, query-explanation, query-learning, query-optimization, query-templates, relationship-recommendations, relevance, reliability-scoring, retention-policies, schema-discovery, schema-migrations, scim, sdk-downloads, search-quality, team-recommendations, temporal-cache, transformations, webhook-admin, webhook-dlq-admin, workspace-members, federation, llm-cost-optimization, mcp-auto-tools, query-clustering, relationship-inference.
+- **Priority**: High
+- **Description**: ~80 route factories in `apps/api/src/routes/*.ts` are exported and have passing unit tests but are NEVER mounted in `apps/api/src/server.ts`, so their endpoints return 404 in the running server. The pipeline generates a route module + test but does not wire it into `createApp`. This means many "implemented" features (including core flows like `/api/v1/api-keys` MCP key management, which the e2e fixtures depend on) are unreachable. Fix incrementally: (1) enumerate unmounted factories — for each `export function (create*Routes|make*Router)` in routes/, check it is referenced in server.ts; (2) for each, determine its constructor dependencies (sql / sql+redis / sql+vectorStore / sql+masterSecret) and the prefix asserted by its own test file (`app.route('<prefix>', ...)`); (3) mount in `createApp` under that prefix on the `authed` router (or `app` for unauthenticated webhooks), resolving any prefix collisions and sourcing required secrets from env; (4) build (`pnpm --filter @iris/api build`), commit a small BATCH (5–10 routes), push, and watch the Load Testing *Integration* job (boots the server, hits /health) to confirm boot. NEVER mount all at once — a single bad constructor (I/O at construction) or route collision breaks server boot and turns CI red. Each batch must keep CI green before the next.
+- **Files**:
+  - apps/api/src/server.ts (route mounts)
+  - any route factory whose signature/types need a small fix to mount
+- **Depends on**: nothing
+- **Added**: 2026-06-09
+
+---
+
+---
+
+<!-- archived 2026-06-11 -->
+
+## Layer 79: SLICE 2 — Iris in Real Use (see docs/SLICE_2.md)
+### Task: S2-17 Fix superlative attribute resolution (amount_usd) + manifest labelColumns + re-run demo
+- **Layer**: 79 — Slice 2
+- **Status**: COMMITTED
+- **Priority**: Critical
+- **Description**: The eval report (2026-06-10, 81.8% accuracy) is stale: the demo ran before the S2-4 labelColumns fix was committed, so contact labels in DB are just first names ("Alice" not "Alice Johnson"). Two remaining code bugs prevent ≥90%: (1) detectSuperlativeIntent defaults to attribute='amount' but deals have 'amount_usd' — fix by resolving the attribute key dynamically (try exact then _usd variant); (2) manifest.ts table configSchema missing 'labelColumns' field — add it so future connector instances store the array correctly. After fixing both: re-run scripts/slice2-demo.sh from scratch to create fresh entities with correct labels and verify eval passes ≥90%. The demo rebuilds packages, reseeds the DB, and runs the full eval chain.
+- **Files**:
+  - packages/semantic-core/src/retrieval.ts
+  - packages/connectors/postgres/src/manifest.ts
+  - pipeline/slice2-eval-report.md (updated by demo run)
+  - pipeline/slice2-eval-summary.json (updated by demo run)
+- **Depends on**: S2-1 through S2-16
+- **Added**: 2026-06-11

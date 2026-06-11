@@ -169,6 +169,26 @@ export const DEFAULT_RETRIEVAL_OPTIONS: Omit<RetrievalOptions, 'workspaceId'> = 
 };
 
 /**
+ * Resolve a logical attribute name to the actual key used in entity attributes.
+ * Tries the exact name first, then the `_usd` suffix variant so that queries
+ * for "amount" match entities that store values as "amount_usd", etc.
+ *
+ * @param entities - Candidate entities to probe for the attribute
+ * @param attr     - Logical attribute name (e.g. 'amount', 'annual_revenue')
+ * @returns The resolved attribute key to use for comparisons
+ */
+function resolveAttrKey(entities: SemanticEntity[], attr: string): string {
+  if (entities.some((e) => e.attributes[attr] !== null && e.attributes[attr] !== undefined)) {
+    return attr;
+  }
+  const usdVariant = `${attr}_usd`;
+  if (entities.some((e) => e.attributes[usdVariant] !== null && e.attributes[usdVariant] !== undefined)) {
+    return usdVariant;
+  }
+  return attr;
+}
+
+/**
  * Retrieve semantically relevant entities for a natural language query.
  * One embedding call per MCP request per embedding-patterns.md cost rules.
  *
@@ -272,7 +292,10 @@ export async function retrieveContext(
 
   // Post-process: superlative ranking (e.g. "second largest deal" → sort + slice)
   if (superlativeIntent) {
-    const { attribute, direction, rank } = superlativeIntent;
+    const { attribute: rawAttr, direction, rank } = superlativeIntent;
+    // Resolve the attribute key: try exact match first, then the _usd suffix variant
+    // (postgres connectors often store monetary values as amount_usd, annual_revenue_usd, etc.)
+    const attribute = resolveAttrKey(expanded, rawAttr);
     const candidates = expanded.filter(
       (e) => e.attributes[attribute] !== null &&
              e.attributes[attribute] !== undefined &&

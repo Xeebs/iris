@@ -1,13 +1,13 @@
 {
   "current_phase": "AWAITING_OWNER",
   "active_task": null,
-  "active_layer": null,
+  "active_layer": "79",
   "last_cycle": "2026-06-11",
   "last_research": "2026-06-11",
   "last_commit": "2026-06-11",
-  "cycle_count": 373,
+  "cycle_count": 375,
   "rate_limit_hit": false,
   "mode": "SLICE_2",
   "session_tasks_committed": 1,
-  "note": "Layer 77 route-mounting sweep fully complete (commit 992845c): all 34 remaining orphaned routes mounted in batches 10-13, including 5 SqlBindings refactors. Every route module in apps/api/src/routes/ is now reachable in the running server. Queue exhausted in permitted scope — Layer 79 AWAITING_OWNER, Layers 74/76 frozen. Exiting cleanly."
+  "note": "S2-17 committed. All script-verifiable Slice 2 criteria pass: demo 22/22 twice (100% accuracy, 79.1% token savings). Awaiting owner sign-off per docs/SLICE_2.md."
 }

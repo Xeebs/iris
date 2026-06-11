@@ -774,6 +774,39 @@ describe('retrieveContext — superlative post-sort (S2-14)', () => {
       expect.any(Object),
     );
   });
+
+  it('resolves amount_usd when entities use that variant instead of amount', async () => {
+    // Postgres connector stores deals as amount_usd, not amount
+    function makeDealUsd(id: string, amountUsd: number): SemanticEntity {
+      return {
+        id,
+        type: 'deal',
+        label: `Deal ${id}`,
+        attributes: { amount_usd: amountUsd, stage: 'closed_won' },
+        relationships: [],
+        lastModified: new Date('2026-01-01'),
+        sourceId: id,
+      };
+    }
+    const deals = [
+      { entity: makeDealUsd('deal:1', 50000), score: 0.9 },
+      { entity: makeDealUsd('deal:2', 145000), score: 0.8 },
+      { entity: makeDealUsd('deal:3', 128000), score: 0.7 },
+    ];
+    const store = makeMockVectorStore(deals);
+
+    const result = await retrieveContext('What is the second largest deal?', store, {
+      workspaceId: 'ws-1',
+      topK: 5,
+      expandRelationships: false,
+      maxDepth: 0,
+    });
+
+    // Should resolve to amount_usd and return the second-largest (deal:3 = 128000)
+    expect(result.entities).toHaveLength(1);
+    expect(result.entities[0]!.id).toBe('deal:3');
+    expect(result.entities[0]!.attributes['amount_usd']).toBe(128000);
+  });
 });
 
 // ─── retrieveContext — attribute filter post-processing ───────────────────────
