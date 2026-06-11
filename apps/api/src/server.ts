@@ -6,6 +6,7 @@ import { clerkMiddleware } from '@hono/clerk-auth';
 import { PgvectorStore } from '@iris/semantic-core';
 import { ConnectorHealthService } from '@iris/semantic-core/connector-health-service';
 import { createDefaultProvider } from '@iris/semantic-core/embedding-provider';
+import { validateEmbeddingDimension } from '@iris/semantic-core/validate-embedding-dimension';
 import { logger } from '@iris/core/logger';
 
 import { SyncJobQueue } from '@iris/queue';
@@ -542,6 +543,7 @@ async function main(): Promise<void> {
 
   const redisUrl = process.env['REDIS_URL'] ?? 'redis://localhost:6379';
   const sql = postgres(pgUrl);
+  await validateEmbeddingDimension(sql);
   const embeddingProvider = createDefaultProvider();
   const vectorStore = new PgvectorStore(pgUrl, embeddingProvider.getModelDimensions());
   await vectorStore.initialize();

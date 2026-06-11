@@ -25,6 +25,8 @@ export default defineConfig({
       '@iris/semantic-core/nl-query-generator': path.resolve(__dirname, '../../packages/semantic-core/src/nl-query-generator.ts'),
       '@iris/semantic-core/entity-change-stream': path.resolve(__dirname, '../../packages/semantic-core/src/entity-change-stream.ts'),
       '@iris/semantic-core/schema-discovery': path.resolve(__dirname, '../../packages/semantic-core/src/schema-discovery.ts'),
+      '@iris/semantic-core/validate-embedding-dimension': path.resolve(__dirname, '../../packages/semantic-core/src/validate-embedding-dimension.ts'),
+      '@iris/semantic-core/embedding-provider': path.resolve(__dirname, '../../packages/semantic-core/src/embedding-provider.ts'),
       '@iris/semantic-core': path.resolve(__dirname, '../../packages/semantic-core/src/index.ts'),
       '@iris/cache/semantic-cache': path.resolve(__dirname, '../../packages/cache/src/semantic-cache.ts'),
       '@iris/cache/response-cache': path.resolve(__dirname, '../../packages/cache/src/response-cache.ts'),

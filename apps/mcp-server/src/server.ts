@@ -36,6 +36,7 @@ import { bulkEntityUpdateTool, bulkEntityUpdateSchema } from './tools/bulk-entit
 import { entityTrendAnalysisTool, entityTrendAnalysisSchema } from './tools/entity-trend-analysis.js';
 import { createMultiConnectorQueryOptimizeTool } from './tools/multi-connector-query-optimize.js';
 import { createGenerateQueryFromQuestionTool } from './tools/generate-query-from-question.js';
+import { validateEmbeddingDimension } from '@iris/semantic-core/validate-embedding-dimension';
 
 const log = logger.child({ service: 'mcp-server' });
 
@@ -239,6 +240,7 @@ async function main(): Promise<void> {
     log.warn('No IRIS_API_KEY set — running in unauthenticated dev mode (all workspaces accessible)');
   }
 
+  await validateEmbeddingDimension(sql);
   const embeddingProvider = createDefaultProvider();
   const vectorStore = new PgvectorStore(pgUrl, embeddingProvider.getModelDimensions());
   await vectorStore.initialize();

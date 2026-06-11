@@ -92,3 +92,17 @@ Completed tasks are moved to `pipeline/queue-archive.md` by `scripts/archive-que
 - **Added**: 2026-06-09
 
 ---
+
+## Layer 79 — Slice 2
+
+### Task: S2-19 — Add Embedding Dimension Validation to MCP and API Startup
+- **Layer**: 79 — Slice 2
+- **Status**: IN_PROGRESS
+- **Priority**: High
+- **Description**: Ensure that embedding provider dimension mismatches (a critical SLICE_2.md requirement #1: "a provider/dimension mismatch at startup must be a hard, clear error — silent truncation or padding is forbidden") are caught with a clear error message at startup, not silently at query time. Call `validateEmbeddingDimension()` in both startup paths: (1) `apps/mcp-server/src/server.ts` main() before `vectorStore.initialize()` and (2) `apps/api/src/server.ts` main() before `vectorStore.initialize()`. Both calls must happen after the sql connection is open (the function queries `pg_attribute` to read the stored column dimension). The error message must name the migration to run (e.g., "Run apps/api/migrations/183_embedding_dimension_ollama.sql"). Add a small integration test: `apps/mcp-server/src/__tests__/embedding-validation.integration.test.ts` that verifies the startup error is thrown when schema has 1536 dims but EMBEDDING_PROVIDER=ollama (768 dims).
+- **Files**:
+  - apps/mcp-server/src/server.ts
+  - apps/api/src/server.ts
+  - apps/mcp-server/src/__tests__/embedding-validation.integration.test.ts
+- **Depends on**: nothing
+- **Added**: 2026-06-11
