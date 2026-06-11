@@ -6,6 +6,20 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
+# Locate pnpm — daemon-spawned shells may lack it in PATH; inject a shim via corepack.
+if ! command -v pnpm &>/dev/null; then
+  if command -v corepack &>/dev/null; then
+    _PNPM_SHIM_DIR=$(mktemp -d)
+    printf '#!/bin/bash\nexec corepack pnpm "$@"\n' > "$_PNPM_SHIM_DIR/pnpm"
+    chmod +x "$_PNPM_SHIM_DIR/pnpm"
+    export PATH="$_PNPM_SHIM_DIR:$PATH"
+    trap 'rm -rf "$_PNPM_SHIM_DIR"' EXIT
+  else
+    echo "ERROR: pnpm not found. Install via: corepack enable pnpm" >&2
+    exit 1
+  fi
+fi
+
 # Refuse hash-deterministic — Slice 2 requires real semantic embeddings.
 PROVIDER="${EMBEDDING_PROVIDER:-ollama}"
 if [ "$PROVIDER" = "hash-deterministic" ]; then
