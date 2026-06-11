@@ -107,7 +107,7 @@ As a quick sanity check before asking questions, run the programmatic smoke test
 source .env.local
 
 SLICE_WORKSPACE_ID=<uuid-from-step-1> \
-IRIS_API_KEY=iris_<token-from-step-1> \
+IRIS_API_KEY=<api-key-from-step-1> \
   node --import tsx scripts/mcp-smoke.ts
 ```
 
@@ -124,8 +124,8 @@ In the Claude Code session, ask each of these 5 questions (or their natural equi
 |---|----------|---------------------|
 | 1 | "Who are the contacts at Acme Corp?" | Alice Johnson, Marcus Webb, Diana Patel |
 | 2 | "List all our open deals and their total pipeline value." | Globex Enterprise Platform, Quantum Security Platform, multiple deals |
-| 3 | "Which companies have more than 200 employees?" | Globex, BlueSky, Quantum Systems, Forge Manufacturing, Pacific Dynamics, Ember Cloud |
-| 4 | "Who is the owner of our largest deal?" | Sarah Chen (or the deal name: Globex Enterprise Platform) |
+| 3 | "Which companies have more than 200 employees?" | Globex, BlueSky, Quantum Systems, Forge Manufacturing, Pacific Logistics, Ember Energy |
+| 4 | "Who is the owner of our largest deal?" | Sarah Kim (or the deal name: Globex Enterprise Platform) |
 | 5 | "Which contact is a CTO or VP of Engineering?" | Marcus Webb (CTO, Acme Corp) or others with matching title |
 
 - [ ] Q1 passes — at least Alice Johnson, Marcus Webb, Diana Patel appear
