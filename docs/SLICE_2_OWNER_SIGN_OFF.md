@@ -173,7 +173,7 @@ The pipeline will detect the status flip and enter post-slice mode.
   The Pi default is `azure` (1536-dim). Using `ollama` (768-dim) against azure-indexed data produces meaningless similarity scores and empty results.
 - If using Ollama: verify it is running: `curl -sf http://localhost:11434/api/tags`
 - If using Azure: verify the Azure endpoint and API key in `.mcp.json` match `.env.local`
-- Confirm the workspace ID in `.mcp.json` matches the one from `slice2-demo.sh`
+- Confirm the `IRIS_API_KEY` in `.mcp.json` is the key printed by `slice2-demo.sh` (starts with `iris_`). The workspace ID is derived from the API key — no need to edit it separately.
 
 **Accuracy below expectations for Q3 / Q12**
 - Questions about aggregate counts (companies with >200 employees) or superlatives (second largest deal) are harder for semantic search — see `docs/SLICE_2.md` known issues. Q1, Q2, Q4, Q5 should pass reliably; Q3 may require rephrasing.
