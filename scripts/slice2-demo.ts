@@ -17,7 +17,7 @@
  */
 
 import { spawn, type ChildProcess } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { fileURLToPath } from 'node:url';
 import { join } from 'node:path';
@@ -25,6 +25,23 @@ import { join } from 'node:path';
 import postgres from 'postgres';
 
 const ROOT = join(fileURLToPath(new URL('.', import.meta.url)), '..');
+
+// Load .env / .env.local so the demo is self-contained and doesn't depend on
+// the shell environment having the correct credentials pre-configured.
+// Project settings override shell defaults so credentials (AZURE_OPENAI_API_KEY,
+// OPENAI_API_KEY, etc.) are always sourced from the repo config, not the caller's env.
+for (const envFile of [join(ROOT, '.env'), join(ROOT, '.env.local')]) {
+  if (!existsSync(envFile)) continue;
+  for (const line of readFileSync(envFile, 'utf8').split('\n')) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) continue;
+    const eqIdx = trimmed.indexOf('=');
+    if (eqIdx < 0) continue;
+    const key = trimmed.slice(0, eqIdx).trim();
+    const val = trimmed.slice(eqIdx + 1).trim().replace(/^["']|["']$/g, '');
+    process.env[key] = val;
+  }
+}
 const API_DIR = join(ROOT, 'apps', 'api');
 const MCP_DIR = join(ROOT, 'apps', 'mcp-server');
 

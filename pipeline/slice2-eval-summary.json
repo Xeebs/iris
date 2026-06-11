@@ -1,17 +1,17 @@
 {
-  "generatedAt": "2026-06-11T05:08:07.911Z",
-  "workspaceId": "a9e7a0c0-730b-48d8-948c-879899d680c2",
-  "embeddingProvider": "ollama",
+  "generatedAt": "2026-06-11T05:41:41.249Z",
+  "workspaceId": "e87c2d80-2aff-4e27-b399-8c840cd2d74a",
+  "embeddingProvider": "azure",
   "totalQuestions": 22,
   "passedQuestions": 22,
   "accuracy": 1,
   "accuracyMet": true,
-  "totalIrisTokens": 38007,
+  "totalIrisTokens": 37837,
   "totalBaselineTokens": 182160,
-  "overallSavings": 0.7913537549407115,
+  "overallSavings": 0.7922870004391743,
   "savingsMet": true,
-  "latencyP50Ms": 90,
-  "latencyP95Ms": 167,
+  "latencyP50Ms": 244,
+  "latencyP95Ms": 584,
   "categoryBreakdown": {
     "relationship": {
       "total": 4,
@@ -41,9 +41,9 @@
       "category": "relationship",
       "passed": true,
       "missingFacts": [],
-      "irisTokens": 1993,
-      "savings": 0.7592995169082126,
-      "latencyMs": 167
+      "irisTokens": 1946,
+      "savings": 0.764975845410628,
+      "latencyMs": 403
     },
     {
       "id": "Q02",
@@ -53,7 +53,7 @@
       "missingFacts": [],
       "irisTokens": 90,
       "savings": 0.9891304347826086,
-      "latencyMs": 102
+      "latencyMs": 331
     },
     {
       "id": "Q03",
@@ -61,9 +61,9 @@
       "category": "relationship",
       "passed": true,
       "missingFacts": [],
-      "irisTokens": 1982,
-      "savings": 0.7606280193236715,
-      "latencyMs": 99
+      "irisTokens": 1990,
+      "savings": 0.7596618357487923,
+      "latencyMs": 127
     },
     {
       "id": "Q04",
@@ -71,9 +71,9 @@
       "category": "aggregate_count",
       "passed": true,
       "missingFacts": [],
-      "irisTokens": 1947,
-      "savings": 0.7648550724637682,
-      "latencyMs": 176
+      "irisTokens": 1979,
+      "savings": 0.7609903381642512,
+      "latencyMs": 179
     },
     {
       "id": "Q05",
@@ -81,9 +81,9 @@
       "category": "entity_lookup",
       "passed": true,
       "missingFacts": [],
-      "irisTokens": 1987,
-      "savings": 0.760024154589372,
-      "latencyMs": 87
+      "irisTokens": 1961,
+      "savings": 0.7631642512077295,
+      "latencyMs": 584
     },
     {
       "id": "Q06",
@@ -91,9 +91,9 @@
       "category": "filter",
       "passed": true,
       "missingFacts": [],
-      "irisTokens": 1997,
-      "savings": 0.758816425120773,
-      "latencyMs": 90
+      "irisTokens": 1944,
+      "savings": 0.7652173913043478,
+      "latencyMs": 235
     },
     {
       "id": "Q07",
@@ -101,9 +101,9 @@
       "category": "entity_lookup",
       "passed": true,
       "missingFacts": [],
-      "irisTokens": 1981,
-      "savings": 0.7607487922705314,
-      "latencyMs": 96
+      "irisTokens": 1979,
+      "savings": 0.7609903381642512,
+      "latencyMs": 489
     },
     {
       "id": "Q08",
@@ -111,9 +111,9 @@
       "category": "aggregate_superlative",
       "passed": true,
       "missingFacts": [],
-      "irisTokens": 1991,
-      "savings": 0.7595410628019323,
-      "latencyMs": 90
+      "irisTokens": 1941,
+      "savings": 0.7655797101449275,
+      "latencyMs": 163
     },
     {
       "id": "Q09",
@@ -121,9 +121,9 @@
       "category": "filter",
       "passed": true,
       "missingFacts": [],
-      "irisTokens": 1949,
-      "savings": 0.7646135265700483,
-      "latencyMs": 89
+      "irisTokens": 1950,
+      "savings": 0.7644927536231885,
+      "latencyMs": 251
     },
     {
       "id": "Q10",
@@ -131,9 +131,9 @@
       "category": "entity_lookup",
       "passed": true,
       "missingFacts": [],
-      "irisTokens": 1993,
-      "savings": 0.7592995169082126,
-      "latencyMs": 89
+      "irisTokens": 1998,
+      "savings": 0.758695652173913,
+      "latencyMs": 244
     },
     {
       "id": "Q11",
@@ -141,9 +141,9 @@
       "category": "filter",
       "passed": true,
       "missingFacts": [],
-      "irisTokens": 1981,
-      "savings": 0.7607487922705314,
-      "latencyMs": 159
+      "irisTokens": 1975,
+      "savings": 0.7614734299516908,
+      "latencyMs": 192
     },
     {
       "id": "Q12",
@@ -153,7 +153,7 @@
       "missingFacts": [],
       "irisTokens": 91,
       "savings": 0.9890096618357488,
-      "latencyMs": 93
+      "latencyMs": 543
     },
     {
       "id": "Q13",
@@ -161,9 +161,9 @@
       "category": "entity_lookup",
       "passed": true,
       "missingFacts": [],
-      "irisTokens": 1986,
-      "savings": 0.7601449275362319,
-      "latencyMs": 80
+      "irisTokens": 1987,
+      "savings": 0.760024154589372,
+      "latencyMs": 189
     },
     {
       "id": "Q14",
@@ -171,9 +171,9 @@
       "category": "filter",
       "passed": true,
       "missingFacts": [],
-      "irisTokens": 1928,
-      "savings": 0.7671497584541063,
-      "latencyMs": 80
+      "irisTokens": 1953,
+      "savings": 0.7641304347826087,
+      "latencyMs": 809
     },
     {
       "id": "Q15",
@@ -181,9 +181,9 @@
       "category": "aggregate_count",
       "passed": true,
       "missingFacts": [],
-      "irisTokens": 1952,
-      "savings": 0.7642512077294686,
-      "latencyMs": 85
+      "irisTokens": 2000,
+      "savings": 0.7584541062801933,
+      "latencyMs": 208
     },
     {
       "id": "Q16",
@@ -191,9 +191,9 @@
       "category": "relationship",
       "passed": true,
       "missingFacts": [],
-      "irisTokens": 1991,
-      "savings": 0.7595410628019323,
-      "latencyMs": 118
+      "irisTokens": 1947,
+      "savings": 0.7648550724637682,
+      "latencyMs": 275
     },
     {
       "id": "Q17",
@@ -201,9 +201,9 @@
       "category": "relationship",
       "passed": true,
       "missingFacts": [],
-      "irisTokens": 1967,
-      "savings": 0.7624396135265701,
-      "latencyMs": 117
+      "irisTokens": 1954,
+      "savings": 0.7640096618357488,
+      "latencyMs": 246
     },
     {
       "id": "Q18",
@@ -211,9 +211,9 @@
       "category": "entity_lookup",
       "passed": true,
       "missingFacts": [],
-      "irisTokens": 1981,
-      "savings": 0.7607487922705314,
-      "latencyMs": 107
+      "irisTokens": 1980,
+      "savings": 0.7608695652173914,
+      "latencyMs": 225
     },
     {
       "id": "Q19",
@@ -223,7 +223,7 @@
       "missingFacts": [],
       "irisTokens": 298,
       "savings": 0.9640096618357488,
-      "latencyMs": 77
+      "latencyMs": 276
     },
     {
       "id": "Q20",
@@ -231,9 +231,9 @@
       "category": "entity_lookup",
       "passed": true,
       "missingFacts": [],
-      "irisTokens": 1981,
-      "savings": 0.7607487922705314,
-      "latencyMs": 88
+      "irisTokens": 1967,
+      "savings": 0.7624396135265701,
+      "latencyMs": 303
     },
     {
       "id": "Q21",
@@ -241,9 +241,9 @@
       "category": "filter",
       "passed": true,
       "missingFacts": [],
-      "irisTokens": 1988,
-      "savings": 0.759903381642512,
-      "latencyMs": 103
+      "irisTokens": 1948,
+      "savings": 0.7647342995169082,
+      "latencyMs": 166
     },
     {
       "id": "Q22",
@@ -251,9 +251,9 @@
       "category": "filter",
       "passed": true,
       "missingFacts": [],
-      "irisTokens": 1953,
-      "savings": 0.7641304347826087,
-      "latencyMs": 84
+      "irisTokens": 1959,
+      "savings": 0.7634057971014493,
+      "latencyMs": 221
     }
   ]
 }

@@ -6,7 +6,7 @@ import { OllamaProvider } from './providers/ollama-provider.js';
 import { CohereProvider } from './providers/cohere-provider.js';
 import { DeterministicHashProvider } from './providers/deterministic-hash-provider.js';
 
-export type EmbeddingProviderType = 'openai' | 'azure' | 'ollama' | 'cohere' | 'hash-deterministic';
+export type EmbeddingProviderType = 'openai' | 'azure' | 'azure-openai' | 'ollama' | 'cohere' | 'hash-deterministic';
 
 export type EmbeddingProviderConfig = {
   provider: EmbeddingProviderType;
@@ -43,6 +43,7 @@ export function createEmbeddingProvider(config: EmbeddingProviderConfig): Embedd
         config.modelId ?? process.env['EMBEDDING_MODEL_ID'] ?? 'text-embedding-3-small',
       );
     case 'azure':
+    case 'azure-openai':
       return new AzureOpenAIProvider({
         endpoint: config.endpoint ?? process.env['AZURE_OPENAI_ENDPOINT'] ?? '',
         apiKey: config.apiKey ?? process.env['AZURE_OPENAI_API_KEY'] ?? '',
