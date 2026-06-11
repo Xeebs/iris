@@ -41,7 +41,7 @@ async function main(): Promise<void> {
     fail(
       'WORKSPACE_ID (or SLICE_WORKSPACE_ID) is required.\n' +
         '  Get it from the dashboard (Settings → API Keys) or from the demo bootstrap:\n' +
-        '    curl -X POST http://localhost:3000/api/v1/demo/bootstrap \\\n' +
+        '    curl -X POST http://localhost:3001/api/v1/demo/bootstrap \\\n' +
         '      -H "Content-Type: application/json" \\\n' +
         "      -d '{\"name\": \"Smoke Test Workspace\"}'",
     );

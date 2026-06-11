@@ -20,16 +20,22 @@ This guide walks through registering Iris as an MCP server in Claude Code so you
 
 ### From the dashboard
 
-1. Open the Iris dashboard at `http://localhost:4000`
-2. Navigate to **Settings → API Keys**
-3. Click **Create key**, select your workspace, and copy the key — it starts with `iris_`
+1. Start the API and dashboard: `pnpm dev`
+2. Open the Iris dashboard at `http://localhost:3000`
+3. Navigate to **Settings → API Keys**
+4. Click **Create key**, select your workspace, and copy the key — it starts with `iris_`
 
 ### From the demo bootstrap (CLI)
 
-If you have not set up a workspace yet, bootstrap one in one command:
+If you have not set up a workspace yet, bootstrap one in one command. The API must be running with `DEMO_MODE=true`:
 
 ```bash
-curl -X POST http://localhost:3000/api/v1/demo/bootstrap \
+# Start the API in demo mode (separate terminal)
+DEMO_MODE=true DATABASE_URL=postgresql://postgres:postgres@localhost:5432/iris \
+  pnpm --filter @iris/api dev &
+
+# Bootstrap a workspace and API key
+curl -X POST http://localhost:3001/api/v1/demo/bootstrap \
   -H "Content-Type: application/json" \
   -d '{"name": "My Workspace"}'
 ```
@@ -38,7 +44,7 @@ The response contains `data.workspaceId` and `data.apiKey`. Save both.
 
 ### From the slice2-demo output
 
-If you ran `bash scripts/slice2-demo.sh`, the workspace ID is printed during step 5 and the API key is stored in the demo environment. Re-run the bootstrap curl above to get a fresh key for manual use.
+If you ran `bash scripts/slice2-demo.sh`, the workspace ID is printed during the bootstrap step and the API key is printed at the end. Copy both from the output — you do not need to call the bootstrap endpoint separately.
 
 ## Step 2: Set environment variables
 

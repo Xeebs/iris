@@ -4,6 +4,7 @@ Completed tasks are logged here by the daemon after each successful commit.
 
 ---
 
+- 2026-06-10 | docs(mcp-server,docs): S2-12 CONNECT_CLAUDE.md port fixes (3000→3001, 4000→3000), DEMO_MODE note, validation narrative
 - 2026-06-10 | feat(semantic-core): S2-11 interleaved relationship expansion — contacts appear immediately after parent company, fixing Q01/Q17 accuracy; test env isolation for EMBEDDING_PROVIDER
 - 2026-06-10 | feat(dashboard,tests): S2-5 onboarding golden path — postgres config form, MCP snippet screen, Playwright API tests, CI job
 - 2026-06-10 | feat(scripts,api,connector-postgres): S2-4 slice2-demo.sh + CI job — real-data demo driver, Ollama CI job, postgres connector labelColumns, eval path fix, connector registration

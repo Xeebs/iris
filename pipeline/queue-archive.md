@@ -5124,3 +5124,19 @@ the live queue small. Layer headings are repeated per archival batch.
   - .github/workflows/slice2-demo.yml (validation + documentation comment)
 - **Depends on**: S2-10
 - **Added**: 2026-06-10
+
+---
+
+<!-- archived 2026-06-10 -->
+
+## Layer 79: SLICE 2 — Iris in Real Use (see docs/SLICE_2.md)
+### Task: S2-12 Deployment readiness — CONNECT_CLAUDE.md end-to-end validation
+- **Layer**: 79 — Slice 2
+- **Status**: COMMITTED
+- **Priority**: High
+- **Description**: The docs/CONNECT_CLAUDE.md guide explains how to register Iris as an MCP server in Claude Code. However, the E2E flow has never been validated by a real user. Create a narrative test (not an automated test — this is owner-preparedness): (1) follow all steps in CONNECT_CLAUDE.md from scratch (assume a fresh Iris checkout with the seeded demo data), (2) successfully connect to Claude Code via the documented method, (3) ask the 22 eval questions from eval-questions.json and confirm ≥90% return correct facts, (4) document any UX friction points (missing env vars, unclear paths, incomplete instructions), (5) update CONNECT_CLAUDE.md with fixes. This task prepares the owner to do the final verification step. Success: CONNECT_CLAUDE.md is known to work end-to-end, and a summary document lists any barriers encountered and how they were resolved (or intentionally deferred to post-Slice 2).
+- **Files**:
+  - docs/CONNECT_CLAUDE.md (validation + UX fixes)
+  - docs/SLICE_2_CONNECT_VALIDATION.md (new — narrative of the E2E test)
+- **Depends on**: S2-10
+- **Added**: 2026-06-10
