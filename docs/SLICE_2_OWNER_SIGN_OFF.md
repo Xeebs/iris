@@ -13,8 +13,13 @@ CI cannot substitute for this step. Complete the checklist below, then flip the 
 - [ ] You are on a machine with the Iris repo checked out and `pnpm install` run
 - [ ] PostgreSQL (with pgvector extension) is running and accessible at `$DATABASE_URL`
 - [ ] Redis is running (default: `redis://localhost:6379`)
-- [ ] Ollama is running and `nomic-embed-text` is pulled: `ollama list | grep nomic-embed-text`
-  - If not pulled: `ollama pull nomic-embed-text`
+- [ ] Embedding provider is configured. Check which one is active:
+  ```bash
+  grep EMBEDDING_PROVIDER .env.local
+  # or: python3 -c "import json; d=json.load(open('pipeline/slice2-eval-summary.json')); print('Provider:', d['embeddingProvider'])"
+  ```
+  - **Azure** (default on the Pi — `EMBEDDING_PROVIDER=azure`): confirm `AZURE_OPENAI_ENDPOINT` and `AZURE_OPENAI_API_KEY` are set in `.env.local`
+  - **Ollama** (`EMBEDDING_PROVIDER=ollama`): confirm Ollama is running: `ollama list | grep nomic-embed-text` (pull if missing: `ollama pull nomic-embed-text`)
 - [ ] The MCP server is built: `pnpm --filter @iris/mcp-server build`
   - Produces `apps/mcp-server/dist/server.js`
 
@@ -48,13 +53,17 @@ Save both `Workspace` (the UUID) and `IRIS_API_KEY`.
 
 ## Step 2 — Configure `.mcp.json`
 
-Copy the template and fill in your values:
+Copy the template that matches your embedding provider:
 
 ```bash
+# Azure (default on the Pi — most likely what you need):
+cp examples/claude-code-mcp-azure.json .mcp.json
+
+# Ollama:
 cp examples/claude-code-mcp.json .mcp.json
 ```
 
-Edit `.mcp.json` — replace all three placeholders:
+Edit `.mcp.json` — replace all placeholders. For **Azure**:
 
 ```json
 {
@@ -67,16 +76,22 @@ Edit `.mcp.json` — replace all three placeholders:
         "DATABASE_URL": "postgresql://postgres:postgres@localhost:5432/iris",
         "REDIS_URL": "redis://localhost:6379",
         "IRIS_API_KEY": "iris_YOUR_KEY_FROM_STEP_1",
-        "EMBEDDING_PROVIDER": "ollama",
-        "OLLAMA_ENDPOINT": "http://localhost:11434"
+        "EMBEDDING_PROVIDER": "azure",
+        "AZURE_OPENAI_ENDPOINT": "https://your-resource.cognitiveservices.azure.com/",
+        "AZURE_OPENAI_API_KEY": "your-azure-api-key",
+        "AZURE_OPENAI_API_VERSION": "2023-05-15",
+        "AZURE_OPENAI_SMALL_DEPLOYMENT": "text-embedding-3-small"
       }
     }
   }
 }
 ```
 
-- [ ] `/ABSOLUTE/PATH/TO/iris` replaced with real path (e.g. `/home/you/iris`)
+Copy the actual Azure values from `.env.local` — they are already set there.
+
+- [ ] `/ABSOLUTE/PATH/TO/iris` replaced with real path (e.g. `/home/xhasan/my-projects/Iris`)
 - [ ] `IRIS_API_KEY` replaced with the key from Step 1
+- [ ] Azure values (or Ollama endpoint) filled in to match what was used at index time
 - [ ] `.mcp.json` is in the Iris repo root (or `~/.claude/mcp.json` for global registration)
 
 ---
@@ -88,10 +103,11 @@ Open a new Claude Code session in the Iris project directory. Iris should appear
 As a quick sanity check before asking questions, run the programmatic smoke test:
 
 ```bash
-WORKSPACE_ID=<uuid-from-step-1> \
+# Source .env.local first so EMBEDDING_PROVIDER and provider credentials are inherited:
+source .env.local
+
+SLICE_WORKSPACE_ID=<uuid-from-step-1> \
 IRIS_API_KEY=iris_<token-from-step-1> \
-DATABASE_URL=postgresql://postgres:postgres@localhost:5432/iris \
-EMBEDDING_PROVIDER=ollama \
   node --import tsx scripts/mcp-smoke.ts
 ```
 
@@ -152,8 +168,11 @@ The pipeline will detect the status flip and enter post-slice mode.
 - If you re-ran the demo, get the new key from that run's output
 
 **Empty results / wrong answers**
-- Confirm `EMBEDDING_PROVIDER` in `.mcp.json` matches what was used during indexing (`ollama` if you ran `slice2-demo.sh` on the Pi)
-- Verify Ollama is still running: `curl -sf http://localhost:11434/api/tags`
+- Confirm `EMBEDDING_PROVIDER` in `.mcp.json` matches what was used during indexing.
+  Check: `python3 -c "import json; d=json.load(open('pipeline/slice2-eval-summary.json')); print(d['embeddingProvider'])"`
+  The Pi default is `azure` (1536-dim). Using `ollama` (768-dim) against azure-indexed data produces meaningless similarity scores and empty results.
+- If using Ollama: verify it is running: `curl -sf http://localhost:11434/api/tags`
+- If using Azure: verify the Azure endpoint and API key in `.mcp.json` match `.env.local`
 - Confirm the workspace ID in `.mcp.json` matches the one from `slice2-demo.sh`
 
 **Accuracy below expectations for Q3 / Q12**

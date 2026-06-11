@@ -93,19 +93,13 @@ Completed tasks are moved to `pipeline/queue-archive.md` by `scripts/archive-que
 
 ---
 
-## Layer 79 — Slice 2
+## Layer 79: Slice 2 — Iris in Real Use
 
-> Tasks that directly unblock or harden the owner's live Slice 2 session. Only generated when the vertical slice (Layer 78) is ACHIEVED.
-
-### Task: Verify .mcp.json path resolution in startup validation
-- **Layer**: 79 — Slice 2
+### Task: Fix SLICE_2_OWNER_SIGN_OFF.md for Azure Embeddings Default
+- **Layer**: 79 — Slice 2 — Iris in Real Use
 - **Status**: COMMITTED
 - **Priority**: High
-- **Description**: The owner must set the absolute path to apps/mcp-server/dist/server.js in .mcp.json. If the path is wrong (relative, symlink-broken, missing dist/), the MCP server fails silently in Claude Code's tool loading. Add a validation step to apps/mcp-server/src/server.ts startup: when running as an MCP server (detect via stdio or SLICE_WORKSPACE_ID env), log the resolved __filename and validate that dist/server.js is the actual entry point. On path mismatch, throw a clear error: "MCP server started from wrong path: expected /correct/path, got /actual/path. Check examples/claude-code-mcp.json and .mcp.json." Document this in docs/CONNECT_CLAUDE.md troubleshooting section.
-- **Files**:
-  - apps/mcp-server/src/server.ts
-  - docs/CONNECT_CLAUDE.md
+- **Description**: The owner sign-off checklist currently hardcodes Ollama as the embedding provider, but the Pi setup (.env.local) and the last eval run (slice2-eval-summary.json) both confirm Azure is the default. Update docs/SLICE_2_OWNER_SIGN_OFF.md: (1) Pre-flight section (lines 14-17): replace "Ollama is running..." with clear instructions to detect which provider is configured (mention checking .env.local and slice2-eval-summary.json), list setup for both Azure and Ollama side by side, (2) Step 2 template (line 70): replace hardcoded `"EMBEDDING_PROVIDER": "ollama"` with `"EMBEDDING_PROVIDER": "azure"` and a note that Ollama users should override, (3) Step 4 troubleshooting (line 156): expand "Empty results" section to mention provider dimension mismatch (768-dim vs 1536-dim) as a root cause. Reference docs/CONNECT_CLAUDE.md section "How to check which provider indexed the current data" (lines 79-87) for the detection pattern. After edits, verify the sign-off doc reads coherently end-to-end (owner can follow it blind without knowing Azure vs Ollama beforehand). Do NOT modify SLICE_2.md status line or any acceptance criteria — this is doc clarity only.
+- **Files**: docs/SLICE_2_OWNER_SIGN_OFF.md
 - **Depends on**: nothing
 - **Added**: 2026-06-11
-
----
