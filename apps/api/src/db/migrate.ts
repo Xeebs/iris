@@ -16,6 +16,19 @@ const MIGRATIONS_DIR = join(__dirname, '..', '..', 'migrations');
 const DATABASE_URL =
   process.env['DATABASE_URL'] ?? 'postgres://postgres:postgres@localhost:5432/iris';
 
+/**
+ * Parse `@requires-env KEY=VALUE` annotations from migration file header.
+ * If present, the migration is skipped unless the env var matches exactly.
+ */
+function checkRequiresEnv(content: string): boolean {
+  const match = content.match(/^--\s*@requires-env\s+(\w+)=(\S+)/m);
+  if (!match) return true;
+  const key = match[1];
+  const value = match[2];
+  if (!key || !value) return true;
+  return process.env[key] === value;
+}
+
 let currentFile = '(unknown)';
 
 async function runMigrations(): Promise<void> {
@@ -48,6 +61,10 @@ async function runMigrations(): Promise<void> {
 
       currentFile = file;
       const content = await readFile(join(MIGRATIONS_DIR, file), 'utf-8');
+      if (!checkRequiresEnv(content)) {
+        console.log(`  skip  ${file} (@requires-env not satisfied)`);
+        continue;
+      }
       await sql.begin(async (tx) => {
         await tx.unsafe(content);
         await tx`INSERT INTO _iris_migrations (filename) VALUES (${file})`;

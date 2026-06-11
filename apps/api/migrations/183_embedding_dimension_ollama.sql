@@ -1,4 +1,5 @@
 -- Migration 183: Switch iris_entities embedding column to vector(768) for Ollama deployments.
+-- @requires-env EMBEDDING_PROVIDER=ollama
 --
 -- Run this migration when EMBEDDING_PROVIDER=ollama (nomic-embed-text, 768 dimensions).
 -- Migration 182 created the default vector(1536) column (OpenAI / hash-deterministic).
