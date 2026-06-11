@@ -155,7 +155,7 @@ export default function StreamingPreviewPanel() {
           {String(doneChunk.data['totalEntities'])} entities &mdash;{' '}
           {String(doneChunk.data['totalTokensUsed'])} tokens &mdash;{' '}
           {String(doneChunk.data['durationMs'])} ms
-          {doneChunk.data['truncated'] && (
+          {Boolean(doneChunk.data['truncated']) && (
             <span className="ml-2 text-amber-600 font-medium">Truncated</span>
           )}
         </div>

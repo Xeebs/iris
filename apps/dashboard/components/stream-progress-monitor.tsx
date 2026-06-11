@@ -93,7 +93,7 @@ export function StreamProgressMonitor({
             setProgress((p) => ({
               ...p,
               isComplete: true,
-              elapsedMs: p.startedAt ? Math.round(performance.now() - p.startedAt) : undefined,
+              ...(p.startedAt ? { elapsedMs: Math.round(performance.now() - p.startedAt) } : {}),
             }));
             onComplete?.();
             setIsStreaming(false);
@@ -106,7 +106,7 @@ export function StreamProgressMonitor({
               error?: string;
             };
             if (chunk.error) {
-              setProgress((p) => ({ ...p, hasError: true, errorMessage: chunk.error }));
+              setProgress((p) => ({ ...p, hasError: true, ...(chunk.error ? { errorMessage: chunk.error } : {}) }));
               onError?.(chunk.error ?? 'Stream error');
               continue;
             }
@@ -117,7 +117,7 @@ export function StreamProgressMonitor({
               bytesReceived: p.bytesReceived + bytes,
               tokensReceived: p.tokensReceived + (chunk.metadata?.tokensInChunk ?? 0),
               entitiesReceived: p.entitiesReceived + (chunk.entities?.length ?? 0),
-              elapsedMs: p.startedAt ? Math.round(performance.now() - p.startedAt) : undefined,
+              ...(p.startedAt ? { elapsedMs: Math.round(performance.now() - p.startedAt) } : {}),
             }));
             onChunk?.(chunk.entities ?? []);
           } catch {
