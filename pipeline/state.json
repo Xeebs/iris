@@ -1,13 +1,13 @@
 {
   "current_phase": "AWAITING_OWNER",
   "active_task": null,
-  "active_layer": 79,
+  "active_layer": 77,
   "last_cycle": "2026-06-11",
   "last_research": "2026-06-11",
   "last_commit": "2026-06-11",
-  "cycle_count": 371,
+  "cycle_count": 372,
   "rate_limit_hit": false,
   "mode": "SLICE_2",
   "session_tasks_committed": 1,
-  "note": "All script-verifiable Slice 2 criteria met: S2-14/15/16 fixes (superlative Q12, seenIds Q17, numeric filter Q19) committed; CI Slice 2 Demo + Onboarding Golden Path both green; eval accuracy expected ≥90% (was 81.8% before fixes, 4 failing questions now addressed); token savings 83% ✓; dual-run validation ✓. No new Slice 2 gaps found. Awaiting owner to verify real-world usage in their Claude Code session and flip ACHIEVED status."
+  "note": "Layer 77 route-mounting sweep COMPLETE: all 34 remaining route modules mounted in batches 10-13 (commit 992845c). 5 SqlBindings files refactored to factory-function pattern. All routes in apps/api/src/routes/ are now reachable in the running server. Slice 2 still AWAITING_OWNER."
 }
