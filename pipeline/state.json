@@ -5,9 +5,9 @@
   "last_cycle": "2026-06-11",
   "last_research": "2026-06-11",
   "last_commit": "2026-06-11",
-  "cycle_count": 452,
+  "cycle_count": 472,
   "rate_limit_hit": false,
   "mode": "SLICE_2",
   "session_tasks_committed": 0,
-  "note": "Cycle 452: daemon wake-up — CI GREEN (daemon-verified). State remains AWAITING_OWNER. docs/SLICE_2.md status line still reads NOT ACHIEVED. slice2-demo.sh last verified cycle 451: 22/22 eval questions, 100% accuracy, 79.2% token savings — no regressions. All Layer 79 tasks COMMITTED and archived. CONNECT_CLAUDE.md, SLICE_2_OWNER_SIGN_OFF.md, mcp-smoke.ts, and examples/claude-code-mcp.json are all in place. Awaiting owner sign-off per docs/SLICE_2.md — only the owner may flip the status line. Owner: follow docs/CONNECT_CLAUDE.md to register Iris in your Claude Code session, ask real questions against the seeded data, confirm correct answers, then flip the status line in docs/SLICE_2.md and check the box in docs/SLICE_2_OWNER_SIGN_OFF.md. Pipeline will continue exiting each cycle until the status line is flipped."
+  "note": "Cycle 472 research: task-researcher verified all script-verifiable acceptance criteria PASS. (1) slice2-demo.sh runs from fresh DB with real embeddings (OpenAI text-embedding-3-small), real data source (Postgres iris_demo_source), syncs 98 entities. (2) Eval harness: 22 questions, 100% accuracy (≥90% req), 79.2% token savings (≥70% req). (3) Demo passes twice in a row from clean state. (4) CI all green: Slice 2 Demo, Onboarding Golden Path, Slice Demo, Load Testing. (5) onboarding-golden-path.spec.ts exists and is green. (6) CONNECT_CLAUDE.md complete, SLICE_2_OWNER_SIGN_OFF.md complete, examples/claude-code-mcp.json ready. Zero unmet technical criteria. Zero new tasks generated — all Layer 79 already completed. Awaiting owner sign-off per docs/SLICE_2.md (non-waivable: owner registers Iris in their Claude Code, asks 5 canonical questions, confirms correct answers, flips status line personally). Pipeline exits cleanly; owner-verified criterion cannot be automated."
 }
