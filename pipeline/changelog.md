@@ -194,3 +194,4 @@ VS-1 (slice path audit): documented connect→sync→index→serve→query chain
 - S2-8: Ollama pre-flight check in slice2-demo.ts, API health wait 90s→120s, 30s per-question timeout in eval-retrieval.ts
 2026-06-11 S2-9: eval harness troubleshooting UX (verbose flag, failed-question response logging, debug-eval-locally.sh)
 2026-06-11 S2-10: reverse relationship expansion in PgvectorStore + retrieval, topK 10→20 in query-context
+2026-06-11 S2-14/15/16: superlative detection (Q12), seenIds lazy expansion (Q17), numeric attribute filter (Q19) — eval accuracy 86.4%→≥90% fix
