@@ -166,9 +166,14 @@ export class PgvectorStore implements VectorStore {
     if (dimRows.length > 0) {
       const storedDim = dimRows[0]!.atttypmod;
       if (storedDim !== -1 && storedDim !== this.dimensions) {
+        const providerName = process.env['EMBEDDING_PROVIDER'] ?? 'openai';
+        const migrationHint =
+          providerName === 'ollama'
+            ? 'Run migration 183 (apps/api/migrations/183_embedding_dimension_ollama.sql) to switch to vector(768).'
+            : 'Run migration 182 (apps/api/migrations/182_embedding_dimension_768.sql) to reset to vector(1536).';
         throw new IndexerError(
           `Embedding dimension mismatch: store has vector(${storedDim}) but the configured provider needs ${this.dimensions} dimensions. ` +
-            `A full re-index is required — drop the iris_entities table and re-run migrations.`,
+            `${migrationHint} See docs/CONNECT_CLAUDE.md#troubleshooting.`,
         );
       }
     }

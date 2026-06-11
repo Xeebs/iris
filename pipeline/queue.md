@@ -27,21 +27,9 @@ Completed tasks are moved to `pipeline/queue-archive.md` by `scripts/archive-que
 
 > While `docs/SLICE_2.md` reads `NOT ACHIEVED`, the pipeline selects ONLY from this layer, the CI gate, and the in-flight Layer 77 task. Goal: the owner connects a real data source, registers Iris in their own Claude Code, and gets correct answers with real embeddings — accuracy and token cost measured by an eval harness.
 
-### Task: S2-6 Claude Code MCP registration — docs, config template, stdio smoke test
-- **Layer**: 79 — Slice 2
-- **Status**: IN_PROGRESS
-- **Priority**: Medium
-- **Description**: Make connecting a real Claude client a documented 5-minute step. Write `docs/CONNECT_CLAUDE.md`: exact steps to register the Iris MCP server in Claude Code (`claude mcp add` command and the equivalent `.mcp.json` block), including env (`IRIS_API_KEY`, `DATABASE_URL`, `EMBEDDING_PROVIDER`), how to get the API key (from the demo bootstrap or the dashboard snippet screen from S2-5), and the canonical questions to try. Add a checked-in template `examples/claude-code-mcp.json`. Add `scripts/mcp-smoke.ts`: connects to the MCP server over stdio exactly as Claude Code would (official MCP SDK client), lists tools, calls `query-context` once, asserts a non-empty in-budget response — this is the CI-checkable proxy for the owner-verified criterion. The final acceptance checkbox in docs/SLICE_2.md (owner uses it in a live Claude Code session) is flipped by the OWNER ONLY — the pipeline must never mark it done.
-- **Files**:
-  - docs/CONNECT_CLAUDE.md
-  - examples/claude-code-mcp.json
-  - scripts/mcp-smoke.ts
-- **Depends on**: S2-4
-- **Added**: 2026-06-10
-
 ### Task: S2-7 Create Ollama-specific embedding dimension migration + hardening
 - **Layer**: 79 — Slice 2
-- **Status**: UNWORKED
+- **Status**: COMMITTED
 - **Priority**: High
 - **Description**: The slice2-demo.ts script performs embedding dimension alignment by hand (DROP + ALTER TABLE with vector(768)). This works but is not a checked-in migration. Create `apps/api/migrations/183_embedding_dimension_ollama.sql` that drops the iris_entities embedding column and recreates it as vector(768) for Ollama deployments, including index and view recreation per migration 182 pattern. This migration must be idempotent (safe to run multiple times) and include a clear comment that it applies only when EMBEDDING_PROVIDER=ollama. The init process (or a new startup validation script) must verify that if a provider is configured, its vector dimension matches the schema; if not, the server must refuse to start with a clear error message. Add `packages/semantic-core/src/validate-embedding-dimension.ts`: a startup hook called by both API and MCP server that (1) reads the configured EMBEDDING_PROVIDER and gets dimensions, (2) queries the iris_entities table embedding column dimension, (3) throws IndexerError if they don't match with the message "Embedding dimension mismatch: schema has vector(X) but EMBEDDING_PROVIDER=Y provides Z-dimensional vectors. Run migration 183 (ollama) or drop iris_entities and re-migrate." Tests: validate that the migration drops/recreates the column correctly, validate the startup hook detects a mismatch and rejects startup.
 - **Files**:

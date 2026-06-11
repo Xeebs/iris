@@ -59,14 +59,14 @@ describe('PgvectorStore dimension guard', () => {
     it('throws IndexerError when stored dim (1536) differs from configured dim (768)', async () => {
       const store = makeStore('postgresql://localhost/test', 768, 1536);
       await expect(store.initialize()).rejects.toThrow(
-        /dimension mismatch.*vector\(1536\).*768.*re-index/i,
+        /dimension mismatch.*vector\(1536\).*768/i,
       );
     });
 
     it('throws IndexerError when stored dim (768) differs from configured dim (1536)', async () => {
       const store = makeStore('postgresql://localhost/test', 1536, 768);
       await expect(store.initialize()).rejects.toThrow(
-        /dimension mismatch.*vector\(768\).*1536.*re-index/i,
+        /dimension mismatch.*vector\(768\).*1536/i,
       );
     });
 

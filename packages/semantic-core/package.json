@@ -12,6 +12,7 @@
     "./llm-router": "./dist/llm-router.js",
     "./embedding": "./dist/embedding.js",
     "./vector-store": "./dist/vector-store.js",
+    "./validate-embedding-dimension": "./dist/validate-embedding-dimension.js",
     "./glossary": "./dist/glossary.js",
     "./metrics": "./dist/metrics.js",
     "./sync-events": "./dist/sync-events.js",
