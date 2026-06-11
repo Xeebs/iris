@@ -162,3 +162,9 @@ All tools respect the `contextBudget` parameter (default: 2000 tokens) and never
 **High latency**
 - Ollama embeddings on CPU (e.g., Raspberry Pi) are slower than GPU — the server is functional but query latency will be higher
 - Query latency p50/p95 is printed in the slice2-demo token report
+
+---
+
+## Owner verification
+
+Once connected and answering questions correctly, see `docs/SLICE_2_OWNER_SIGN_OFF.md` for the five canonical verification questions and the final sign-off steps to mark Slice 2 ACHIEVED.

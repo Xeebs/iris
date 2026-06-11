@@ -5140,3 +5140,23 @@ the live queue small. Layer headings are repeated per archival batch.
   - docs/SLICE_2_CONNECT_VALIDATION.md (new — narrative of the E2E test)
 - **Depends on**: S2-10
 - **Added**: 2026-06-10
+
+---
+
+<!-- archived 2026-06-10 -->
+
+## Layer 79: SLICE 2 — Iris in Real Use (see docs/SLICE_2.md)
+### Task: S2-13 Post-slice preparation — owner sign-off guide
+- **Layer**: 79 — Slice 2
+- **Status**: COMMITTED
+- **Priority**: Medium
+- **Description**: The final acceptance criterion (docs/SLICE_2.md line 40) is owner verification: "The owner has registered Iris in their own Claude Code via the documented steps, asked real questions against the seeded data in a live session, and confirmed correct answers. The owner flips this checkbox and the status line personally." This is NOT waivable by CI. Prepare for this step by: (1) ensuring docs/SLICE_2.md status line can be changed to "ACHIEVED" with a one-line edit, (2) writing a hand-off checklist in docs/SLICE_2_OWNER_SIGN_OFF.md that lists exactly what the owner needs to do (bootstrap a workspace, create postgres connector, run slice2-demo to seed data OR use an existing workspace, connect Claude Code, ask 5 representative questions, verify answers are correct), (3) add a note to CONNECT_CLAUDE.md linking to the owner sign-off checklist, (4) verify that the dashboard onboarding golden path test (tests/e2e/onboarding-golden-path.spec.ts) is green in CI. Success: all script-verifiable acceptance criteria pass (S2-10, S2-11, S2-12, Playwright E2E test green), and the owner sign-off guide is clear and ready.
+- **Files**:
+  - docs/SLICE_2.md (status line ready for owner flip)
+  - docs/SLICE_2_OWNER_SIGN_OFF.md (new — checklist)
+  - docs/CONNECT_CLAUDE.md (cross-link to sign-off guide)
+  - tests/e2e/onboarding-golden-path.spec.ts (verify CI green)
+- **Depends on**: S2-10, S2-11, S2-12
+- **Added**: 2026-06-10
+
+---
