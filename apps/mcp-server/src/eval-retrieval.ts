@@ -31,6 +31,9 @@ import { estimateTokens } from '@iris/semantic-core/llm-router';
 const CONTEXT_BUDGET = 2000;
 const REQUIRED_ACCURACY = 0.9;
 const REQUIRED_SAVINGS = 0.7;
+// Per-question timeout: generous for Ollama on CPU-only hardware (Pi, CI runner).
+// A hung query fails that question but lets the eval continue to the next one.
+const QUERY_TIMEOUT_MS = 30_000;
 
 const ROOT = join(fileURLToPath(new URL('.', import.meta.url)), '..', '..', '..');
 
@@ -74,6 +77,17 @@ async function computeBaseline(demoSourceUrl: string): Promise<number> {
   } finally {
     await sql.end();
   }
+}
+
+/** Race a promise against a wall-clock timeout. Rejects with an Error on timeout. */
+function raceTimeout<T>(ms: number, promise: Promise<T>): Promise<T> {
+  let timer: ReturnType<typeof setTimeout>;
+  return Promise.race([
+    promise,
+    new Promise<never>((_, reject) => {
+      timer = setTimeout(() => reject(new Error(`timed out after ${ms / 1000}s`)), ms);
+    }),
+  ]).finally(() => clearTimeout(timer));
 }
 
 /** Compute percentile of a sorted array. */
@@ -131,10 +145,22 @@ async function main(): Promise<void> {
 
   for (const [i, question] of questions.entries()) {
     const t0 = Date.now();
-    const result = await client.callTool({
-      name: 'query-context',
-      arguments: { query: question.question, workspaceId, contextBudget: CONTEXT_BUDGET },
-    });
+    type ToolResult = { isError?: boolean; content: Array<{ type: string; text?: string }> };
+    let result: ToolResult;
+    try {
+      result = await raceTimeout(
+        QUERY_TIMEOUT_MS,
+        client.callTool({
+          name: 'query-context',
+          arguments: { query: question.question, workspaceId, contextBudget: CONTEXT_BUDGET },
+        }),
+      ) as ToolResult;
+    } catch (e: unknown) {
+      result = {
+        isError: true,
+        content: [{ type: 'text', text: `Error: ${e instanceof Error ? e.message : String(e)}` }],
+      };
+    }
     const latencyMs = Date.now() - t0;
 
     const content = result.content as Array<{ type: string; text?: string }>;

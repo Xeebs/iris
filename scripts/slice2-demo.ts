@@ -218,10 +218,32 @@ async function main(): Promise<void> {
   }
   console.log('iris_demo_source seeded (20 companies, 48 contacts, 30 deals).');
 
-  step(`4/9 Start API server + sync worker (${process.env['EMBEDDING_PROVIDER'] ?? 'ollama'} embeddings)`);
+  // Pre-flight: verify Ollama is responsive before starting the API server.
+  // A missing/offline Ollama turns sync into a 8-minute timeout instead of a fast fail.
+  const embeddingProvider = process.env['EMBEDDING_PROVIDER'] ?? 'ollama';
+  if (embeddingProvider === 'ollama') {
+    const ollamaEndpoint = process.env['OLLAMA_ENDPOINT'] ?? 'http://localhost:11434';
+    step(`3b/9 Verify Ollama is reachable at ${ollamaEndpoint}`);
+    try {
+      const res = await withTimeout(10_000, fetch(`${ollamaEndpoint}/api/tags`));
+      if (!res.ok) fail(`Ollama API returned HTTP ${res.status} — is nomic-embed-text pulled?`);
+      console.log('Ollama is responding.');
+    } catch (e: unknown) {
+      fail(
+        `Ollama is not reachable at ${ollamaEndpoint}.\n` +
+          `  Start it with: ollama serve\n` +
+          `  Pull the model: ollama pull nomic-embed-text\n` +
+          `  Or set EMBEDDING_PROVIDER=openai to use OpenAI instead.\n` +
+          `  Error: ${e instanceof Error ? e.message : String(e)}`,
+      );
+    }
+  }
+
+  step(`4/9 Start API server + sync worker (${embeddingProvider} embeddings)`);
   startProcess('api', 'src/server.ts', API_DIR);
   startProcess('worker', 'src/workers/sync-worker.ts', API_DIR);
-  await waitFor('API /health to return ok', 90_000, async () => {
+  // Allow 120s for the API to start — Ollama on CPU can be slow and delay first startup.
+  await waitFor('API /health to return ok', 120_000, async () => {
     const res = await fetch(`${BASE}/health`);
     return res.ok;
   });

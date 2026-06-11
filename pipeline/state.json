@@ -1,13 +1,13 @@
 {
   "current_phase": "PLAN",
-  "active_task": "S2-7",
+  "active_task": "S2-8",
   "active_layer": 79,
   "last_cycle": "2026-06-10",
   "last_research": "2026-06-10",
   "last_commit": "2026-06-10",
-  "cycle_count": 360,
+  "cycle_count": 361,
   "rate_limit_hit": false,
   "mode": "SLICE_2",
-  "session_tasks_committed": 1,
-  "note": "S2-7: migration 183 (Ollama 768-dim), validate-embedding-dimension.ts, update vector-store.ts error message"
+  "session_tasks_committed": 2,
+  "note": "S2-8: Ollama robustness in slice2-demo.ts: API health timeout 90s→120s, Ollama pre-flight check, per-question timeout in eval-retrieval.ts"
 }
