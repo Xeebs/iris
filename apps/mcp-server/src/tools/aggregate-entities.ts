@@ -148,7 +148,7 @@ export async function aggregateEntitiesTool(
   try {
     const rows = await sql`
       SELECT attributes
-      FROM semantic_entities
+      FROM indexed_entities
       WHERE workspace_id = ${workspaceId}
         AND entity_type = ${entityType}
       LIMIT 10000

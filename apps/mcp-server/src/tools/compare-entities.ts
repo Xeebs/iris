@@ -125,10 +125,10 @@ export async function compareEntitiesTool(
 
   try {
     const rows = await sql`
-      SELECT entity_id, entity_type, label, attributes
-      FROM semantic_entities
+      SELECT id AS entity_id, entity_type, label, attributes
+      FROM indexed_entities
       WHERE workspace_id = ${workspaceId}
-        AND entity_id = ANY(${entityIds}::text[])
+        AND id = ANY(${entityIds}::text[])
     ` as EntityRow[];
 
     if (rows.length === 0) {

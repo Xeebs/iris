@@ -20,7 +20,7 @@ beforeAll(async () => {
   const url = process.env['DATABASE_URL'] ?? 'postgres://iris:iris@localhost:5432/iris_test';
   sql = postgres(url);
 
-  await sql`DELETE FROM semantic_entities WHERE workspace_id = ${WORKSPACE_ID}`.catch(() => {});
+  await sql`DELETE FROM iris_entities WHERE workspace_id = ${WORKSPACE_ID}`;
 
   // Seed 10 contacts: 5 lead, 3 prospect, 2 customer
   const contacts = [
@@ -38,15 +38,15 @@ beforeAll(async () => {
 
   for (const c of contacts) {
     await sql`
-      INSERT INTO semantic_entities (entity_id, workspace_id, entity_type, label, attributes)
-      VALUES (${c.id}, ${WORKSPACE_ID}, 'contact', ${c.label}, ${sql.json(c.attrs)})
+      INSERT INTO iris_entities (id, workspace_id, type, label, attributes, last_modified, source_id)
+      VALUES (${c.id}, ${WORKSPACE_ID}, 'contact', ${c.label}, ${sql.json(c.attrs)}, now(), ${`test:contact:${c.id}`})
       ON CONFLICT DO NOTHING
-    `.catch(() => {});
+    `;
   }
 });
 
 afterAll(async () => {
-  await sql`DELETE FROM semantic_entities WHERE workspace_id = ${WORKSPACE_ID}`.catch(() => {});
+  await sql`DELETE FROM iris_entities WHERE workspace_id = ${WORKSPACE_ID}`;
   await sql.end();
 });
 
