@@ -142,6 +142,7 @@ source .env.local   # or export each var from Step 2 manually
 SLICE_WORKSPACE_ID=<your-workspace-id> \
 IRIS_API_KEY=<your-api-key> \
   node --import tsx scripts/mcp-smoke.ts
+# WORKSPACE_ID=<id> is also accepted as an alias for SLICE_WORKSPACE_ID
 ```
 
 The smoke test connects to the MCP server over stdio (the same transport Claude Code uses), lists tools, calls `query-context`, and exits 0 on success. It inherits `EMBEDDING_PROVIDER` and provider-specific vars from the environment.
@@ -150,6 +151,7 @@ The smoke test connects to the MCP server over stdio (the same transport Claude 
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
+| `SLICE_WORKSPACE_ID` | Yes | — | Workspace UUID to query. `WORKSPACE_ID` is accepted as an alias. |
 | `DATABASE_URL` | Yes | — | PostgreSQL connection string for the Iris database |
 | `REDIS_URL` | No | `redis://localhost:6379` | Redis URL |
 | `IRIS_API_KEY` | Recommended | — | MCP API key scoped to your workspace. Omit to run in unauthenticated dev mode (all workspaces accessible — only for local development) |

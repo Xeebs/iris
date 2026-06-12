@@ -109,6 +109,7 @@ source .env.local
 SLICE_WORKSPACE_ID=<uuid-from-step-1> \
 IRIS_API_KEY=<api-key-from-step-1> \
   node --import tsx scripts/mcp-smoke.ts
+# WORKSPACE_ID=<id> is accepted as an alias for SLICE_WORKSPACE_ID
 ```
 
 - [ ] Smoke test exits 0

@@ -1,14 +1,14 @@
 {
-  "current_phase": "AWAITING_OWNER",
-  "active_task": null,
+  "current_phase": "TEST",
+  "active_task": "clarify-workspace-id-naming",
   "active_layer": "79",
   "last_cycle": "2026-06-12",
   "last_research": "2026-06-12",
   "research_result": "NEW_TASKS (1)",
   "last_commit": "2026-06-12",
-  "cycle_count": 665,
+  "cycle_count": 666,
   "rate_limit_hit": false,
   "mode": "SLICE_2",
   "session_tasks_committed": 0,
-  "note": "2026-06-12 research: Audited owner connection path (CONNECT_CLAUDE.md, SLICE_2_OWNER_SIGN_OFF.md, mcp-smoke.ts, migrations 182/183). Found: embedding dimension validation works correctly, all supporting docs exist, all migrations present. Gap found: WORKSPACE_ID vs SLICE_WORKSPACE_ID naming inconsistency in docs vs wrapper script (both accepted as aliases but creates friction). Added S2-13 task: clarify env var naming. All script-verifiable SLICE_2.md checkboxes [x]. Awaiting owner sign-off on real MCP session."
+  "note": "S2-13: docs-only fix complete. Verifying."
 }
