@@ -40,11 +40,11 @@ curl -X POST http://localhost:3001/api/v1/demo/bootstrap \
   -d '{"name": "My Workspace"}'
 ```
 
-The response contains `data.workspaceId` and `data.apiKey`. Save both.
+The response contains `data.workspaceId` and `data.apiKey`. Save the `apiKey` — the workspace ID is no longer needed when connecting from Claude Code.
 
 ### From the slice2-demo output
 
-If you ran `bash scripts/slice2-demo.sh`, the workspace ID is printed during the bootstrap step and the API key is printed at the end. Copy both from the output — you do not need to call the bootstrap endpoint separately.
+If you ran `bash scripts/slice2-demo.sh`, the API key is printed at the end. Copy it — you do not need to call the bootstrap endpoint separately.
 
 ## Step 2: Set environment variables
 
@@ -139,19 +139,16 @@ Or verify programmatically before opening Claude Code:
 # Source your environment first so the embedding provider vars are available:
 source .env.local   # or export each var from Step 2 manually
 
-SLICE_WORKSPACE_ID=<your-workspace-id> \
 IRIS_API_KEY=<your-api-key> \
   node --import tsx scripts/mcp-smoke.ts
-# WORKSPACE_ID=<id> is also accepted as an alias for SLICE_WORKSPACE_ID
 ```
 
-The smoke test connects to the MCP server over stdio (the same transport Claude Code uses), lists tools, calls `query-context`, and exits 0 on success. It inherits `EMBEDDING_PROVIDER` and provider-specific vars from the environment.
+The smoke test connects to the MCP server over stdio (the same transport Claude Code uses), lists tools, calls `query-context` (workspace ID is derived from the API key automatically), and exits 0 on success. It inherits `EMBEDDING_PROVIDER` and provider-specific vars from the environment.
 
 ## Environment variable reference
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `SLICE_WORKSPACE_ID` | Yes | — | Workspace UUID to query. `WORKSPACE_ID` is accepted as an alias. |
 | `DATABASE_URL` | Yes | — | PostgreSQL connection string for the Iris database |
 | `REDIS_URL` | No | `redis://localhost:6379` | Redis URL |
 | `IRIS_API_KEY` | Recommended | — | MCP API key scoped to your workspace. Omit to run in unauthenticated dev mode (all workspaces accessible — only for local development) |

@@ -20,11 +20,11 @@ export const aggregateEntitiesZodSchema = z.object({
   sumField: z.string().optional(),
   filters: z.record(z.string(), z.unknown()).optional(),
   topK: z.number().int().min(1).max(100).default(10),
-  workspaceId: z.string().min(1),
+  workspaceId: z.string().min(1).optional(),
   contextBudget: z.number().int().min(100).default(2000),
 });
 
-type AggregateInput = z.infer<typeof aggregateEntitiesZodSchema>;
+type AggregateInput = z.infer<typeof aggregateEntitiesZodSchema> & { workspaceId: string };
 
 type AggregateGroup = {
   groupValue: string;
@@ -195,6 +195,6 @@ export const aggregateEntitiesToolDefinition = {
       workspaceId: { type: 'string', description: 'Workspace to query' },
       contextBudget: { type: 'number', description: 'Token budget for response (default 2000)' },
     },
-    required: ['entityType', 'groupByAttribute', 'workspaceId'],
+    required: ['entityType', 'groupByAttribute'],
   },
 };

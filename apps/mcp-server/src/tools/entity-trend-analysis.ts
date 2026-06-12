@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 export const entityTrendAnalysisSchema = z.object({
   metricName: z.string().min(1),
-  workspaceId: z.string().default('default'),
+  workspaceId: z.string().optional(),
   windowDays: z.number().int().min(1).max(365).default(30),
   granularity: z.enum(['day', 'week', 'month']).default('day'),
 });
@@ -55,6 +55,10 @@ export const entityTrendAnalysisTool = {
   ): Promise<{ content: [{ type: 'text'; text: string }] }> {
     const { metricName, workspaceId, windowDays, granularity } = input;
     const { sql } = deps;
+
+    if (workspaceId === undefined) {
+      return { content: [{ type: 'text', text: JSON.stringify({ error: 'workspaceId is required' }) }] };
+    }
 
     const truncUnit = granularity === 'month' ? 'month' : granularity === 'week' ? 'week' : 'day';
 

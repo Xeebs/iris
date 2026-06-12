@@ -7,7 +7,6 @@ import { filterContextByRole } from '@iris/semantic-core';
 import type { WorkspacePiiConfig } from '@iris/semantic-core';
 import { maskEntity } from '@iris/semantic-core';
 import { logger } from '@iris/core/logger';
-import { assertWorkspace } from '../workspace-guard.js';
 
 import { registerTool } from '../register-tool.js';
 
@@ -15,7 +14,7 @@ const log = logger.child({ tool: 'get-entity' });
 
 const inputSchema = {
   id: z.string().min(1).describe('Globally unique entity ID (e.g., hubspot:contact:123)'),
-  workspaceId: z.string().min(1).describe('Workspace ID for tenant isolation'),
+  workspaceId: z.string().min(1).optional().describe('Workspace ID for tenant isolation (defaults to the authenticated key\'s workspace)'),
 };
 
 /**
@@ -41,13 +40,11 @@ export function registerGetEntity(
       title: 'Get Entity',
       description: 'Retrieve a specific entity by its globally unique ID.',
       inputSchema,
+      authenticatedWorkspaceId,
     },
     async (rawParams) => {
-      const params = rawParams as z.infer<z.ZodObject<typeof inputSchema>>;
+      const params = rawParams as z.infer<z.ZodObject<typeof inputSchema>> & { workspaceId: string };
       try {
-        const authError = assertWorkspace(params.workspaceId, authenticatedWorkspaceId);
-        if (authError) return { content: [{ type: 'text' as const, text: authError }] };
-
         const entity = await vectorStore.getById(params.workspaceId, params.id);
 
         if (!entity) {

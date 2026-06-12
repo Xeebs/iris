@@ -3,14 +3,13 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { GlossaryService } from '@iris/semantic-core';
 import { withResponseCache } from '@iris/cache/response-cache';
 import type { ResponseCache } from '@iris/cache/response-cache';
-import { assertWorkspace } from '../workspace-guard.js';
 
 import { registerTool } from '../register-tool.js';
 
 const MAX_PAGE_SIZE = 100;
 
 const inputSchema = {
-  workspaceId: z.string().min(1).describe('Workspace ID for tenant isolation'),
+  workspaceId: z.string().min(1).optional().describe('Workspace ID for tenant isolation (defaults to the authenticated key\'s workspace)'),
   filter: z
     .string()
     .optional()
@@ -51,13 +50,10 @@ export function registerListGlossary(
         'Includes metric names, entity type descriptions, and domain-specific terms. ' +
         'Supports pagination via the `cursor` field — pass `nextCursor` from a previous response to get the next page.',
       inputSchema,
+      authenticatedWorkspaceId,
     },
     async (rawParams) => {
-      const params = rawParams as z.infer<z.ZodObject<typeof inputSchema>>;
-      const authError = assertWorkspace(params.workspaceId, authenticatedWorkspaceId);
-      if (authError) {
-        return { content: [{ type: 'text' as const, text: authError }] };
-      }
+      const params = rawParams as z.infer<z.ZodObject<typeof inputSchema>> & { workspaceId: string };
 
       const execute = async () => {
         const pageSize = Math.min(params.limit ?? 50, MAX_PAGE_SIZE);

@@ -7,7 +7,6 @@ import { filterContextByRole } from '@iris/semantic-core';
 import type { WorkspacePiiConfig } from '@iris/semantic-core';
 import { maskEntities } from '@iris/semantic-core';
 import { logger } from '@iris/core/logger';
-import { assertWorkspace } from '../workspace-guard.js';
 
 import { registerTool } from '../register-tool.js';
 
@@ -17,7 +16,7 @@ const MAX_PAGE_SIZE = 100;
 
 const inputSchema = {
   entityType: z.string().min(1).describe('Entity type to list (e.g., contact, deal, company)'),
-  workspaceId: z.string().min(1).describe('Workspace ID for tenant isolation'),
+  workspaceId: z.string().min(1).optional().describe('Workspace ID for tenant isolation (defaults to the authenticated key\'s workspace)'),
   limit: z
     .number()
     .int()
@@ -62,13 +61,11 @@ export function registerListEntities(
         'List entities of a given type within a workspace, ordered by most recently modified. ' +
         'Supports pagination via the `cursor` field — pass `nextCursor` from a previous response to get the next page.',
       inputSchema,
+      authenticatedWorkspaceId,
     },
     async (rawParams) => {
-      const params = rawParams as z.infer<z.ZodObject<typeof inputSchema>>;
+      const params = rawParams as z.infer<z.ZodObject<typeof inputSchema>> & { workspaceId: string };
       try {
-        const authError = assertWorkspace(params.workspaceId, authenticatedWorkspaceId);
-        if (authError) return { content: [{ type: 'text' as const, text: authError }] };
-
         if (contextPermissions && !contextPermissions.allowedEntityTypes.has(params.entityType)) {
           return {
             content: [

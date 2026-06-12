@@ -14,7 +14,7 @@ export const compareEntitiesZodSchema = z.object({
   entityIds: z.array(z.string()).min(2).max(10),
   attributes: z.union([z.literal('all'), z.array(z.string())]).default('all'),
   diffHighlight: z.boolean().default(true),
-  workspaceId: z.string().min(1),
+  workspaceId: z.string().min(1).optional(),
   contextBudget: z.number().int().min(100).default(2000),
 });
 
@@ -180,6 +180,6 @@ export const compareEntitiesToolDefinition = {
       workspaceId: { type: 'string', description: 'Workspace to query' },
       contextBudget: { type: 'number', description: 'Token budget (default 2000)' },
     },
-    required: ['entityIds', 'workspaceId'],
+    required: ['entityIds'],
   },
 };

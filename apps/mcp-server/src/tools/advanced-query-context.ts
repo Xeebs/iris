@@ -11,7 +11,6 @@ import {
 } from '@iris/semantic-core/advanced-query-engine';
 import { compress } from '@iris/compression';
 import { logger } from '@iris/core/logger';
-import { assertWorkspace } from '../workspace-guard.js';
 
 import { registerTool } from '../register-tool.js';
 
@@ -33,7 +32,7 @@ const inputSchema = {
   query: z.string().min(1).describe(
     'Natural language query or filter expression (e.g. "contacts where industry=\'SaaS\' and ARR>100k")',
   ),
-  workspaceId: z.string().min(1).describe('Workspace ID for tenant isolation'),
+  workspaceId: z.string().min(1).optional().describe('Workspace ID for tenant isolation (defaults to the authenticated key\'s workspace)'),
   filters: z
     .array(filterConditionSchema)
     .optional()
@@ -83,14 +82,12 @@ export function registerAdvancedQueryContext(
         'Supports syntax like "contacts where industry=\'SaaS\' and ARR>100k", ' +
         'aggregations like "sum revenue by region", and chained multi-step queries.',
       inputSchema,
+      authenticatedWorkspaceId,
     },
     async (rawParams) => {
-      const params = rawParams as z.infer<z.ZodObject<typeof inputSchema>>;
+      const params = rawParams as z.infer<z.ZodObject<typeof inputSchema>> & { workspaceId: string };
       const start = Date.now();
       try {
-        const authError = assertWorkspace(params.workspaceId, authenticatedWorkspaceId);
-        if (authError) return { content: [{ type: 'text' as const, text: authError }] };
-
         const topK = params.topK ?? 20;
         const contextBudget = params.contextBudget ?? 2000;
 

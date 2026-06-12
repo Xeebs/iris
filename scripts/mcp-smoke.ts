@@ -5,10 +5,10 @@
  * so that module resolution and the stdio server spawn work correctly.
  *
  * Usage:
- *   SLICE_WORKSPACE_ID=<id> IRIS_API_KEY=<key> DATABASE_URL=<url> \
+ *   IRIS_API_KEY=<key> DATABASE_URL=<url> \
  *     node --import tsx scripts/mcp-smoke.ts
  *
- * WORKSPACE_ID is accepted as an alias for SLICE_WORKSPACE_ID.
+ * The workspace ID is derived automatically from the API key — no need to pass it separately.
  *
  * See apps/mcp-server/src/mcp-smoke.ts for full docs.
  * See docs/CONNECT_CLAUDE.md for setup instructions.

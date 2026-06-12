@@ -3,13 +3,12 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { MetricRegistry } from '@iris/semantic-core';
 import { withResponseCache } from '@iris/cache/response-cache';
 import type { ResponseCache } from '@iris/cache/response-cache';
-import { assertWorkspace } from '../workspace-guard.js';
 
 import { registerTool } from '../register-tool.js';
 
 const inputSchema = {
   metricId: z.string().min(1).describe('Metric identifier (e.g., monthly_revenue, churn_rate)'),
-  workspaceId: z.string().min(1).describe('Workspace ID for tenant isolation'),
+  workspaceId: z.string().min(1).optional().describe('Workspace ID for tenant isolation (defaults to the authenticated key\'s workspace)'),
 };
 
 /**
@@ -34,13 +33,10 @@ export function registerGetMetric(
         'Resolve a metric definition. ' +
         'Returns the metric name, formula, and description.',
       inputSchema,
+      authenticatedWorkspaceId,
     },
     async (rawParams) => {
-      const params = rawParams as z.infer<z.ZodObject<typeof inputSchema>>;
-      const authError = assertWorkspace(params.workspaceId, authenticatedWorkspaceId);
-      if (authError) {
-        return { content: [{ type: 'text' as const, text: authError }] };
-      }
+      const params = rawParams as z.infer<z.ZodObject<typeof inputSchema>> & { workspaceId: string };
 
       const execute = async () => {
           const result = await metricRegistry.getMetric(params.workspaceId, params.metricId);

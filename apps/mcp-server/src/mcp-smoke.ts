@@ -8,10 +8,10 @@
  *
  * Required env:
  *   DATABASE_URL          — Iris Postgres connection string
- *   WORKSPACE_ID          — workspace to query (or SLICE_WORKSPACE_ID as alias)
+ *   IRIS_API_KEY          — MCP API key; workspace is derived from the key automatically
  *
- * Optional env:
- *   IRIS_API_KEY          — MCP API key; omit for unauthenticated dev mode
+ * Optional env (only needed in unauthenticated dev mode when IRIS_API_KEY is not set):
+ *   WORKSPACE_ID          — workspace to query; SLICE_WORKSPACE_ID accepted as an alias
  *   REDIS_URL             — defaults to redis://localhost:6379
  *   EMBEDDING_PROVIDER    — ollama | openai (defaults to ollama)
  *   OLLAMA_ENDPOINT       — defaults to http://localhost:11434
@@ -36,14 +36,19 @@ async function main(): Promise<void> {
   const databaseUrl = process.env['DATABASE_URL'];
   if (!databaseUrl) fail('DATABASE_URL is required');
 
-  const workspaceId = process.env['WORKSPACE_ID'] ?? process.env['SLICE_WORKSPACE_ID'];
-  if (!workspaceId) {
+  const apiKey = process.env['IRIS_API_KEY'];
+
+  // In dev mode (no API key), the tool call must include workspaceId explicitly.
+  // In authenticated mode, workspaceId is resolved from the key — no need to pass it.
+  const devWorkspaceId = !apiKey
+    ? (process.env['WORKSPACE_ID'] ?? process.env['SLICE_WORKSPACE_ID'])
+    : undefined;
+
+  if (!apiKey && !devWorkspaceId) {
     fail(
-      'WORKSPACE_ID (or SLICE_WORKSPACE_ID) is required.\n' +
-        '  Get it from the dashboard (Settings → API Keys) or from the demo bootstrap:\n' +
-        '    curl -X POST http://localhost:3001/api/v1/demo/bootstrap \\\n' +
-        '      -H "Content-Type: application/json" \\\n' +
-        "      -d '{\"name\": \"Smoke Test Workspace\"}'",
+      'Either IRIS_API_KEY (recommended) or WORKSPACE_ID is required.\n' +
+        '  With IRIS_API_KEY: workspace is derived from the key automatically.\n' +
+        '  Without IRIS_API_KEY (dev mode): pass WORKSPACE_ID explicitly.',
     );
   }
 
@@ -51,9 +56,8 @@ async function main(): Promise<void> {
     Object.entries(process.env).filter((kv): kv is [string, string] => kv[1] !== undefined),
   );
 
-  console.log(`Workspace: ${workspaceId}`);
+  console.log(`Auth: ${apiKey ? 'IRIS_API_KEY set (workspace from key)' : `dev mode, workspace=${devWorkspaceId}`}`);
   console.log(`Embedding provider: ${env['EMBEDDING_PROVIDER'] ?? 'ollama'}`);
-  console.log(env['IRIS_API_KEY'] ? 'IRIS_API_KEY: set' : 'IRIS_API_KEY: not set (dev mode)');
   console.log('');
 
   // Spawn the MCP server over stdio, exactly as Claude Code does.
@@ -84,13 +88,13 @@ async function main(): Promise<void> {
   }
   console.log('query-context: present ✓\n');
 
-  // 2. Call query-context — assert non-empty, in-budget response.
+  // 2. Call query-context — omit workspaceId when authenticated (derived from key).
   console.log(`Calling query-context: "${SMOKE_QUERY}"...`);
   const t0 = Date.now();
-  const result = await client.callTool({
-    name: 'query-context',
-    arguments: { query: SMOKE_QUERY, workspaceId, contextBudget: CONTEXT_BUDGET },
-  });
+  const toolArgs: Record<string, unknown> = { query: SMOKE_QUERY, contextBudget: CONTEXT_BUDGET };
+  if (devWorkspaceId) toolArgs['workspaceId'] = devWorkspaceId;
+
+  const result = await client.callTool({ name: 'query-context', arguments: toolArgs });
   const latencyMs = Date.now() - t0;
 
   const content = result.content as Array<{ type: string; text?: string }>;

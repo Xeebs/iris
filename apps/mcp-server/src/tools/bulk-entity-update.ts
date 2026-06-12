@@ -4,7 +4,7 @@ export const bulkEntityUpdateSchema = z.object({
   filter: z.object({
     type: z.string().optional(),
     labelContains: z.string().optional(),
-    workspaceId: z.string().default('default'),
+    workspaceId: z.string().optional(),
   }),
   patch: z.record(z.string(), z.unknown()),
   dryRun: z.boolean().default(false),
@@ -37,15 +37,15 @@ export const bulkEntityUpdateTool = {
     const { filter, patch, dryRun } = input;
     const { sql } = deps;
 
-    // Build WHERE clause conditions
-    type EntityRow = { id: string };
-    const conditions: string[] = [`workspace_id = '${filter.workspaceId}'`];
-    if (filter.type) conditions.push(`type = '${filter.type}'`);
-    if (filter.labelContains) conditions.push(`label ILIKE '%${filter.labelContains}%'`);
+    const workspaceId = filter.workspaceId;
+    if (workspaceId === undefined) {
+      return { content: [{ type: 'text', text: JSON.stringify({ error: 'workspaceId is required' }) }] };
+    }
 
+    type EntityRow = { id: string };
     const matching = await sql<EntityRow[]>`
       SELECT id FROM iris_entities
-      WHERE workspace_id = ${filter.workspaceId}
+      WHERE workspace_id = ${workspaceId}
         ${filter.type ? sql`AND type = ${filter.type}` : sql``}
         ${filter.labelContains ? sql`AND label ILIKE ${'%' + filter.labelContains + '%'}` : sql``}
       LIMIT 500

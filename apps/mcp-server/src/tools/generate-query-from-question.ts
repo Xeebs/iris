@@ -5,7 +5,7 @@ import { logger } from '@iris/core/logger';
 
 const InputSchema = z.object({
   question: z.string().min(1).describe('The business question in plain English'),
-  workspaceId: z.string().min(1).describe('Workspace to query against'),
+  workspaceId: z.string().min(1).optional().describe('Workspace to query against (defaults to the authenticated key\'s workspace)'),
   contextBudget: z.number().int().positive().default(2000).describe('Token budget for the result'),
 });
 
@@ -35,10 +35,20 @@ export function createGenerateQueryFromQuestionTool(sql: Sql) {
         };
       }
 
+      const workspaceId = parsed.data.workspaceId;
+      if (workspaceId === undefined) {
+        return {
+          content: [{
+            type: 'text' as const,
+            text: JSON.stringify({ error: 'workspaceId is required' }),
+          }],
+        };
+      }
+
       try {
         const session = await generator.processNaturalLanguageQuery(
           parsed.data.question,
-          parsed.data.workspaceId,
+          workspaceId,
           parsed.data.contextBudget
         );
 

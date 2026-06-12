@@ -5,7 +5,6 @@ import type { VectorStore } from '@iris/semantic-core';
 import { retrieveContext } from '@iris/semantic-core';
 import type { SemanticEntity } from '@iris/connector-sdk';
 import { logger } from '@iris/core/logger';
-import { assertWorkspace } from '../workspace-guard.js';
 
 import { registerTool } from '../register-tool.js';
 
@@ -152,7 +151,7 @@ export function predictExpansionLevel(
 
 const streamingInputSchema = {
   query: z.string().min(1).describe('Natural language query'),
-  workspaceId: z.string().min(1).describe('Workspace ID'),
+  workspaceId: z.string().min(1).optional().describe('Workspace ID (defaults to the authenticated key\'s workspace)'),
   initialBudget: z
     .number()
     .int()
@@ -175,7 +174,7 @@ const streamingInputSchema = {
 
 const expansionInputSchema = {
   expansionKey: z.string().min(1).describe('Key returned by streaming-context'),
-  workspaceId: z.string().min(1),
+  workspaceId: z.string().min(1).optional().describe('Workspace ID (defaults to the authenticated key\'s workspace)'),
   targetLevel: z
     .enum(['detailed', 'full'])
     .describe('The expansion level to fetch next'),
@@ -211,16 +210,14 @@ export function registerStreamingContext(
         'Returns a compressed initial context for a query at summary level, plus an expansionKey. ' +
         'Call get-context-expansion with that key to fetch a more detailed view if needed.',
       inputSchema: streamingInputSchema,
+      authenticatedWorkspaceId,
     },
     async (rawParams) => {
-      const params = rawParams as z.infer<z.ZodObject<typeof streamingInputSchema>>;
+      const params = rawParams as z.infer<z.ZodObject<typeof streamingInputSchema>> & { workspaceId: string };
       pruneExpansions();
       const start = Date.now();
 
       try {
-        const authError = assertWorkspace(params.workspaceId, authenticatedWorkspaceId);
-        if (authError) return { content: [{ type: 'text' as const, text: authError }] };
-
         const retrievalOpts: Parameters<typeof retrieveContext>[2] = {
           workspaceId: params.workspaceId,
           topK: params.topK ?? 10,
@@ -282,13 +279,11 @@ export function registerStreamingContext(
         'Expand a previous streaming-context response to a more detailed level. ' +
         'Requires the expansionKey returned by streaming-context.',
       inputSchema: expansionInputSchema,
+      authenticatedWorkspaceId,
     },
     async (rawParams) => {
-      const params = rawParams as z.infer<z.ZodObject<typeof expansionInputSchema>>;
+      const params = rawParams as z.infer<z.ZodObject<typeof expansionInputSchema>> & { workspaceId: string };
       try {
-        const authError = assertWorkspace(params.workspaceId, authenticatedWorkspaceId);
-        if (authError) return { content: [{ type: 'text' as const, text: authError }] };
-
         const entry = EXPANSION_STORE.get(params.expansionKey);
 
         if (!entry) {

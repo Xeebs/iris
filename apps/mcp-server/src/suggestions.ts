@@ -2,14 +2,13 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { generateSuggestions } from '@iris/semantic-core/proactive-suggester';
 import { logger } from '@iris/core/logger';
-import { assertWorkspace } from './workspace-guard.js';
 
 import { registerTool } from './register-tool.js';
 
 const log = logger.child({ tool: 'suggest-context' });
 
 const inputSchema = {
-  workspaceId: z.string().min(1).describe('Workspace ID for tenant isolation'),
+  workspaceId: z.string().min(1).optional().describe('Workspace ID for tenant isolation (defaults to the authenticated key\'s workspace)'),
   recentQueries: z
     .array(z.string())
     .max(20)
@@ -45,13 +44,11 @@ export function registerSuggestContext(
         'Get proactive context suggestions based on recent query activity. ' +
         'Returns top-N entity types and labels that are likely relevant to the current session.',
       inputSchema,
+      authenticatedWorkspaceId,
     },
     async (rawParams) => {
-      const params = rawParams as z.infer<z.ZodObject<typeof inputSchema>>;
+      const params = rawParams as z.infer<z.ZodObject<typeof inputSchema>> & { workspaceId: string };
       try {
-        const authError = assertWorkspace(params.workspaceId, authenticatedWorkspaceId);
-        if (authError) return { content: [{ type: 'text' as const, text: authError }] };
-
         const activity = (params.recentQueries ?? []).map((q: string) => ({
           query: q,
           timestamp: new Date(),

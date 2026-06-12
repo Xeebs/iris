@@ -9,7 +9,6 @@ import { filterContextByRole } from '@iris/semantic-core';
 import type { WorkspacePiiConfig } from '@iris/semantic-core';
 import { maskEntities } from '@iris/semantic-core';
 import { logger } from '@iris/core/logger';
-import { assertWorkspace } from '../workspace-guard.js';
 
 import { registerTool } from '../register-tool.js';
 
@@ -17,7 +16,7 @@ const log = logger.child({ tool: 'query-context' });
 
 const inputSchema = {
   query: z.string().min(1).describe('Natural language query'),
-  workspaceId: z.string().min(1).describe('Workspace ID for tenant isolation'),
+  workspaceId: z.string().min(1).optional().describe('Workspace ID for tenant isolation (defaults to the authenticated key\'s workspace)'),
   contextBudget: z
     .number()
     .int()
@@ -78,13 +77,12 @@ export function registerQueryContext(
         'Retrieve semantically relevant business context for a natural language query. ' +
         'Returns compressed entity information within the token budget.',
       inputSchema,
+      authenticatedWorkspaceId,
     },
     async (rawParams) => {
-      const params = rawParams as z.infer<z.ZodObject<typeof inputSchema>>;
+      const params = rawParams as z.infer<z.ZodObject<typeof inputSchema>> & { workspaceId: string };
       const start = Date.now();
       try {
-        const authError = assertWorkspace(params.workspaceId, authenticatedWorkspaceId);
-        if (authError) return { content: [{ type: 'text' as const, text: authError }] };
         const queryEmbeddingPlaceholder: number[] = [];
 
         const cacheHit = queryEmbeddingPlaceholder.length > 0

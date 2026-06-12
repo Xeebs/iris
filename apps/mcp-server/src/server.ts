@@ -84,10 +84,10 @@ export function createMcpServer(
     registerTool(
       server,
       aggregateEntitiesToolDefinition.name,
-      { description: aggregateEntitiesToolDefinition.description, inputSchema: aggregateEntitiesZodSchema.shape },
+      { description: aggregateEntitiesToolDefinition.description, inputSchema: aggregateEntitiesZodSchema.shape, authenticatedWorkspaceId },
       async (input) => {
         const result = await aggregateEntitiesTool(
-          { ...input, workspaceId: authenticatedWorkspaceId ?? (input as { workspaceId: string }).workspaceId } as Parameters<typeof aggregateEntitiesTool>[0],
+          input as Parameters<typeof aggregateEntitiesTool>[0],
           sqlFn
         );
         return result.isOk() ? result.value : { content: [{ type: 'text' as const, text: 'Aggregation error' }] };
@@ -97,10 +97,10 @@ export function createMcpServer(
     registerTool(
       server,
       compareEntitiesToolDefinition.name,
-      { description: compareEntitiesToolDefinition.description, inputSchema: compareEntitiesZodSchema.shape },
+      { description: compareEntitiesToolDefinition.description, inputSchema: compareEntitiesZodSchema.shape, authenticatedWorkspaceId },
       async (input) => {
         const result = await compareEntitiesTool(
-          { ...input, workspaceId: authenticatedWorkspaceId ?? (input as { workspaceId: string }).workspaceId } as Parameters<typeof compareEntitiesTool>[0],
+          input as Parameters<typeof compareEntitiesTool>[0],
           sqlFn
         );
         return result.isOk() ? result.value : { content: [{ type: 'text' as const, text: 'Comparison error' }] };
@@ -118,26 +118,34 @@ export function createMcpServer(
     );
 
     // Register previously unwired tools
-    registerConnectorHealthForecastTool(server, sqlFn as unknown as ReturnType<typeof postgres>);
-    registerQueryContextAtDateTool(server, { sql: sqlFn });
+    registerConnectorHealthForecastTool(server, sqlFn as unknown as ReturnType<typeof postgres>, authenticatedWorkspaceId);
+    registerQueryContextAtDateTool(server, { sql: sqlFn }, authenticatedWorkspaceId);
     registerQueryContextRefined(server, sqlFn as unknown as ReturnType<typeof postgres>, authenticatedWorkspaceId);
-    registerQueryFederatedContextTool(server, { sql: sqlFn });
+    registerQueryFederatedContextTool(server, { sql: sqlFn }, authenticatedWorkspaceId);
 
     registerTool(
       server,
       bulkEntityUpdateTool.name,
       { description: bulkEntityUpdateTool.description, inputSchema: bulkEntityUpdateSchema.shape },
-      async (input) =>
-        bulkEntityUpdateTool.execute(
-          input as Parameters<typeof bulkEntityUpdateTool.execute>[0],
-          { sql: sqlFn as unknown as ReturnType<typeof postgres> }
-        )
+      async (input) => {
+        // workspaceId is nested in filter — resolve manually since middleware only handles top-level
+        const typed = input as Parameters<typeof bulkEntityUpdateTool.execute>[0];
+        if (typed.filter.workspaceId && authenticatedWorkspaceId && typed.filter.workspaceId !== authenticatedWorkspaceId) {
+          return { content: [{ type: 'text' as const, text: `Access denied: workspace "${typed.filter.workspaceId}" is not accessible with this API key` }] };
+        }
+        if (!typed.filter.workspaceId && authenticatedWorkspaceId) {
+          typed.filter.workspaceId = authenticatedWorkspaceId;
+        } else if (!typed.filter.workspaceId) {
+          return { content: [{ type: 'text' as const, text: 'workspaceId is required in unauthenticated mode' }] };
+        }
+        return bulkEntityUpdateTool.execute(typed, { sql: sqlFn as unknown as ReturnType<typeof postgres> });
+      }
     );
 
     registerTool(
       server,
       entityTrendAnalysisTool.name,
-      { description: entityTrendAnalysisTool.description, inputSchema: entityTrendAnalysisSchema.shape },
+      { description: entityTrendAnalysisTool.description, inputSchema: entityTrendAnalysisSchema.shape, authenticatedWorkspaceId },
       async (input) =>
         entityTrendAnalysisTool.execute(
           input as Parameters<typeof entityTrendAnalysisTool.execute>[0],
@@ -162,7 +170,7 @@ export function createMcpServer(
     registerTool(
       server,
       nlQueryTool.name,
-      { description: nlQueryTool.description, inputSchema: nlQueryTool.inputSchema.shape },
+      { description: nlQueryTool.description, inputSchema: nlQueryTool.inputSchema.shape, authenticatedWorkspaceId },
       async (input) =>
         nlQueryTool.handler(input as Parameters<typeof nlQueryTool.handler>[0])
     );

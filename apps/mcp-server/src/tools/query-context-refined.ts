@@ -12,7 +12,7 @@ const FEEDBACK_MARKS = ['stale', 'incomplete', 'irrelevant', 'useful'] as const;
 
 const inputSchema = {
   query: z.string().min(1).describe('The search query to expand'),
-  workspaceId: z.string().min(1).describe('Workspace ID for tenant isolation'),
+  workspaceId: z.string().min(1).optional().describe('Workspace ID for tenant isolation (defaults to the authenticated key\'s workspace)'),
   stage: z.number().int().min(1).optional().describe('Expansion stage — 1 for initial, 2+ for iterative refinement'),
   sessionId: z.string().uuid().optional().describe('Prior expansion session ID to continue'),
   feedback: z.array(z.object({
@@ -43,9 +43,10 @@ export function registerQueryContextRefined(
       title: 'Query Context (Refined)',
       description: 'Iteratively expand and refine search results using user feedback marks. Supports multi-stage retrieval where each round re-ranks results based on stale/incomplete/irrelevant/useful signals.',
       inputSchema,
+      authenticatedWorkspaceId,
     },
     async (rawParams) => {
-      const params = rawParams as z.infer<z.ZodObject<typeof inputSchema>>;
+      const params = rawParams as z.infer<z.ZodObject<typeof inputSchema>> & { workspaceId: string };
       const budget = params.contextBudget ?? 2000;
       const stage = params.stage ?? 1;
       const feedback = params.feedback ?? null;

@@ -8,21 +8,23 @@ const log = logger.child({ tool: 'query-context-at-date' });
 
 const inputSchema = {
   query: z.string().min(1).describe('Natural language query'),
-  workspaceId: z.string().min(1).describe('Workspace ID'),
+  workspaceId: z.string().min(1).optional().describe('Workspace ID (defaults to the authenticated key\'s workspace)'),
   targetDate: z.string().datetime().describe('ISO 8601 date — query context as it existed at this point in time'),
   contextBudget: z.number().int().positive().default(2000).describe('Maximum tokens to return'),
 };
 
-type ToolInput = z.infer<z.ZodObject<typeof inputSchema>>;
+type ToolInput = z.infer<z.ZodObject<typeof inputSchema>> & { workspaceId: string };
 
 /**
  * Register the query-context-at-date MCP tool.
  * @param server - MCP server instance
  * @param deps - External dependencies
+ * @param authenticatedWorkspaceId - Workspace from validated API key, or null in dev mode
  */
 export function registerQueryContextAtDateTool(
   server: McpServer,
   deps: { sql: (strings: TemplateStringsArray, ...values: unknown[]) => Promise<unknown[]> },
+  authenticatedWorkspaceId: string | null = null,
 ): void {
   registerTool(
     server,
@@ -30,6 +32,7 @@ export function registerQueryContextAtDateTool(
     {
       description: 'Query business context as it existed at a specific historical point in time using time-travel snapshots',
       inputSchema,
+      authenticatedWorkspaceId,
     },
     async (rawInput) => {
       const { query, workspaceId, targetDate, contextBudget } = rawInput as ToolInput;
