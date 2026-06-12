@@ -1,6 +1,6 @@
 {
-  "current_phase": "TEST",
-  "active_task": "derive-workspace-id-from-mcp-key",
+  "current_phase": "AWAITING_OWNER",
+  "active_task": null,
   "active_layer": "79",
   "last_cycle": "2026-06-12",
   "last_research": "2026-06-12",
@@ -9,6 +9,6 @@
   "cycle_count": 834,
   "rate_limit_hit": false,
   "mode": "SLICE_2",
-  "session_tasks_committed": 0,
-  "note": "Cycle 834: implementing derive-workspace-id-from-mcp-key, running typecheck."
+  "session_tasks_committed": 1,
+  "note": "Cycle 834: Committed derive-workspace-id-from-mcp-key (6dd50fd). workspaceId is now optional in all 17+ MCP tool schemas; derived from authenticated API key via registerTool middleware. All script-verifiable criteria green. Sole remaining criterion: owner registers Iris via docs/CONNECT_CLAUDE.md (no longer requires workspace ID), asks real questions, confirms correct answers, and flips checkbox on SLICE_2.md line 40 personally."
 }
