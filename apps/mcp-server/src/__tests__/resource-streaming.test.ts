@@ -8,7 +8,8 @@ vi.mock('@iris/core/logger', () => ({
 
 function makeSql(...responses: unknown[][]) {
   let idx = 0;
-  return vi.fn().mockImplementation(() => Promise.resolve(responses[idx++] ?? []));
+  const fn = vi.fn().mockImplementation(() => Promise.resolve(responses[idx++] ?? []));
+  return Object.assign(fn, { json: (v: unknown) => v });
 }
 
 const ENTITIES: EntitySummary[] = [
