@@ -3,12 +3,12 @@
   "active_task": null,
   "active_layer": "79",
   "last_cycle": "2026-06-12",
-  "last_research": "2026-06-11",
-  "research_result": "NO_NEW_TASKS",
+  "last_research": "2026-06-12",
+  "research_result": "NEW_TASKS (1)",
   "last_commit": "2026-06-12",
   "cycle_count": 665,
   "rate_limit_hit": false,
   "mode": "SLICE_2",
   "session_tasks_committed": 0,
-  "note": "Re-confirmed 2026-06-12 (cycle 665): CI GREEN (daemon-confirmed). All Layer 79 S2 tasks COMMITTED and archived. All script-verifiable SLICE_2.md checkboxes [x]: accuracy 100% (22/22), token savings 79.2%, p50 200ms p95 313ms, slice2-demo passes locally. Only remaining criterion: owner sign-off — owner connects their Claude Code via docs/CONNECT_CLAUDE.md, asks real questions against seeded data, confirms correct answers, then flips the [ ] checkbox and the status line in docs/SLICE_2.md to ACHIEVED. Pipeline exits cleanly each cycle until that flip occurs."
+  "note": "2026-06-12 research: Audited owner connection path (CONNECT_CLAUDE.md, SLICE_2_OWNER_SIGN_OFF.md, mcp-smoke.ts, migrations 182/183). Found: embedding dimension validation works correctly, all supporting docs exist, all migrations present. Gap found: WORKSPACE_ID vs SLICE_WORKSPACE_ID naming inconsistency in docs vs wrapper script (both accepted as aliases but creates friction). Added S2-13 task: clarify env var naming. All script-verifiable SLICE_2.md checkboxes [x]. Awaiting owner sign-off on real MCP session."
 }
