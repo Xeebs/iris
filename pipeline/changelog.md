@@ -206,3 +206,4 @@ feat(api): complete Layer 77 route-mounting sweep — all 34 remaining routes mo
 - [c6a34c4] feat(mcp-server): log startup path and warn on .mcp.json path mismatch — clear error for wrong .mcp.json path, docs troubleshooting entry
 - [599cb46] docs(slice2): fix SLICE_2_OWNER_SIGN_OFF.md for Azure — provider-agnostic pre-flight, Azure .mcp.json template, smoke test sources .env.local
 - S2-19 feat(mcp-server,api): validateEmbeddingDimension() wired into startup — hard error on provider/schema dimension mismatch (2026-06-11)
+- [2026-06-12] S2-13: docs(slice2): clarify WORKSPACE_ID / SLICE_WORKSPACE_ID alias in smoke test docs (e32c8bf)
