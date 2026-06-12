@@ -35,12 +35,13 @@ LOG_DIR     = IRIS / "logs"
 CLAUDE      = Path.home() / ".local" / "bin" / "claude"
 ENV_FILE    = IRIS / ".env"
 
-SLEEP_QUEUE_EMPTY   = 3600   # 1 hour
-SLEEP_UNEXPECTED    = 120    # 2 min
-SLEEP_MODEL_SWITCH  = 30     # brief pause before relaunching on a fallback model
-SLEEP_LOCK_BUSY     = 300    # another worker (heartbeat) holds the tree — retry in 5 min
-SLEEP_CI_PENDING    = 60     # CI run in progress — poll again shortly (costs zero tokens)
-SLEEP_NEXT_SESSION  = 15     # session finished its task batch — respawn fresh
+SLEEP_QUEUE_EMPTY       = 3600   # 1 hour
+SLEEP_UNEXPECTED        = 120    # 2 min
+SLEEP_MODEL_SWITCH      = 30     # brief pause before relaunching on a fallback model
+SLEEP_LOCK_BUSY         = 300    # another worker (heartbeat) holds the tree — retry in 5 min
+SLEEP_CI_PENDING        = 60     # CI run in progress — poll again shortly (costs zero tokens)
+SLEEP_NEXT_SESSION      = 15     # session finished its task batch — respawn fresh
+SLEEP_AWAITING_OWNER    = 14400  # 4 hours — all script-verifiable criteria met; owner must sign off
 
 # ── model fallback chain ─────────────────────────────────────────────────────
 # When the active model's usage limit is exhausted (CLI usage-limit error or the
@@ -485,6 +486,13 @@ def main() -> None:
         elif phase == "IDLE":
             write_daemon("sleeping", "Queue exhausted — resuming in 1 hour for task research", wake_iso(SLEEP_QUEUE_EMPTY))
             interruptible_sleep(SLEEP_QUEUE_EMPTY)
+        elif phase == "AWAITING_OWNER":
+            write_daemon(
+                "sleeping",
+                "All script-verifiable Slice 2 criteria met — waiting for owner sign-off. Resuming in 4 hours.",
+                wake_iso(SLEEP_AWAITING_OWNER),
+            )
+            interruptible_sleep(SLEEP_AWAITING_OWNER)
         elif returncode == 0 and phase == "COMMITTED":
             # Clean exit after a completed task batch — respawn a fresh session
             write_daemon("sleeping", "Task batch committed — respawning fresh session", wake_iso(SLEEP_NEXT_SESSION))

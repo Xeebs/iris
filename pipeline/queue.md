@@ -23,21 +23,6 @@ Completed tasks are moved to `pipeline/queue-archive.md` by `scripts/archive-que
 
 ---
 
-## Layer 79 — Slice 2
-
-### Task: Clarify WORKSPACE_ID vs SLICE_WORKSPACE_ID environment variable naming
-- **Layer**: 79 — Slice 2
-- **Status**: COMMITTED
-- **Priority**: High
-- **Description**: Fix documentation inconsistency around the workspace ID environment variable for the MCP smoke test. The wrapper script (scripts/mcp-smoke.ts) accepts both `WORKSPACE_ID` and `SLICE_WORKSPACE_ID` as aliases, but user docs (CONNECT_CLAUDE.md and SLICE_2_OWNER_SIGN_OFF.md) only show `SLICE_WORKSPACE_ID`. Update the wrapper script docstring to list both variable names (recommending `WORKSPACE_ID` as primary since it matches the actual smoke test expectation), and optionally update CONNECT_CLAUDE.md Step 4 to show both forms. This removes friction for the owner during setup. No code changes required — documentation only.
-- **Files**:
-  - scripts/mcp-smoke.ts (update docstring)
-  - docs/CONNECT_CLAUDE.md (optional: line 142, mention both variable names)
-- **Depends on**: nothing
-- **Added**: 2026-06-12
-
----
-
 ## Layer 74: Post-MVP Scale - Developer Experience & Advanced Analytics — ❄ FROZEN (Slice 2 mode)
 
 > Frozen 2026-06-10 by the Slice 2 pivot. Do not select tasks from this layer while `docs/SLICE_2.md` reads `NOT ACHIEVED`. After Slice 2, these re-enter the queue only if they serve a user-visible flow (post-slice prune comes first — see docs/SLICE_2.md "After the slice").

@@ -5328,3 +5328,21 @@ the live queue small. Layer headings are repeated per archival batch.
   - apps/mcp-server/src/__tests__/embedding-validation.integration.test.ts
 - **Depends on**: nothing
 - **Added**: 2026-06-11
+
+---
+
+<!-- archived 2026-06-12 -->
+
+## Layer 79 — Slice 2
+### Task: Clarify WORKSPACE_ID vs SLICE_WORKSPACE_ID environment variable naming
+- **Layer**: 79 — Slice 2
+- **Status**: COMMITTED
+- **Priority**: High
+- **Description**: Fix documentation inconsistency around the workspace ID environment variable for the MCP smoke test. The wrapper script (scripts/mcp-smoke.ts) accepts both `WORKSPACE_ID` and `SLICE_WORKSPACE_ID` as aliases, but user docs (CONNECT_CLAUDE.md and SLICE_2_OWNER_SIGN_OFF.md) only show `SLICE_WORKSPACE_ID`. Update the wrapper script docstring to list both variable names (recommending `WORKSPACE_ID` as primary since it matches the actual smoke test expectation), and optionally update CONNECT_CLAUDE.md Step 4 to show both forms. This removes friction for the owner during setup. No code changes required — documentation only.
+- **Files**:
+  - scripts/mcp-smoke.ts (update docstring)
+  - docs/CONNECT_CLAUDE.md (optional: line 142, mention both variable names)
+- **Depends on**: nothing
+- **Added**: 2026-06-12
+
+---
