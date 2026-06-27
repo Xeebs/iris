@@ -1,17 +1,17 @@
 {
-  "generatedAt": "2026-06-23T13:18:56.415Z",
-  "workspaceId": "770eacf8-cc42-43d5-8337-cfcf20e951ad",
+  "generatedAt": "2026-06-27T05:41:55.920Z",
+  "workspaceId": "51a38e40-fd1b-487a-bda8-33c3445972bd",
   "embeddingProvider": "azure",
   "totalQuestions": 22,
   "passedQuestions": 22,
   "accuracy": 1,
   "accuracyMet": true,
-  "totalIrisTokens": 37837,
+  "totalIrisTokens": 37881,
   "totalBaselineTokens": 182160,
-  "overallSavings": 0.7922870004391743,
+  "overallSavings": 0.7920454545454545,
   "savingsMet": true,
-  "latencyP50Ms": 187,
-  "latencyP95Ms": 311,
+  "latencyP50Ms": 195,
+  "latencyP95Ms": 370,
   "categoryBreakdown": {
     "relationship": {
       "total": 4,
@@ -41,9 +41,9 @@
       "category": "relationship",
       "passed": true,
       "missingFacts": [],
-      "irisTokens": 1946,
-      "savings": 0.764975845410628,
-      "latencyMs": 409
+      "irisTokens": 1990,
+      "savings": 0.7596618357487923,
+      "latencyMs": 338
     },
     {
       "id": "Q02",
@@ -53,7 +53,7 @@
       "missingFacts": [],
       "irisTokens": 90,
       "savings": 0.9891304347826086,
-      "latencyMs": 187
+      "latencyMs": 147
     },
     {
       "id": "Q03",
@@ -63,7 +63,7 @@
       "missingFacts": [],
       "irisTokens": 1990,
       "savings": 0.7596618357487923,
-      "latencyMs": 144
+      "latencyMs": 182
     },
     {
       "id": "Q04",
@@ -73,7 +73,7 @@
       "missingFacts": [],
       "irisTokens": 1979,
       "savings": 0.7609903381642512,
-      "latencyMs": 198
+      "latencyMs": 168
     },
     {
       "id": "Q05",
@@ -83,7 +83,7 @@
       "missingFacts": [],
       "irisTokens": 1961,
       "savings": 0.7631642512077295,
-      "latencyMs": 190
+      "latencyMs": 222
     },
     {
       "id": "Q06",
@@ -93,7 +93,7 @@
       "missingFacts": [],
       "irisTokens": 1944,
       "savings": 0.7652173913043478,
-      "latencyMs": 161
+      "latencyMs": 246
     },
     {
       "id": "Q07",
@@ -103,7 +103,7 @@
       "missingFacts": [],
       "irisTokens": 1979,
       "savings": 0.7609903381642512,
-      "latencyMs": 237
+      "latencyMs": 166
     },
     {
       "id": "Q08",
@@ -113,7 +113,7 @@
       "missingFacts": [],
       "irisTokens": 1941,
       "savings": 0.7655797101449275,
-      "latencyMs": 311
+      "latencyMs": 176
     },
     {
       "id": "Q09",
@@ -123,7 +123,7 @@
       "missingFacts": [],
       "irisTokens": 1950,
       "savings": 0.7644927536231885,
-      "latencyMs": 143
+      "latencyMs": 150
     },
     {
       "id": "Q10",
@@ -133,7 +133,7 @@
       "missingFacts": [],
       "irisTokens": 1998,
       "savings": 0.758695652173913,
-      "latencyMs": 163
+      "latencyMs": 195
     },
     {
       "id": "Q11",
@@ -143,7 +143,7 @@
       "missingFacts": [],
       "irisTokens": 1975,
       "savings": 0.7614734299516908,
-      "latencyMs": 221
+      "latencyMs": 223
     },
     {
       "id": "Q12",
@@ -153,7 +153,7 @@
       "missingFacts": [],
       "irisTokens": 91,
       "savings": 0.9890096618357488,
-      "latencyMs": 172
+      "latencyMs": 269
     },
     {
       "id": "Q13",
@@ -163,7 +163,7 @@
       "missingFacts": [],
       "irisTokens": 1987,
       "savings": 0.760024154589372,
-      "latencyMs": 143
+      "latencyMs": 370
     },
     {
       "id": "Q14",
@@ -173,7 +173,7 @@
       "missingFacts": [],
       "irisTokens": 1953,
       "savings": 0.7641304347826087,
-      "latencyMs": 137
+      "latencyMs": 175
     },
     {
       "id": "Q15",
@@ -183,7 +183,7 @@
       "missingFacts": [],
       "irisTokens": 2000,
       "savings": 0.7584541062801933,
-      "latencyMs": 287
+      "latencyMs": 467
     },
     {
       "id": "Q16",
@@ -193,7 +193,7 @@
       "missingFacts": [],
       "irisTokens": 1947,
       "savings": 0.7648550724637682,
-      "latencyMs": 140
+      "latencyMs": 171
     },
     {
       "id": "Q17",
@@ -203,7 +203,7 @@
       "missingFacts": [],
       "irisTokens": 1954,
       "savings": 0.7640096618357488,
-      "latencyMs": 251
+      "latencyMs": 172
     },
     {
       "id": "Q18",
@@ -213,7 +213,7 @@
       "missingFacts": [],
       "irisTokens": 1980,
       "savings": 0.7608695652173914,
-      "latencyMs": 183
+      "latencyMs": 161
     },
     {
       "id": "Q19",
@@ -223,7 +223,7 @@
       "missingFacts": [],
       "irisTokens": 298,
       "savings": 0.9640096618357488,
-      "latencyMs": 194
+      "latencyMs": 210
     },
     {
       "id": "Q20",
@@ -233,7 +233,7 @@
       "missingFacts": [],
       "irisTokens": 1967,
       "savings": 0.7624396135265701,
-      "latencyMs": 147
+      "latencyMs": 213
     },
     {
       "id": "Q21",
@@ -243,7 +243,7 @@
       "missingFacts": [],
       "irisTokens": 1948,
       "savings": 0.7647342995169082,
-      "latencyMs": 289
+      "latencyMs": 307
     },
     {
       "id": "Q22",
@@ -253,7 +253,7 @@
       "missingFacts": [],
       "irisTokens": 1959,
       "savings": 0.7634057971014493,
-      "latencyMs": 207
+      "latencyMs": 294
     }
   ]
 }
